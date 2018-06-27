@@ -466,7 +466,7 @@ data EnumValueDefinition
 
 newtype EnumValue
   = EnumValue { unEnumValue :: Name }
-  deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON)
+  deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
 
 data InputObjectTypeDefinition
   = InputObjectTypeDefinition
