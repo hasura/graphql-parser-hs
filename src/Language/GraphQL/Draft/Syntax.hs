@@ -87,7 +87,7 @@ import qualified Data.Aeson                 as J
 
 newtype Name
   = Name { unName :: Text }
-  deriving ( Eq, Ord, Show, Hashable, IsString, Lift
+  deriving ( Eq, Ord, Show, Hashable, IsString, Lift, Semigroup
            , Monoid, J.ToJSONKey, J.FromJSONKey, J.ToJSON, J.FromJSON)
 
 newtype Document
@@ -388,7 +388,7 @@ data TypeDefinition
 
 newtype Description
   = Description { unDescription :: Text }
-  deriving (Show, Eq, Ord, IsString, Lift, Monoid)
+  deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid)
 
 data ObjectTypeDefinition
   = ObjectTypeDefinition
