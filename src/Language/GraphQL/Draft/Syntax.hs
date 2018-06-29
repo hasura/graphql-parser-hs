@@ -306,7 +306,11 @@ type DefaultValue = ValueConst
 
 -- * Directives
 
-data Directive = Directive Name [Argument] deriving (Show, Eq, Lift)
+data Directive
+  = Directive
+  { _dName      :: !Name
+  , _dArguments :: ![Argument]
+  } deriving (Show, Eq, Lift)
 
 -- * Type Reference
 
