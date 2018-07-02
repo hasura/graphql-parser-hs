@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Description: Parse text into GraphQL ASTs
@@ -12,15 +13,16 @@ module Language.GraphQL.Draft.Parser
 
 import           Protolude                     hiding (option)
 
-import           Control.Applicative           (empty, many, optional, (<|>))
-import           Control.Monad                 (fail)
+import           Control.Applicative           (many, optional, (<|>))
+import           Control.Monad.Fail            (fail)
 import           Data.Aeson.Parser             (jstring)
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
                                                 match, option, scan, scientific,
                                                 sepBy1, (<?>))
 import qualified Data.Attoparsec.Text          as AT
-import           Data.Char                     (isDigit, isSpace)
+import           Data.Char                     (isAsciiLower, isAsciiUpper,
+                                                isDigit)
 import           Data.Scientific               (floatingOrInteger)
 import           Data.Text                     (find)
 
@@ -102,15 +104,22 @@ selection = AST.SelectionField <$> field
         <|> AST.SelectionFragmentSpread <$> fragmentSpread
         <?> "selection error!"
 
-field :: Parser AST.Field
-field = AST.Field <$> option empty (pure <$> alias)
-                  <*> nameParser
-                  <*> optempty arguments
-                  <*> optempty directives
-                  <*> optempty selectionSet
+aliasAndFld :: Parser (Maybe AST.Alias, AST.Name)
+aliasAndFld = do
+  n <- nameParser
+  colonM <- optional (tok ":")
+  case colonM of
+    Just _  -> (,) (Just $ AST.Alias n) <$> nameParser
+    Nothing -> return (Nothing, n)
+{-# INLINE aliasAndFld #-}
 
-alias :: Parser AST.Alias
-alias = AST.Alias <$> (nameParser <* tok ":")
+field :: Parser AST.Field
+field = do
+  (alM, n) <- aliasAndFld
+  AST.Field alM n
+   <$> optempty arguments
+   <*> optempty directives
+   <*> optempty selectionSet
 
 arguments :: Parser [AST.Argument]
 arguments = parens $ many1 argument
@@ -241,9 +250,6 @@ objectValueC = objectValueG valueConst
 
 objectFieldG :: Parser a -> Parser (AST.ObjectFieldG a)
 objectFieldG p = AST.ObjectFieldG <$> nameParser <* tok ":" <*> p
-
--- objectField :: Parser AST.ObjectField
--- objectField = objectFieldG value
 
 -- * Directives
 
@@ -389,19 +395,47 @@ inputValueDefinition = AST.InputValueDefinition
 
 tok :: AT.Parser a -> AT.Parser a
 tok p = p <* whiteSpace
+{-# INLINE tok #-}
+
+comment :: Parser ()
+comment =
+  AT.char '#' *>
+  AT.skipWhile (\c -> c /= '\n' && c /= '\r' )
+{-# INLINE comment #-}
+
+isSpaceLike :: Char -> Bool
+isSpaceLike c =
+  c == '\t' || c == ' ' || c == '\n' || c == '\r' || c == ','
+{-# INLINE isSpaceLike #-}
 
 whiteSpace :: AT.Parser ()
-whiteSpace = AT.peekChar >>= traverse_ (\c ->
-  if isSpace c || c == ','
-    then AT.anyChar *> whiteSpace
-    else when (c == '#') $ A.manyTill AT.anyChar AT.endOfLine *> whiteSpace)
+whiteSpace = do
+  AT.skipWhile isSpaceLike
+  (comment *> whiteSpace) <|> pure ()
+
+-- whiteSpace :: AT.Parser ()
+-- whiteSpace =
+--   void $ AT.scan False $ \st c ->
+--   if | not st && isSpaceLike c        -> Just False
+--      | not st && c == '#'             -> Just True
+--      | not st                         -> Nothing
+--      | st && (c == '\r' || c == '\n') -> Just False
+--      | st                             -> Just True
+-- {-# INLINE whiteSpace #-}
 
 nameParser :: AT.Parser AST.Name
-nameParser = AST.Name <$> tok ((<>) <$> AT.takeWhile1 isA_z
-                                <*> AT.takeWhile ((||) <$> isDigit <*> isA_z))
+nameParser =
+  AST.Name <$> tok ((<>) <$> AT.takeWhile1 isFirstChar
+                     <*> AT.takeWhile isNonFirstChar)
   where
-    -- `isAlpha` handles many more Unicode Chars
-    isA_z = AT.inClass $ '_' : ['A'..'Z'] <> ['a'..'z']
+
+    isFirstChar x = isAsciiLower x || isAsciiUpper x || x == '_'
+    {-# INLINE isFirstChar #-}
+
+    isNonFirstChar x = isFirstChar x || isDigit x
+    {-# INLINE isNonFirstChar #-}
+
+{-# INLINE nameParser #-}
 
 parens :: Parser a -> Parser a
 parens = between "(" ")"
