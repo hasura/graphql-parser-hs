@@ -68,6 +68,7 @@ operationTypeParser :: Parser AST.OperationType
 operationTypeParser =
   AST.OperationTypeQuery <$ tok "query"
   <|> AST.OperationTypeMutation <$ tok "mutation"
+  <|> AST.OperationTypeSubscription <$ tok "subscription"
 
 typedOperationDef :: Parser AST.TypedOperationDefinition
 typedOperationDef =
