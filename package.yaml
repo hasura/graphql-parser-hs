@@ -5,6 +5,8 @@ license:             BSD3
 author:              "Vamshi Surabhi"
 maintainer:          "vamshi@hasura.io"
 copyright:           "2018 Hasura Technologies Pvt. Ltd."
+synopsis:            GraphQL API
+category:            Web
 
 extra-source-files:
 - README.md
@@ -45,6 +47,8 @@ default-extensions:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -O2
 
 tests:
   graphql-parser-test:
@@ -56,3 +60,8 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - graphql-parser
+    - tasty
+    - hspec
+    - tasty-hspec
+    - QuickCheck
+    - bytestring

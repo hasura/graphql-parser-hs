@@ -1,14 +1,33 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE MultiWayIf        #-}
 {-# LANGUAGE OverloadedStrings #-}
+-- |
+-- Module:      Language.GraphQL.Draft.Parser
+-- Copyright:   (c) 2018 Hasura Technologies Pvt. Ltd.
+-- License:     BSD3
+-- Maintainer:  Vamshi Surabhi <vamshi@hasura.io>
+-- Stability:   experimental
+-- Portability: portable
+--
 
--- | Description: Parse text into GraphQL ASTs
 module Language.GraphQL.Draft.Parser
-  ( executableDocument
+  (
+  -- * How to use this library
+  -- $use
+
+  -- ** Parsing GraphQL executable documents
+  -- $executabledocs
+
+  -- ** Parsing GraphQL schema
+  -- $schema
+
+  -- ** GraphQL functions
+    parseExecutableDoc
+  , parseSchemaDoc
+  -- ** Parsers
+  , executableDocument
   , schemaDocument
   , value
-  , parseExecutableDoc
-  , parseSchemaDoc
   ) where
 
 import           Protolude                     hiding (option)
@@ -24,12 +43,13 @@ import qualified Data.Attoparsec.Text          as AT
 import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
 import           Data.Scientific               (floatingOrInteger)
-import           Data.Text                     (find)
+import           Data.Text                     (find, Text)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
 
 -- * Document
 
+-- | Parser for GraphQL Abstract Syntax Tree
 executableDocument :: Parser AST.ExecutableDocument
 executableDocument =
   whiteSpace *>
@@ -40,15 +60,17 @@ parse :: AT.Parser a -> Text -> Either Text a
 parse parser t =
   either (Left . toS) return $ AT.parseOnly (parser <* AT.endOfInput) t
 
+-- | Parse an executable document into GraphQL Abstract Syntax Tree
 parseExecutableDoc :: Text -> Either Text AST.ExecutableDocument
 parseExecutableDoc = parse executableDocument
 
--- | Parser for a schema document.
+-- | Parser for GraphQL schema
 schemaDocument :: Parser AST.SchemaDocument
 schemaDocument =
   whiteSpace *> (AST.SchemaDocument <$> many1 typeDefinition)
   <?> "type document error"
 
+-- | Parse a schema document
 parseSchemaDoc :: Text -> Either Text AST.SchemaDocument
 parseSchemaDoc = parse schemaDocument
 
@@ -183,8 +205,9 @@ number =  do
     (Nothing, Left r)  -> pure (Right (floor r))
     (Nothing, Right i) -> pure (Right i)
 
--- This will try to pick the first type it can parse. If you are working with
--- explicit types use the `typedValue` parser.
+-- This will try to pick the first type it can parse.
+-- | Parser for GraphQL value data type.
+--
 value :: Parser AST.Value
 value = tok (
   AST.VVariable <$> (variable <?> "variable")
@@ -453,3 +476,28 @@ between open close p = tok open *> p <* tok close
 -- `empty` /= `pure mempty` for `Parser`.
 optempty :: Monoid a => Parser a -> Parser a
 optempty = option mempty
+
+-- $use
+-- This module exposes functions dealing with parsing GraphQL schema and executable documents.
+
+-- $executabledocs
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > import qualified  Language.GraphQL.Draft.Parser as AST
+-- >
+-- > main = do
+-- >   let ast = AST.parseExecutableDoc "{ cat }"
+-- >   either (fail . show) f ast
+-- >   where
+-- >     f _ = return () -- The function which uses the ast
+
+
+-- $schema
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > import qualified  Language.GraphQL.Draft.Parser as AST
+-- >
+-- > main :: do
+-- >   let schema = AST.parseSchemaDoc "type cat {name: String!}"
+-- >   either (fail . show) f ast
+-- >   where
+-- >     f _ = return () -- The function which uses the schema

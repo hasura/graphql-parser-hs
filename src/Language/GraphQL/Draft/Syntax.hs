@@ -5,20 +5,30 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
+-- |
+-- Module:      Language.GraphQL.Draft.Syntax
+-- Copyright:   (c) 2018 Hasura Technologies Pvt. Ltd.
+-- License:     BSD3
+-- Maintainer:  Vamshi Surabhi <vamshi@hasura.io>
+-- Stability:   experimental
+-- Portability: portable
+--
+-- Parse text into GraphQL ASTs
+--
 
--- | Description: The GraphQL AST
 module Language.GraphQL.Draft.Syntax
-  ( Name(..)
-  , Document(..)
-  , ExecutableDocument(..)
+  (
+    ExecutableDocument(..)
   , SchemaDocument(..)
   , Definition(..)
   , ExecutableDefinition(..)
   , partitionExDefs
+  , Document(..)
   , OperationDefinition(..)
   , OperationType(..)
   , TypedOperationDefinition(..)
   , VariableDefinition(..)
+  , Name(..)
   , Variable(..)
   , SelectionSet
   , Selection(..)
@@ -130,8 +140,8 @@ partitionExDefs =
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema !SchemaDefinition
   | TypeSystemDefinitionType !TypeDefinition
-  -- | TypeSystemDefinitionDir !DirectiveDefinition
   deriving (Show, Eq, Lift, Generic)
+
 
 instance Hashable TypeSystemDefinition
 
