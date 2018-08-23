@@ -44,17 +44,16 @@ module Language.GraphQL.Draft.Syntax
   , DefaultValue
   , Directive(..)
   , GType(..)
+  , Nullability(..)
   , showGT
   , ToGType(..)
   , toLT
+  , toNT
   , showLT
-  , ToNonNullType(..)
-  , isNotNull
+  , isNullable
   , showNT
   , NamedType(..)
   , ListType(..)
-  , NonNullType(..)
-  , showNNT
   , Description(..)
   , TypeDefinition(..)
   , ObjectTypeDefinition(..)
@@ -93,23 +92,23 @@ newtype Name
 
 newtype Document
   = Document { getDefinitions :: [Definition] }
-  deriving (Show, Eq, Lift)
+  deriving (Ord, Show, Eq, Lift)
 
 data Definition
   = DefinitionExecutable !ExecutableDefinition
   | DefinitionTypeSystem !TypeSystemDefinition
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable Definition
 
 newtype ExecutableDocument
   = ExecutableDocument { getExecutableDefinitions :: [ExecutableDefinition] }
-  deriving (Show, Eq, Lift, Hashable)
+  deriving (Ord, Show, Eq, Lift, Hashable)
 
 data ExecutableDefinition
   = ExecutableDefinitionOperation OperationDefinition
   | ExecutableDefinitionFragment FragmentDefinition
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable ExecutableDefinition
 
@@ -131,7 +130,7 @@ data TypeSystemDefinition
   = TypeSystemDefinitionSchema !SchemaDefinition
   | TypeSystemDefinitionType !TypeDefinition
   -- | TypeSystemDefinitionDir !DirectiveDefinition
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
 
@@ -139,7 +138,7 @@ data SchemaDefinition
   = SchemaDefinition
   { _sdDirectives                   :: !(Maybe [Directive])
   , _sdRootOperationTypeDefinitions :: ![RootOperationTypeDefinition]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable SchemaDefinition
 
@@ -147,7 +146,7 @@ data RootOperationTypeDefinition
   = RootOperationTypeDefinition
   { _rotdOperationType     :: !OperationType
   , _rotdOperationTypeType :: !NamedType
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable RootOperationTypeDefinition
 
@@ -155,18 +154,18 @@ data OperationType
   = OperationTypeQuery
   | OperationTypeMutation
   | OperationTypeSubscription
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable OperationType
 
 newtype SchemaDocument
   = SchemaDocument [TypeDefinition]
-  deriving (Show, Eq, Lift, Hashable)
+  deriving (Ord, Show, Eq, Lift, Hashable)
 
 data OperationDefinition
   = OperationDefinitionTyped !TypedOperationDefinition
   | OperationDefinitionUnTyped !SelectionSet
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable OperationDefinition
 
@@ -177,7 +176,7 @@ data TypedOperationDefinition
   , _todVariableDefinitions :: ![VariableDefinition]
   , _todDirectives          :: ![Directive]
   , _todSelectionSet        :: !SelectionSet
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypedOperationDefinition
 
@@ -186,13 +185,14 @@ data VariableDefinition
   { _vdVariable     :: !Variable
   , _vdType         :: !GType
   , _vdDefaultValue :: !(Maybe DefaultValue)
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable VariableDefinition
 
 newtype Variable
   = Variable { unVariable :: Name }
-  deriving (Eq, Ord, Show, Hashable, Lift, J.ToJSONKey, J.FromJSONKey)
+  deriving ( Eq, Ord, Show, Hashable, Lift, J.ToJSONKey, J.FromJSONKey
+           , J.ToJSON, J.FromJSON)
 
 type SelectionSet = [Selection]
 
@@ -200,7 +200,7 @@ data Selection
   = SelectionField !Field
   | SelectionFragmentSpread !FragmentSpread
   | SelectionInlineFragment !InlineFragment
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable Selection
 
@@ -211,19 +211,19 @@ data Field
   , _fArguments    :: ![Argument]
   , _fDirectives   :: ![Directive]
   , _fSelectionSet :: !SelectionSet
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable Field
 
 newtype Alias
   = Alias { unAlias :: Name }
-  deriving (Show, Eq, Hashable, Lift, J.ToJSON, J.FromJSON)
+  deriving (Ord, Show, Eq, Hashable, Lift, J.ToJSON, J.FromJSON)
 
 data Argument
   = Argument
   { _aName  :: !Name
   , _aValue :: !Value
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable Argument
 
@@ -233,7 +233,7 @@ data FragmentSpread
   = FragmentSpread
   { _fsName       :: !Name
   , _fsDirectives :: ![Directive]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable FragmentSpread
 
@@ -242,7 +242,7 @@ data InlineFragment
   { _ifTypeCondition :: !(Maybe TypeCondition)
   , _ifDirectives    :: ![Directive]
   , _ifSelectionSet  :: !SelectionSet
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable InlineFragment
 
@@ -252,7 +252,7 @@ data FragmentDefinition
   , _fdTypeCondition :: !TypeCondition
   , _fdDirectives    :: ![Directive]
   , _fdSelectionSet  :: !SelectionSet
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable FragmentDefinition
 
@@ -267,20 +267,20 @@ type TypeCondition = NamedType
 --   | VLString !StringValue
 --   | VLEnum !EnumValue
 --   | VLNull
---   deriving (Show, Eq, Lift)
+--   deriving (Ord, Show, Eq, Lift)
 
 -- data ValueConst
 --   = VCLeaf !ValueLeaf
 --   | VCList !ListValueC
 --   | VCObject !ObjectValueC
---   deriving (Show, Eq, Lift)
+--   deriving (Ord, Show, Eq, Lift)
 
 -- data Value
 --   = VVariable !Variable
 --   | VLeaf !ValueLeaf
 --   | VList !ListValue
 --   | VObject !ObjectValue
---   deriving (Show, Eq, Lift)
+--   deriving (Ord, Show, Eq, Lift)
 
 data ValueConst
   = VCInt !Int32
@@ -291,7 +291,7 @@ data ValueConst
   | VCEnum !EnumValue
   | VCList !ListValueC
   | VCObject !ObjectValueC
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable ValueConst
 
@@ -305,23 +305,23 @@ data Value
   | VEnum !EnumValue
   | VList !ListValue
   | VObject !ObjectValue
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable Value
 
 newtype StringValue
-  = StringValue { unStringValue :: Text } deriving (Show, Eq, Lift, Hashable)
+  = StringValue { unStringValue :: Text } deriving (Ord, Show, Eq, Lift, Hashable)
 
 newtype ListValueG a
   = ListValueG {unListValue :: [a]}
-  deriving (Show, Eq, Lift, Hashable)
+  deriving (Ord, Show, Eq, Lift, Hashable)
 
 type ListValue = ListValueG Value
 
 type ListValueC = ListValueG ValueConst
 
 newtype ObjectValueG a
-  = ObjectValueG {unObjectValue :: [ObjectFieldG a]} deriving (Show, Eq, Lift, Hashable)
+  = ObjectValueG {unObjectValue :: [ObjectFieldG a]} deriving (Ord, Show, Eq, Lift, Hashable)
 
 type ObjectValue = ObjectValueG Value
 
@@ -331,7 +331,7 @@ data ObjectFieldG a
   = ObjectFieldG
   { _ofName  :: Name
   , _ofValue :: a
-  } deriving (Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 
 instance (Hashable a) => Hashable (ObjectFieldG a)
 
@@ -346,25 +346,44 @@ data Directive
   = Directive
   { _dName      :: !Name
   , _dArguments :: ![Argument]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable Directive
 
 -- * Type Reference
 
+newtype Nullability
+  = Nullability { unNullability :: Bool }
+  deriving (Show, Ord, Eq, Lift, Generic, Hashable)
+
 data GType
-  = TypeNamed NamedType
-  | TypeList ListType
-  | TypeNonNull NonNullType
+  = TypeNamed !Nullability !NamedType
+  | TypeList !Nullability !ListType
   deriving (Eq, Ord, Show, Lift, Generic)
+
+class ToGType a where
+  toGT :: a -> GType
+
+toNT :: (ToGType a) => a -> GType
+toNT ty = case toGT ty of
+  TypeNamed _ nt -> TypeNamed (Nullability False) nt
+  TypeList _ lt -> TypeList (Nullability False) lt
+
+instance ToGType GType where
+  toGT t = t
+
+instance J.ToJSON GType where
+  toJSON = J.toJSON . showGT
 
 instance Hashable GType
 
 showGT :: GType -> Text
 showGT = \case
-  TypeNamed nt -> showNT nt
-  TypeList lt  -> showLT lt
-  TypeNonNull nnt -> showNNT nnt
+  TypeNamed nullability nt -> showNT nt <> showNullable nullability
+  TypeList nullability lt  -> showLT lt <> showNullable nullability
+
+showNullable :: Nullability -> Text
+showNullable = bool "!" "" . unNullability
 
 showNT :: NamedType -> Text
 showNT = unName . unNamedType
@@ -372,23 +391,13 @@ showNT = unName . unNamedType
 showLT :: ListType -> Text
 showLT lt = "[" <> showGT (unListType lt) <> "]"
 
-showNNT :: NonNullType -> Text
-showNNT = \case
-  NonNullTypeList lt -> showLT lt <> "!"
-  NonNullTypeNamed nt -> showNT nt <> "!"
-
-class ToGType a where
-  toGT :: a -> GType
-
-class ToNonNullType a where
-  toNT :: a -> NonNullType
-
 toLT :: (ToGType a) => a -> ListType
 toLT = ListType . toGT
 
-isNotNull :: GType -> Bool
-isNotNull (TypeNonNull _) = True
-isNotNull _               = False
+isNullable :: GType -> Bool
+isNullable = \case
+  (TypeNamed nullability _) -> unNullability nullability
+  (TypeList nullability _)  -> unNullability nullability
 
 newtype NamedType
   = NamedType { unNamedType :: Name }
@@ -396,30 +405,14 @@ newtype NamedType
             J.ToJSONKey, J.FromJSON, J.FromJSONKey)
 
 instance ToGType NamedType where
-  toGT = TypeNamed
-
-instance ToNonNullType NamedType where
-  toNT = NonNullTypeNamed
+  toGT = TypeNamed (Nullability True)
 
 newtype ListType
   = ListType {unListType :: GType }
   deriving (Eq, Ord, Show, Lift, Hashable)
 
 instance ToGType ListType where
-  toGT = TypeList
-
-instance ToNonNullType ListType where
-  toNT = NonNullTypeList
-
-data NonNullType
-  = NonNullTypeNamed NamedType
-  | NonNullTypeList  ListType
-  deriving (Eq, Ord, Show, Lift, Generic)
-
-instance Hashable NonNullType
-
-instance ToGType NonNullType where
-  toGT = TypeNonNull
+  toGT = TypeList (Nullability True)
 
 -- * Type definition
 
@@ -430,7 +423,7 @@ data TypeDefinition
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
   | TypeDefinitionInputObject InputObjectTypeDefinition
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeDefinition
 
@@ -446,7 +439,7 @@ data ObjectTypeDefinition
   , _otdDirectives           :: ![Directive]
   , _otdFieldsDefinition     :: ![FieldDefinition]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable ObjectTypeDefinition
 
@@ -458,7 +451,7 @@ data FieldDefinition
   , _fldType                :: !GType
   , _fldDirectives          :: ![Directive]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable FieldDefinition
 
@@ -471,7 +464,7 @@ data InputValueDefinition
   , _ivdType         :: !GType
   , _ivdDefaultValue :: !(Maybe DefaultValue)
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable InputValueDefinition
 
@@ -482,7 +475,7 @@ data InterfaceTypeDefinition
   , _itdDirectives       :: ![Directive]
   , _itdFieldsDefinition :: ![FieldDefinition]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable InterfaceTypeDefinition
 
@@ -493,7 +486,7 @@ data UnionTypeDefinition
   , _utdDirectives  :: ![Directive]
   , _utdMemberTypes :: ![NamedType]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable UnionTypeDefinition
 
@@ -503,7 +496,7 @@ data ScalarTypeDefinition
   , _stdName        :: !Name
   , _stdDirectives  :: ![Directive]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable ScalarTypeDefinition
 
@@ -514,7 +507,7 @@ data EnumTypeDefinition
   , _etdDirectives       :: ![Directive]
   , _etdValueDefinitions :: ![EnumValueDefinition]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable EnumTypeDefinition
 
@@ -524,7 +517,7 @@ data EnumValueDefinition
   , _evdName        :: !EnumValue
   , _evdDirectives  :: ![Directive]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable EnumValueDefinition
 
@@ -539,7 +532,7 @@ data InputObjectTypeDefinition
   , _iotdDirectives       :: ![Directive]
   , _iotdValueDefinitions :: ![InputValueDefinition]
   }
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable InputObjectTypeDefinition
 
@@ -549,14 +542,14 @@ data DirectiveDefinition
   , _ddName        :: !Name
   , _ddArguments   :: !ArgumentsDefinition
   , _ddLocations   :: ![DirectiveLocation]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable DirectiveDefinition
 
 data DirectiveLocation
   = DLExecutable !ExecutableDirectiveLocation
   | DLTypeSystem !TypeSystemDirectiveLocation
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable DirectiveLocation
 
@@ -568,7 +561,7 @@ data ExecutableDirectiveLocation
   | EDLFRAGMENT_DEFINITION
   | EDLFRAGMENT_SPREAD
   | EDLINLINE_FRAGMENT
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable ExecutableDirectiveLocation
 
@@ -584,6 +577,6 @@ data TypeSystemDirectiveLocation
   | TSDLENUM_VALUE
   | TSDLINPUT_OBJECT
   | TSDLINPUT_FIELD_DEFINITION
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDirectiveLocation

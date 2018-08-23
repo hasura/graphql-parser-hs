@@ -267,9 +267,8 @@ directive = AST.Directive
 
 type_ :: Parser AST.GType
 type_ =
-    AST.TypeNonNull <$> nonNullType
-    <|> AST.TypeList    <$> listType
-    <|> AST.TypeNamed   <$> namedType
+    (flip AST.TypeList <$> listType <*> nullability)
+    <|> (flip AST.TypeNamed <$> namedType <*> nullability)
     <?> "type_ error!"
 
 namedType :: Parser AST.NamedType
@@ -278,10 +277,10 @@ namedType = AST.NamedType <$> nameParser
 listType :: Parser AST.ListType
 listType = AST.ListType <$> brackets type_
 
-nonNullType :: Parser AST.NonNullType
-nonNullType = AST.NonNullTypeNamed <$> namedType <* tok "!"
-          <|> AST.NonNullTypeList  <$> listType  <* tok "!"
-          <?> "nonNullType error!"
+nullability :: Parser AST.Nullability
+nullability =
+  (tok "!" $> AST.Nullability False)
+  <|> pure (AST.Nullability True)
 
 -- * Type Definition
 
