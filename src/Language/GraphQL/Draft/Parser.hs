@@ -23,7 +23,8 @@ import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
 import qualified Data.Attoparsec.Text          as AT
 import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
-import           Data.Scientific               (floatingOrInteger)
+import           Data.Scientific               (floatingOrInteger,
+                                                toBoundedInteger)
 import           Data.Text                     (find)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
@@ -179,9 +180,11 @@ number =  do
   case (Data.Text.find (== '.') numText, floatingOrInteger num) of
     (Just _, Left r)   -> pure (Left r)
     (Just _, Right i)  -> pure (Left (fromIntegral i))
-    -- TODO: Handle maxBound, Int32 in spec.
     (Nothing, Left r)  -> pure (Right (floor r))
-    (Nothing, Right i) -> pure (Right i)
+    (Nothing, Right _) -> Right <$> int32 num
+  where
+    int32 num = maybe int32Err pure $ toBoundedInteger num
+    int32Err = fail "value (int32) error!"
 
 -- This will try to pick the first type it can parse. If you are working with
 -- explicit types use the `typedValue` parser.
