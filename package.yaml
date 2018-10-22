@@ -25,6 +25,7 @@ dependencies:
 - attoparsec
 - text
 - aeson
+- aeson-casing
 - scientific
 
 # for sequence

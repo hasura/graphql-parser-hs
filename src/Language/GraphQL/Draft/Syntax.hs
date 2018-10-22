@@ -5,6 +5,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 -- | Description: The GraphQL AST
 module Language.GraphQL.Draft.Syntax
@@ -51,6 +53,7 @@ module Language.GraphQL.Draft.Syntax
   , toNT
   , showLT
   , isNullable
+  , isNotNull
   , showNT
   , NamedType(..)
   , ListType(..)
@@ -73,11 +76,14 @@ module Language.GraphQL.Draft.Syntax
   , TypeSystemDirectiveLocation(..)
   ) where
 
+import           Data.Bool                  (not)
 import           Instances.TH.Lift          ()
 import           Language.Haskell.TH.Syntax (Lift)
 import           Protolude
 
 import qualified Data.Aeson                 as J
+import qualified Data.Aeson.Casing          as J
+import qualified Data.Aeson.TH              as J
 
 -- * Documents
 
@@ -158,9 +164,15 @@ data OperationType
 
 instance Hashable OperationType
 
-newtype SchemaDocument
-  = SchemaDocument [TypeDefinition]
-  deriving (Ord, Show, Eq, Lift, Hashable)
+data SchemaDocument
+  = SchemaDocument
+  { _sdTypes            :: ![TypeDefinition]
+  , _sdQueryRoot        :: !NamedType
+  , _sdMutationRoot     :: !NamedType
+  , _sdSubscriptionRoot :: !(Maybe NamedType)
+  } deriving (Ord, Show, Eq, Lift, Generic)
+
+instance Hashable SchemaDocument
 
 data OperationDefinition
   = OperationDefinitionTyped !TypedOperationDefinition
@@ -224,6 +236,7 @@ data Argument
   { _aName  :: !Name
   , _aValue :: !Value
   } deriving (Ord, Show, Eq, Lift, Generic)
+
 
 instance Hashable Argument
 
@@ -310,18 +323,21 @@ data Value
 instance Hashable Value
 
 newtype StringValue
-  = StringValue { unStringValue :: Text } deriving (Ord, Show, Eq, Lift, Hashable)
+  = StringValue { unStringValue :: Text }
+  deriving (Ord, Show, Eq, Lift, Hashable, J.FromJSON, J.ToJSON)
 
 newtype ListValueG a
   = ListValueG {unListValue :: [a]}
-  deriving (Ord, Show, Eq, Lift, Hashable)
+  deriving (Ord, Show, Eq, Lift, Hashable, J.FromJSON, J.ToJSON)
 
 type ListValue = ListValueG Value
 
 type ListValueC = ListValueG ValueConst
 
 newtype ObjectValueG a
-  = ObjectValueG {unObjectValue :: [ObjectFieldG a]} deriving (Ord, Show, Eq, Lift, Hashable)
+  = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
+  deriving (Ord, Show, Eq, Lift, Generic, Hashable)
+
 
 type ObjectValue = ObjectValueG Value
 
@@ -332,6 +348,7 @@ data ObjectFieldG a
   { _ofName  :: Name
   , _ofValue :: a
   } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+
 
 instance (Hashable a) => Hashable (ObjectFieldG a)
 
@@ -347,6 +364,7 @@ data Directive
   { _dName      :: !Name
   , _dArguments :: ![Argument]
   } deriving (Ord, Show, Eq, Lift, Generic)
+
 
 instance Hashable Directive
 
@@ -367,7 +385,7 @@ class ToGType a where
 toNT :: (ToGType a) => a -> GType
 toNT ty = case toGT ty of
   TypeNamed _ nt -> TypeNamed (Nullability False) nt
-  TypeList _ lt -> TypeList (Nullability False) lt
+  TypeList _ lt  -> TypeList (Nullability False) lt
 
 instance ToGType GType where
   toGT t = t
@@ -399,6 +417,9 @@ isNullable = \case
   (TypeNamed nullability _) -> unNullability nullability
   (TypeList nullability _)  -> unNullability nullability
 
+isNotNull :: GType -> Bool
+isNotNull = not . isNullable
+
 newtype NamedType
   = NamedType { unNamedType :: Name }
   deriving (Eq, Ord, Show, Hashable, Lift, J.ToJSON,
@@ -409,7 +430,7 @@ instance ToGType NamedType where
 
 newtype ListType
   = ListType {unListType :: GType }
-  deriving (Eq, Ord, Show, Lift, Hashable)
+  deriving (Eq, Ord, Show, Lift, Hashable, J.ToJSON, Generic)
 
 instance ToGType ListType where
   toGT = TypeList (Nullability True)
@@ -429,7 +450,8 @@ instance Hashable TypeDefinition
 
 newtype Description
   = Description { unDescription :: Text }
-  deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable)
+  deriving ( Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable
+           , J.FromJSON, J.ToJSON)
 
 data ObjectTypeDefinition
   = ObjectTypeDefinition
@@ -442,6 +464,7 @@ data ObjectTypeDefinition
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable ObjectTypeDefinition
+
 
 data FieldDefinition
   = FieldDefinition
@@ -467,6 +490,7 @@ data InputValueDefinition
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable InputValueDefinition
+
 
 data InterfaceTypeDefinition
   = InterfaceTypeDefinition

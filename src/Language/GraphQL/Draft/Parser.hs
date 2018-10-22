@@ -9,6 +9,7 @@ module Language.GraphQL.Draft.Parser
   , value
   , parseExecutableDoc
   , parseSchemaDoc
+  , parse
   ) where
 
 import           Protolude                     hiding (option)
@@ -46,8 +47,13 @@ parseExecutableDoc = parse executableDocument
 -- | Parser for a schema document.
 schemaDocument :: Parser AST.SchemaDocument
 schemaDocument =
-  whiteSpace *> (AST.SchemaDocument <$> many1 typeDefinition)
+  whiteSpace *> (AST.SchemaDocument <$> many1 typeDefinition <*> pure qr <*> pure mr <*> pure sr)
   <?> "type document error"
+  where
+    -- FIXME: hack! TODO: read the actual schema type to get query, mutation roots
+    qr = AST.NamedType "Query"
+    mr = AST.NamedType "Mutation"
+    sr = Just $ AST.NamedType "Subscription"
 
 parseSchemaDoc :: Text -> Either Text AST.SchemaDocument
 parseSchemaDoc = parse schemaDocument
