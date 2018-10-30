@@ -31,7 +31,6 @@ instance FromJSON ScalarTypeDefinition where
   parseJSON = withObject "ScalarTypeDefinition" $ \o -> do
     kind <- o .: "kind"
     name <- o .:  "name"
-    --traceM (T.pack $ "parsing ScalarTypeDefinition: " ++ show kind ++ " " ++ show name)
     desc <- o .:? "description"
     when (kind /= "SCALAR") $ kindErr kind "scalar"
     return $ ScalarTypeDefinition desc name []
@@ -40,7 +39,6 @@ instance FromJSON ObjectTypeDefinition where
   parseJSON = withObject "ObjectTypeDefinition" $ \o -> do
     kind       <- o .: "kind"
     name       <- o .:  "name"
-    --traceM (T.pack $ "parsing ObjectTypeDefinition: " ++ show kind ++ " " ++ show name)
     desc       <- o .:? "description"
     fields     <- o .: "fields"
     interfaces <- o .: "interfaces"
@@ -90,7 +88,6 @@ instance FromJSON InterfaceTypeDefinition where
   parseJSON = withObject "InterfaceTypeDefinition" $ \o -> do
     kind  <- o .: "kind"
     name  <- o .:  "name"
-    --traceM (T.pack $ "parsing InterfaceTypeDefinition: " ++ show kind ++ " " ++ show name)
     desc  <- o .:? "description"
     fields <- o .: "fields"
     when (kind /= "INTERFACE") $ kindErr kind "interface"
@@ -101,7 +98,6 @@ instance FromJSON UnionTypeDefinition where
     kind  <- o .: "kind"
     name  <- o .:  "name"
     desc  <- o .:? "description"
-    --traceM (T.pack $ "parsing UnionTypeDefinition: " ++ show kind ++ " " ++ show name)
     possibleTypes <- o .: "possibleTypes"
     when (kind /= "UNION") $ kindErr kind "union"
     return $ UnionTypeDefinition desc name [] possibleTypes
@@ -110,7 +106,6 @@ instance FromJSON EnumTypeDefinition where
   parseJSON = withObject "EnumTypeDefinition" $ \o -> do
     kind  <- o .: "kind"
     name  <- o .:  "name"
-    --traceM (T.pack $ "parsing EnumTypeDefinition: " ++ show kind ++ " " ++ show name)
     desc  <- o .:? "description"
     vals  <- o .: "enumValues"
     when (kind /= "ENUM") $ kindErr kind "enum"
@@ -126,7 +121,6 @@ instance FromJSON InputObjectTypeDefinition where
   parseJSON = withObject "InputObjectTypeDefinition" $ \o -> do
     kind  <- o .: "kind"
     name  <- o .:  "name"
-    --traceM (T.pack $ "parsing InputObjectTypeDefinition: " ++ show kind ++ " " ++ show name)
     desc  <- o .:? "description"
     mInputFields <- o .:? "inputFields"
     let inputFields = fromMaybe [] mInputFields
@@ -137,8 +131,6 @@ instance FromJSON InputObjectTypeDefinition where
 instance FromJSON TypeDefinition where
   parseJSON = withObject "TypeDefinition" $ \o -> do
     kind :: Text <- o .: "kind"
-    name <- o .: "name"
-    traceM ("parsing TypeDefinition: " <> kind <> " " <> name)
     case kind of
       "SCALAR"       -> TypeDefinitionScalar      <$> parseJSON (J.Object o)
       "OBJECT"       -> TypeDefinitionObject      <$> parseJSON (J.Object o)
@@ -154,7 +146,6 @@ instance FromJSON SchemaDocument where
     schema <- _data .: "__schema"
     -- the list of types
     types <- schema .: "types"
-    traceM (T.pack $ "parsing types: " ++ show (map getNamedTyp types))
     -- query root
     queryType <- schema .: "queryType"
     queryRoot <- queryType .: "name"
