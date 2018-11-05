@@ -52,7 +52,7 @@ schemaDocument =
   where
     -- FIXME: hack! TODO: read the actual schema type to get query, mutation roots
     qr = AST.NamedType "Query"
-    mr = AST.NamedType "Mutation"
+    mr = Just $ AST.NamedType "Mutation"
     sr = Just $ AST.NamedType "Subscription"
 
 parseSchemaDoc :: Text -> Either Text AST.SchemaDocument

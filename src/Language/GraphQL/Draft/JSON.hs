@@ -150,16 +150,20 @@ instance FromJSON SchemaDocument where
     queryType <- schema .: "queryType"
     queryRoot <- queryType .: "name"
     -- mutation root
-    mutationType <- schema .: "mutationType"
-    mutationRoot <- mutationType .: "name"
+    mMutationType <- schema .:? "mutationType"
+    mutationRoot <- case mMutationType of
+      Nothing      -> return Nothing
+      Just mutType -> do
+        mutRoot <- mutType .: "name"
+        return $ Just mutRoot
     -- subscription root
-    --mSubsType <- schema .:? "subscriptionType"
-    --subsRoot <- maybe Nothing (\t -> Just $ t .: "name") mSubsType
-    --subsRoot <- fmap (\o -> o .: "name") mSubsType
-    -- subsRoot <- case mSubsType of
-    --       Nothing       -> return $ Nothing
-    --       Just subsType -> return $ Just $ subsType .: "name"
-    return $ SchemaDocument types queryRoot mutationRoot Nothing
+    mSubsType <- schema .:? "subscriptionType"
+    subsRoot <- case mSubsType of
+      Nothing      -> return Nothing
+      Just subsType -> do
+        subRoot <- subsType .: "name"
+        return $ Just subRoot
+    return $ SchemaDocument types queryRoot mutationRoot subsRoot
 
 
 getNamedTyp :: TypeDefinition -> Name

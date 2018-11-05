@@ -168,7 +168,7 @@ data SchemaDocument
   = SchemaDocument
   { _sdTypes            :: ![TypeDefinition]
   , _sdQueryRoot        :: !NamedType
-  , _sdMutationRoot     :: !NamedType
+  , _sdMutationRoot     :: !(Maybe NamedType)
   , _sdSubscriptionRoot :: !(Maybe NamedType)
   } deriving (Ord, Show, Eq, Lift, Generic)
 
