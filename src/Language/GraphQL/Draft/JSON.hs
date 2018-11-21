@@ -40,10 +40,12 @@ instance FromJSON ObjectTypeDefinition where
     kind       <- o .: "kind"
     name       <- o .:  "name"
     desc       <- o .:? "description"
-    fields     <- o .: "fields"
-    interfaces <- o .: "interfaces"
+    fields     <- o .:? "fields"
+    interfaces <- o .:? "interfaces"
     when (kind /= "OBJECT") $ kindErr kind "object"
-    return $ ObjectTypeDefinition desc name interfaces [] fields
+    let implIfaces = map (NamedType . _itdName) $ fromMaybe [] interfaces
+        flds = fromMaybe [] fields
+    return $ ObjectTypeDefinition desc name implIfaces [] flds
 
 instance FromJSON FieldDefinition where
   parseJSON = withObject "FieldDefinition" $ \o -> do
@@ -89,9 +91,10 @@ instance FromJSON InterfaceTypeDefinition where
     kind  <- o .: "kind"
     name  <- o .:  "name"
     desc  <- o .:? "description"
-    fields <- o .: "fields"
+    fields <- o .:? "fields"
+    let flds = fromMaybe [] fields
     when (kind /= "INTERFACE") $ kindErr kind "interface"
-    return $ InterfaceTypeDefinition desc name [] fields
+    return $ InterfaceTypeDefinition desc name [] flds
 
 instance FromJSON UnionTypeDefinition where
   parseJSON = withObject "UnionTypeDefinition" $ \o -> do
@@ -99,8 +102,9 @@ instance FromJSON UnionTypeDefinition where
     name  <- o .:  "name"
     desc  <- o .:? "description"
     possibleTypes <- o .: "possibleTypes"
+    let memberTys = map (NamedType . _otdName) possibleTypes
     when (kind /= "UNION") $ kindErr kind "union"
-    return $ UnionTypeDefinition desc name [] possibleTypes
+    return $ UnionTypeDefinition desc name [] memberTys
 
 instance FromJSON EnumTypeDefinition where
   parseJSON = withObject "EnumTypeDefinition" $ \o -> do
