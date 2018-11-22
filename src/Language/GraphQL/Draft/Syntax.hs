@@ -51,6 +51,7 @@ module Language.GraphQL.Draft.Syntax
   , toNT
   , showLT
   , isNullable
+  , isNotNull
   , showNT
   , NamedType(..)
   , ListType(..)
@@ -73,6 +74,7 @@ module Language.GraphQL.Draft.Syntax
   , TypeSystemDirectiveLocation(..)
   ) where
 
+import           Data.Bool                  (not)
 import           Instances.TH.Lift          ()
 import           Language.Haskell.TH.Syntax (Lift)
 import           Protolude
@@ -310,7 +312,8 @@ data Value
 instance Hashable Value
 
 newtype StringValue
-  = StringValue { unStringValue :: Text } deriving (Ord, Show, Eq, Lift, Hashable)
+  = StringValue { unStringValue :: Text }
+  deriving (Ord, Show, Eq, Lift, Hashable)
 
 newtype ListValueG a
   = ListValueG {unListValue :: [a]}
@@ -321,7 +324,8 @@ type ListValue = ListValueG Value
 type ListValueC = ListValueG ValueConst
 
 newtype ObjectValueG a
-  = ObjectValueG {unObjectValue :: [ObjectFieldG a]} deriving (Ord, Show, Eq, Lift, Hashable)
+  = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
+  deriving (Ord, Show, Eq, Lift, Hashable)
 
 type ObjectValue = ObjectValueG Value
 
@@ -367,7 +371,7 @@ class ToGType a where
 toNT :: (ToGType a) => a -> GType
 toNT ty = case toGT ty of
   TypeNamed _ nt -> TypeNamed (Nullability False) nt
-  TypeList _ lt -> TypeList (Nullability False) lt
+  TypeList _ lt  -> TypeList (Nullability False) lt
 
 instance ToGType GType where
   toGT t = t
@@ -398,6 +402,9 @@ isNullable :: GType -> Bool
 isNullable = \case
   (TypeNamed nullability _) -> unNullability nullability
   (TypeList nullability _)  -> unNullability nullability
+
+isNotNull :: GType -> Bool
+isNotNull = not . isNullable
 
 newtype NamedType
   = NamedType { unNamedType :: Name }
