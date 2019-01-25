@@ -9,6 +9,7 @@ module Language.GraphQL.Draft.Parser
   , value
   , parseExecutableDoc
   , parseSchemaDoc
+  , parseValueConst
   ) where
 
 import           Protolude                     hiding (option)
@@ -159,6 +160,8 @@ typeCondition :: Parser AST.TypeCondition
 typeCondition = namedType
 
 -- * Values
+parseValueConst :: Text -> Either Text AST.ValueConst
+parseValueConst = parse valueConst
 
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
