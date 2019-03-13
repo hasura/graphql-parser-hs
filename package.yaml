@@ -40,6 +40,8 @@ dependencies:
 - th-lift-instances
 - filepath
 
+- prettyprinter
+
 default-extensions:
 - NoImplicitPrelude
 
