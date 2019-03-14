@@ -3,7 +3,7 @@
 
 -- | This module defines a printer for the @GraphQL@ language.
 
-module Language.GraphQL.Draft.Print where
+module Language.GraphQL.Draft.Printer where
 
 import           Data.Text                             (Text)
 import           Data.Text.Prettyprint.Doc
@@ -14,6 +14,7 @@ import qualified Data.Text                             as T
 
 import           Language.GraphQL.Draft.Parser         (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
+
 
 
 renderPretty :: Doc Text -> Text
@@ -66,10 +67,13 @@ selection = \case
   SelectionInlineFragment ilf -> inlineFragment ilf
 
 field :: Field -> Doc Text
-field (Field alias name args directives selSets) =
+field (Field alias name args dirs selSets) =
+  --trace ("directives here..." :: Text) $
+  --traceShow dirs $
   optAlias alias
   <+> pretty name
   <> optempty arguments args
+  <> optempty directives dirs
   <+> selectionSet selSets
 
 optAlias :: Maybe Alias -> Doc Text
@@ -91,7 +95,7 @@ value = \case
   VFloat f    -> pretty $ T.pack $ show f
   VString s   -> stringValue s
   VBoolean b  -> booleanValue b
-  VNull       -> mempty
+  VNull       -> pretty ("null" :: Text)
   VEnum e     -> pretty $ unEnumValue e
   VList l     -> listValue l
   VObject o   -> objectValue o
@@ -102,7 +106,7 @@ valueC = \case
   VCFloat f    -> pretty $ T.pack $ show f
   VCString s   -> stringValue s
   VCBoolean b  -> booleanValue b
-  VCNull       -> mempty
+  VCNull       -> pretty ("null" :: Text)
   VCEnum e     -> pretty $ unEnumValue e
   VCList l     -> listValueC l
   VCObject o   -> objectValueC o

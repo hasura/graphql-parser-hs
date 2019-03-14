@@ -58,3 +58,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - graphql-parser
+    - hedgehog
+    - pretty-simple
