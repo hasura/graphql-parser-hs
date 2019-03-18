@@ -1,7 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
-
+{-# LANGUAGE OverloadedStrings #-}
 import           Hedgehog
 import           Protolude
+import           System.Environment                          (getArgs)
 
 import qualified Data.Text                                   as T
 import qualified Data.Text.IO                                as T
@@ -20,22 +20,28 @@ import qualified Language.GraphQL.Draft.Printer              as PP
 
 main :: IO ()
 main = do
-  res <- tests
-  putStrLn $ "Status of tests :: " <> show res
+  args <- getArgs
+  case args of
+    [] -> runDevTest
+    (x:_) -> case x of
+      "prod" -> runProdTest
+      _      -> runDevTest
 
-tests :: IO Bool
-tests =
-  checkParallel $$(discover)
+runDevTest :: IO ()
+runDevTest = void $ tests 500
 
-prop_reverse :: Property
-prop_reverse =
-  property $ do
-    xs <- forAll $ Gen.list (Range.linear 1 111) Gen.alpha
-    reverse (reverse xs) === xs
+runProdTest :: IO ()
+runProdTest = void $ tests 1000
 
-prop_parser_printer :: Property
-prop_parser_printer =
-  property $ do
+tests :: TestLimit -> IO Bool
+tests nTests =
+  checkParallel $ Group "Test.parser.printer" [
+    ("prop_parser_printer", prop_parser_printer nTests)
+    ]
+
+propParserPrinter :: TestLimit -> Property
+propParserPrinter space =
+  withTests space $ property $ do
     xs <- forAll genExecutableDocument
     let rendered = PP.renderPretty $ PP.executableDocument xs
     --either fail (xs ===) $ parseExecutableDoc rendered
@@ -49,17 +55,17 @@ prop_parser_printer =
       footnote (T.unpack e)
       failure
 
-prop_value :: Property
-prop_value =
- withTests 1 $ property $ do
-    xs <- forAll genValue
-    let rendered = PP.renderPretty $ PP.value xs
-    either fail (xs ===) $ (parse value) rendered
-  where
-    fail e = do
-      footnote (T.unpack e)
-      failure
-
+-- prop_value :: Property
+-- prop_value =
+ -- withTests 1 $ property $ do
+    -- xs <- forAll genValue
+    -- let rendered = PP.renderPretty $ PP.value xs
+    -- either fail (xs ===) $ (parse value) rendered
+  -- where
+    -- fail e = do
+      -- footnote (T.unpack e)
+      -- failure
+--
 
 -- helper functions to test in ghci
 testFile :: FilePath -> IO ()

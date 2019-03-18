@@ -16,7 +16,6 @@ import           Language.GraphQL.Draft.Parser         (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
 
 
-
 renderPretty :: Doc Text -> Text
 renderPretty = renderStrict . layoutPretty defaultLayoutOptions
 
@@ -58,7 +57,7 @@ node (TypedOperationDefinition _ name vars dirs sels) =
 
 selectionSet :: SelectionSet -> Doc Text
 selectionSet []     = ""
-selectionSet selSet = nest 2 $ vbraces $ vsep $ map selection selSet
+selectionSet selSet = nest 2 $ vbraces $ vsep (map selection selSet)
 
 selection :: Selection -> Doc Text
 selection = \case
@@ -68,8 +67,6 @@ selection = \case
 
 field :: Field -> Doc Text
 field (Field alias name args dirs selSets) =
-  --trace ("directives here..." :: Text) $
-  --traceShow dirs $
   optAlias alias
   <+> pretty name
   <> optempty arguments args
@@ -160,9 +157,10 @@ fragmentSpread (FragmentSpread name ds) =
 
 inlineFragment :: InlineFragment -> Doc Text
 inlineFragment (InlineFragment tc ds sels) =
-  "... on"
+  "... "
+  <> bool "" "on" (isJust tc)
   <> pretty (fold $ fmap (unName . unNamedType) tc)
-  <> directives ds
+  <> optempty directives ds
   <> selectionSet sels
 
 fragmentDefinition :: FragmentDefinition -> Doc Text
