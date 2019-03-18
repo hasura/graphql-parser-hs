@@ -59,4 +59,3 @@ tests:
     dependencies:
     - graphql-parser
     - hedgehog
-    - pretty-simple

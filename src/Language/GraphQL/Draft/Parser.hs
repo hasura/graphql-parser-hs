@@ -10,9 +10,6 @@ module Language.GraphQL.Draft.Parser
   , parseExecutableDoc
   , parseSchemaDoc
   , parseValueConst
-  , parse
-  , type_
-  , directives
   ) where
 
 import           Protolude                     hiding (option)

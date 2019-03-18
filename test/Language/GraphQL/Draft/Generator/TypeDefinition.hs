@@ -69,10 +69,10 @@ genRootOperationTypeDefinition = RootOperationTypeDefinition
 
 genOperationType :: Gen OperationType
 genOperationType =
-  Gen.choice [ pure OperationTypeQuery
-             , pure OperationTypeMutation
-             , pure OperationTypeSubscription
-             ]
+  Gen.element [ OperationTypeQuery
+              , OperationTypeMutation
+              , OperationTypeSubscription
+              ]
 
 genTypeDefinition :: Gen TypeDefinition
 genTypeDefinition =
@@ -163,40 +163,45 @@ genFieldDefinitions :: Gen [FieldDefinition]
 genFieldDefinitions = Gen.list (Range.linear 1 11) genFieldDefinition
 
 
--- genDirectiveDefinition :: Gen.Gen DirectiveDefinition
--- genDirectiveDefinition =
---   DirectiveDefinition <$> Gen.maybe
+genDirectiveDefinition :: Gen DirectiveDefinition
+genDirectiveDefinition = DirectiveDefinition
+                         <$> Gen.maybe genDescription
+                         <*> genName
+                         <*> genArgumentsDefinition
+                         <*> Gen.list (Range.linear 1 10) genDirectiveLocation
 
 
--- genDirectiveLocation :: Gen DirectiveLocation
--- genDirectiveLocation =
---   Gen.choice [ DLExecutable <$> genExecutableDirectiveLocation
---              , DLTypeSystem <$> genTypeSystemDirectiveLocation
---              ]
+genArgumentsDefinition :: Gen ArgumentsDefinition
+genArgumentsDefinition = Gen.list (Range.linear 1 10) genInputValueDefinition
 
--- genExecutableDirectiveLocation :: Gen ExecutableDirectiveLocation
--- genExecutableDirectiveLocation =
---   Gen.choice [ EDLQUERY
---              , EDLMUTATION
---              , EDLSUBSCRIPTION
---              , EDLFIELD
---              , EDLFRAGMENT_DEFINITION
---              , EDLFRAGMENT_SPREAD
---              , EDLINLINE_FRAGMENT
---              ]
+genDirectiveLocation :: Gen DirectiveLocation
+genDirectiveLocation =
+  Gen.choice [ DLExecutable <$> genExecutableDirectiveLocation
+             , DLTypeSystem <$> genTypeSystemDirectiveLocation
+             ]
 
--- genTypeSystemDirectiveLocation :: Gen ExecutableDirectiveLocation
--- genTypeSystemDirectiveLocation =
---   Gen.choice [ TSDLSCHEMA
---              , TSDLSCALAR
---              , TSDLOBJECT
---              , TSDLFIELD_DEFINITION
---              , TSDLARGUMENT_DEFINITION
---              , TSDLINTERFACE
---              , TSDLUNION
---              , TSDLENUM
---              , TSDLENUM_VALUE
---              , TSDLINPUT_OBJECT
---              , TSDLINPUT_FIELD_DEFINITION
---              ]
+genExecutableDirectiveLocation :: Gen ExecutableDirectiveLocation
+genExecutableDirectiveLocation =
+  Gen.element [ EDLQUERY
+              , EDLMUTATION
+              , EDLSUBSCRIPTION
+              , EDLFIELD
+              , EDLFRAGMENT_DEFINITION
+              , EDLFRAGMENT_SPREAD
+              , EDLINLINE_FRAGMENT
+              ]
 
+genTypeSystemDirectiveLocation :: Gen TypeSystemDirectiveLocation
+genTypeSystemDirectiveLocation =
+  Gen.element [ TSDLSCHEMA
+              , TSDLSCALAR
+              , TSDLOBJECT
+              , TSDLFIELD_DEFINITION
+              , TSDLARGUMENT_DEFINITION
+              , TSDLINTERFACE
+              , TSDLUNION
+              , TSDLENUM
+              , TSDLENUM_VALUE
+              , TSDLINPUT_OBJECT
+              , TSDLINPUT_FIELD_DEFINITION
+             ]
