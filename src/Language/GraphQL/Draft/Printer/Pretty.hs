@@ -3,7 +3,7 @@
 
 -- | This module defines a printer for the @GraphQL@ language.
 
-module Language.GraphQL.Draft.Printer where
+module Language.GraphQL.Draft.Printer.Pretty where
 
 import           Data.Text                             (Text)
 import           Data.Text.Prettyprint.Doc

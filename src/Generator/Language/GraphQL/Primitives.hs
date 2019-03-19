@@ -1,4 +1,4 @@
-module Language.GraphQL.Draft.Generator.Primitives where
+module Generator.Language.GraphQL.Primitives where
 
 import           Hedgehog
 import           Protolude
@@ -47,7 +47,7 @@ genValue =
              ]
 
 genStringValue :: Gen StringValue
-genStringValue = StringValue <$> genText
+genStringValue = StringValue . unName <$> genName
 
 genVariable :: Gen Variable
 genVariable = Variable <$> genName

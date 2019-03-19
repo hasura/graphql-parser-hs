@@ -1,15 +1,16 @@
-module Language.GraphQL.Draft.Generator.Document where
+module Generator.Language.GraphQL.Document where
 
 import           Hedgehog
 import           Protolude
 
-import qualified Hedgehog.Gen                                    as Gen
-import qualified Hedgehog.Range                                  as Range
+import qualified Hedgehog.Gen                              as Gen
+import qualified Hedgehog.Range                            as Range
 
-import           Language.GraphQL.Draft.Generator.Primitives
-import           Language.GraphQL.Draft.Generator.TypeDefinition
+import           Generator.Language.GraphQL.TypeDefinition
 import           Language.GraphQL.Draft.Syntax
 
+generate :: MonadIO m => Gen a -> m a
+generate = Gen.sample
 
 genDocument :: Gen Document
 genDocument =

@@ -1,13 +1,13 @@
-module Language.GraphQL.Draft.Generator.TypeDefinition where
+module Generator.Language.GraphQL.TypeDefinition where
 
 import           Hedgehog
 import           Protolude
 
-import qualified Hedgehog.Gen                                as Gen
-import qualified Hedgehog.Range                              as Range
+import qualified Hedgehog.Gen                          as Gen
+import qualified Hedgehog.Range                        as Range
 
-import           Language.GraphQL.Draft.Generator.Primitives
-import           Language.GraphQL.Draft.Generator.Selection
+import           Generator.Language.GraphQL.Primitives
+import           Generator.Language.GraphQL.Selection
 import           Language.GraphQL.Draft.Syntax
 
 
