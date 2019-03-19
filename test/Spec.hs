@@ -21,22 +21,22 @@ import qualified Language.GraphQL.Draft.Printer.ByteString as PP.BB
 import qualified Language.GraphQL.Draft.Printer.Pretty     as PP
 
 
-data TestMode = TMDev | TMQuick | TMProd
+data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
 
 main :: IO ()
 main = do
   args <- getArgs
   case parseArgs args of
-    TMQuick -> runTest 20
-    TMDev   -> runTest 100
-    TMProd  -> runTest 1000
+    TMQuick   -> runTest 20
+    TMDev     -> runTest 100
+    TMRelease -> runTest 1000
   where
     parseArgs = foldr parseArg TMDev
     parseArg str _ = case str of
-      "quick" -> TMQuick
-      "prod"  -> TMProd
-      _       -> TMDev
+      "quick"   -> TMQuick
+      "release" -> TMRelease
+      _         -> TMDev
 
 runTest :: TestLimit -> IO ()
 runTest = void . tests
