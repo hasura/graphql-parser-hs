@@ -43,6 +43,7 @@ dependencies:
 # for pretty printing
 - prettyprinter
 - bytestring
+- text-builder
 
 # for the generator
 - hedgehog
