@@ -2,24 +2,24 @@
 
 import           Hedgehog
 import           Protolude
-import           System.Environment                         (getArgs)
+import           System.Environment                        (getArgs)
 
-import qualified Data.ByteString.Lazy                       as BL
-import qualified Data.Text                                  as T
-import qualified Data.Text.Encoding.Error                   as TE
-import qualified Data.Text.IO                               as T
-import qualified Data.Text.Lazy                             as TL
-import qualified Data.Text.Lazy.Encoding                    as TL
+import qualified Data.ByteString.Lazy                      as BL
+import qualified Data.Text                                 as T
+import qualified Data.Text.Encoding.Error                  as TE
+import qualified Data.Text.Lazy                            as TL
+import qualified Data.Text.Lazy.Encoding                   as TL
+
 
 import           Generator.Language.GraphQL.Document
 import           Generator.Language.GraphQL.Primitives
 import           Generator.Language.GraphQL.Selection
-import           Language.GraphQL.Draft.Parser              (parseExecutableDoc)
+import           Language.GraphQL.Draft.Parser             (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
 
-import qualified Language.GraphQL.Draft.Printer.ByteString  as PP.BB
-import qualified Language.GraphQL.Draft.Printer.Pretty      as PP
-import qualified Language.GraphQL.Draft.Printer.TextBuilder as PP.TB
+import qualified Language.GraphQL.Draft.Printer.ByteString as PP.BB
+import qualified Language.GraphQL.Draft.Printer.Pretty     as PP
+import qualified Language.GraphQL.Draft.Printer.Text       as PP.TB
 
 
 data TestMode = TMDev | TMQuick | TMRelease
@@ -46,8 +46,8 @@ tests :: TestLimit -> IO Bool
 tests nTests =
   checkParallel $ Group "Test.printer.parser"
     [ ("property [ parse (prettyPrint ast) == ast ]", propParserPrinter nTests)
-    , ("property [ parse (builderPrint ast) == ast ]", propParserBBPrinter nTests)
     , ("property [ parse (textbuilderPrint ast) == ast ]", propParserTBPrinter nTests)
+    , ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBBPrinter nTests)
     ]
 
 propParserPrinter :: TestLimit -> Property
@@ -59,6 +59,15 @@ propParserPrinter space =
   where
     fail e = footnote (T.unpack e) >> failure
 
+propParserTBPrinter :: TestLimit -> Property
+propParserTBPrinter space =
+  withTests space $ property $ do
+    xs <- forAll genExecutableDocument
+    let rendered = PP.TB.renderExecutableDoc xs
+    either (\e -> print e >> fail e) (xs ===) $ parseExecutableDoc rendered
+  where
+    fail e = footnote (T.unpack e) >> failure
+
 propParserBBPrinter :: TestLimit -> Property
 propParserBBPrinter space =
   withTests space $ property $ do
@@ -66,15 +75,6 @@ propParserBBPrinter space =
     let rendered = PP.BB.renderExecutableDoc xs
     either (\e -> print e >> fail e) (xs ===) $ parseExecutableDoc $
       bsToTxt rendered
-  where
-    fail e = footnote (T.unpack e) >> failure
-
-propParserTBPrinter :: TestLimit -> Property
-propParserTBPrinter space =
-  withTests space $ property $ do
-    xs <- forAll genExecutableDocument
-    let rendered = PP.TB.renderExecutableDoc xs
-    either (\e -> print e >> fail e) (xs ===) $ parseExecutableDoc rendered
   where
     fail e = footnote (T.unpack e) >> failure
 

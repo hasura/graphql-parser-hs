@@ -6,8 +6,8 @@ import           Language.GraphQL.Draft.Parser             (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
 
 import qualified Language.GraphQL.Draft.Printer.ByteString as PP.BB
-import qualified Language.GraphQL.Draft.Printer.ByteString as PP.TB
 import qualified Language.GraphQL.Draft.Printer.Pretty     as PP
+import qualified Language.GraphQL.Draft.Printer.Text       as PP.TB
 
 
 genDocs :: Int -> IO [(Int, ExecutableDocument)]
@@ -36,10 +36,10 @@ main = do
 
     mkPPGrp gqs =
       bgroup "rendering executableDocument (prettyprinter)" $
-      map (\(n, gq) -> bench (show n) $ whnf renderExeDocC gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf renderExeDocC gq) gqs
 
     mkBBGrp gqs = bgroup "rendering executableDocument (bytestring builder)" $
-      map (\(n, gq) -> bench (show n) $ whnf PP.BB.renderExecutableDoc gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf PP.BB.renderExecutableDoc gq) gqs
 
     mkTBGrp gqs = bgroup "rendering executableDocument (text builder)" $
-      map (\(n, gq) -> bench (show n) $ whnf PP.TB.renderExecutableDoc gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf PP.TB.renderExecutableDoc gq) gqs

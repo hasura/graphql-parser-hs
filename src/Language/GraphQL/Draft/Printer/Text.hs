@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Language.GraphQL.Draft.Printer.TextBuilder where
+module Language.GraphQL.Draft.Printer.Text where
 
 import           Data.Text                     (Text)
 import           Protolude
