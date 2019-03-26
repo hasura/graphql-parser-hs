@@ -4,5 +4,5 @@ build:
 test: build
 	stack test --fast
 
-benchmark: build
+bench: build
 	stack bench --ba --output=ws/graphql_parser_benchmark.html

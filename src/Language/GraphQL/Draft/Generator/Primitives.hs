@@ -1,4 +1,4 @@
-module Generator.Language.GraphQL.Primitives where
+module Language.GraphQL.Draft.Generator.Primitives where
 
 import           Hedgehog
 import           Protolude

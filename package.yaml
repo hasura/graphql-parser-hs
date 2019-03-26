@@ -57,7 +57,7 @@ library:
 benchmarks:
   graphql-parser-bench:
     main:                Benchmark.hs
-    source-dirs:         benchmark
+    source-dirs:         bench
     dependencies:
     - graphql-parser
     - criterion
