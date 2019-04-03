@@ -436,7 +436,8 @@ instance Hashable TypeDefinition
 
 newtype Description
   = Description { unDescription :: Text }
-  deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable)
+  deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable,
+            J.ToJSON, J.FromJSON)
 
 data ObjectTypeDefinition
   = ObjectTypeDefinition
