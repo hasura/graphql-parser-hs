@@ -12,7 +12,6 @@ import           Protolude
 
 import qualified Data.Text                             as T
 
-import           Language.GraphQL.Draft.Parser         (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
 
 

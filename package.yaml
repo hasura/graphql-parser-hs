@@ -54,6 +54,13 @@ default-extensions:
 library:
   source-dirs: src
 
+ghc-options: -O2
+             -Wall
+             -Wcompat
+             -Wincomplete-record-updates
+             -Wincomplete-uni-patterns
+             #-Wredundant-constraint
+
 benchmarks:
   graphql-parser-bench:
     main:                Benchmark.hs
