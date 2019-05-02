@@ -18,7 +18,7 @@ make test
 
 ## To run benchmarks
 ```bash
-make benchmark
+make bench
 ```
 
 Work in progress
