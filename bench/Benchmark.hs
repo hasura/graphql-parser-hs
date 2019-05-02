@@ -22,7 +22,7 @@ main = do
       grp2 = mkBBGrp docs
       grp3 = mkTBGrp docs
       grp4 = mkTLBGrp docs
-      renderedDocs = map (\(n, q) -> (n, renderPretty q)) docs
+      renderedDocs = map (\(n, q) -> (n, PP.renderExecutableDoc q)) docs
       grp5 = mkPGrp renderedDocs
   defaultMain [grp1, grp2, grp3, grp4, grp5]
   where
@@ -32,7 +32,7 @@ main = do
 
     mkPPGrp gqs =
       bgroup "rendering executableDocument (prettyprinter)" $
-      map (\(n, gq) -> bench (show n) $ nf renderPretty gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf PP.renderExecutableDoc gq) gqs
 
     mkBBGrp gqs = bgroup "rendering executableDocument (bytestring builder)" $
       map (\(n, gq) -> bench (show n) $ nf PP.BB.renderExecutableDoc gq) gqs
@@ -42,5 +42,3 @@ main = do
 
     mkTLBGrp gqs = bgroup "rendering executableDocument (lazy text builder)" $
       map (\(n, gq) -> bench (show n) $ nf PP.TLB.renderExecutableDoc gq) gqs
-
-    renderPretty = PP.renderCompact . PP.executableDocument

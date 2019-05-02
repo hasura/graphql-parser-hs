@@ -23,6 +23,12 @@ class (Monoid a, IsString a) => Printer a where
   nameP    :: Name -> a
   nameP    = textP . unName
 
+  nodeP :: TypedOperationDefinition -> a
+  nodeP = node
+
+  selectionSetP :: SelectionSet -> a
+  selectionSetP = selectionSet
+
 
 -- | the pretty printer implementation
 
@@ -38,12 +44,12 @@ executableDefinition = \case
 
 operationDefinition :: (Printer a) => OperationDefinition -> a
 operationDefinition = \case
-  OperationDefinitionUnTyped selSet -> selectionSet selSet
+  OperationDefinitionUnTyped selSet -> selectionSetP selSet
   OperationDefinitionTyped op       -> typedOperationDefinition op
 
 typedOperationDefinition :: (Printer a) => TypedOperationDefinition -> a
 typedOperationDefinition op =
-  operationType (_todType op) <> charP ' ' <> node op
+  operationType (_todType op) <> charP ' ' <> nodeP op
 
 operationType :: (Printer a) => OperationType -> a
 operationType = \case
@@ -58,7 +64,7 @@ node (TypedOperationDefinition _ name vars dirs sels) =
   <> optempty variableDefinitions vars
   <> optempty directives dirs
   <> charP ' '
-  <> selectionSet sels
+  <> selectionSetP sels
 
 -- TODO: add horizontal nesting
 selectionSet :: (Printer a) => SelectionSet -> a
@@ -84,7 +90,7 @@ field (Field alias name args dirs selSets) =
   <> optempty arguments args
   <> optempty directives dirs
   <> charP ' '
-  <> selectionSet selSets
+  <> selectionSetP selSets
 
 optAlias :: (Printer a) => Maybe Alias -> a
 optAlias = maybe mempty (\(Alias a) -> nameP a <> textP ": ")
@@ -99,7 +105,7 @@ inlineFragment (InlineFragment tc ds sels) =
   <> bool mempty (textP "on") (isJust tc)
   <> nameP (fold $ fmap unNamedType tc)
   <> optempty directives ds
-  <> selectionSet sels
+  <> selectionSetP sels
 
 fragmentDefinition :: (Printer a) => FragmentDefinition -> a
 fragmentDefinition (FragmentDefinition name tc dirs sels) =
@@ -108,7 +114,7 @@ fragmentDefinition (FragmentDefinition name tc dirs sels) =
   <> " on "
   <> nameP (unNamedType tc)
   <> optempty directives dirs
-  <> selectionSet sels
+  <> selectionSetP sels
 
 directives :: (Printer a) => [Directive] -> a
 directives = mconcat . intersperse (charP ' ') . map directive
