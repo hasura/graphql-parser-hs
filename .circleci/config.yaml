@@ -1,0 +1,23 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: fpco/stack-build:lts-13.12
+    steps:
+      - checkout
+      - restore_cache:
+          name: Restore Cached Dependencies
+          keys:
+            - graphql-parser-hs-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
+      - run:
+          name: Resolve/Update Dependencies
+          command: stack setup
+      - run:
+          name: Run tests
+          command: stack test --test-arguments release
+      - save_cache:
+          name: Cache Dependencies
+          key: graphql-parser-hs-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
+          paths:
+            - "~/.stack"
+            - ".stack-work"

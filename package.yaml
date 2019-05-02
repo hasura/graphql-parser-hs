@@ -40,11 +40,37 @@ dependencies:
 - th-lift-instances
 - filepath
 
+# for pretty printing
+- prettyprinter
+- bytestring
+- text-builder
+
+# for the generator
+- hedgehog
+
 default-extensions:
 - NoImplicitPrelude
 
 library:
   source-dirs: src
+
+ghc-options: -O2
+             -Wall
+             -Wcompat
+             -Wincomplete-record-updates
+             -Wincomplete-uni-patterns
+             #-Wredundant-constraint
+
+benchmarks:
+  graphql-parser-bench:
+    main:                Benchmark.hs
+    source-dirs:         bench
+    dependencies:
+    - graphql-parser
+    - criterion
+    ghc-options:
+    - -Wall
+    - -O2
 
 tests:
   graphql-parser-test:
@@ -56,3 +82,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - graphql-parser
+    - hedgehog

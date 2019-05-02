@@ -18,6 +18,9 @@ module Language.GraphQL.Draft.Syntax
   , OperationDefinition(..)
   , OperationType(..)
   , TypedOperationDefinition(..)
+  , TypeSystemDefinition(..)
+  , SchemaDefinition(..)
+  , RootOperationTypeDefinition(..)
   , VariableDefinition(..)
   , Variable(..)
   , SelectionSet
