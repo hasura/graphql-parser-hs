@@ -13,10 +13,20 @@ import           Language.GraphQL.Draft.Syntax
 
 instance Printer Builder where
   stringP = stringUtf8
+  {-# INLINE stringP #-}
+
   textP = fromText
+  {-# INLINE textP #-}
+
   charP = charUtf8
+  {-# INLINE charP #-}
+
   intP = int32Dec
+  {-# INLINE intP #-}
+
   doubleP = doubleDec
+  {-# INLINE doubleP #-}
+
 
 render :: (a -> Builder) -> a -> BL.ByteString
 render f = toLazyByteString . f

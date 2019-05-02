@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | This module defines a printer for the @GraphQL@ language.
@@ -29,14 +28,29 @@ instance Pretty Name where
   pretty = pretty. unName
 
 instance Printer (Doc Text) where
-  stringP = pretty
-  textP   = pretty
-  charP   = pretty
-  intP    = pretty
-  doubleP = pretty
-  nameP   = pretty
-  nodeP = node
+  stringP       = pretty
+  {-# INLINE stringP #-}
+
+  textP         = pretty
+  {-# INLINE textP #-}
+
+  charP         = pretty
+  {-# INLINE charP #-}
+
+  intP          = pretty
+  {-# INLINE intP #-}
+
+  doubleP       = pretty
+  {-# INLINE doubleP #-}
+
+  nameP         = pretty
+  {-# INLINE nameP #-}
+
+  nodeP         = node
+  {-# INLINE nodeP #-}
+
   selectionSetP = selectionSet
+  {-# INLINE selectionSetP #-}
 
 
 node :: TypedOperationDefinition -> Doc Text

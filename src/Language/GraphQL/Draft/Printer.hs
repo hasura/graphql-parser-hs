@@ -70,12 +70,7 @@ node (TypedOperationDefinition _ name vars dirs sels) =
 selectionSet :: (Printer a) => SelectionSet -> a
 selectionSet [] = mempty
 selectionSet xs =
-  mconcat [ charP '{'
-          , charP ' '
-          , mconcat $ intersperse (charP ' ') $ map selection xs
-          , charP ' '
-          , charP '}'
-          ]
+  "{ " <> mconcat (intersperse (charP ' ') (map selection xs)) <> " }"
 
 selection :: (Printer a) => Selection -> a
 selection = \case

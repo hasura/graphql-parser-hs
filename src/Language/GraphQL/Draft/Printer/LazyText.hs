@@ -10,13 +10,22 @@ import           Language.GraphQL.Draft.Syntax
 
 instance Printer Builder where
   stringP = fromString
+  {-# INLINE stringP #-}
+
   textP   = fromText
+  {-# INLINE textP #-}
+
   charP   = singleton
+  {-# INLINE charP #-}
+
   intP    = fromString . show
+  {-# INLINE intP #-}
+
   doubleP = fromString . show
+  {-# INLINE doubleP #-}
 
 renderExecutableDoc :: ExecutableDocument -> Text
 renderExecutableDoc = render executableDocument
 
 render :: (a -> Builder) -> a -> Text
-render f v = toLazyText $ f v
+render f = toLazyText . f
