@@ -134,7 +134,7 @@ partitionExDefs =
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema !SchemaDefinition
   | TypeSystemDefinitionType !TypeDefinition
-  -- | TypeSystemDefinitionDir !DirectiveDefinition
+  -- TypeSystemDefinitionDir !DirectiveDefinition
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
