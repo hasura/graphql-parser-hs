@@ -9,6 +9,7 @@
 -- | Description: The GraphQL AST
 module Language.GraphQL.Draft.Syntax
   ( Name(..)
+  , isValidName
   , Document(..)
   , ExecutableDocument(..)
   , SchemaDocument(..)
@@ -77,12 +78,17 @@ module Language.GraphQL.Draft.Syntax
   , TypeSystemDirectiveLocation(..)
   ) where
 
+import           Control.Monad.Fail         (fail)
 import           Data.Bool                  (not)
 import           Instances.TH.Lift          ()
 import           Language.Haskell.TH.Syntax (Lift)
 import           Protolude
 
 import qualified Data.Aeson                 as J
+import qualified Data.Aeson.Types           as J
+import qualified Data.ByteString.Lazy       as BL
+import qualified Data.Text                  as T
+import qualified Text.Regex.TDFA            as TDFA
 
 -- * Documents
 
@@ -93,7 +99,27 @@ import qualified Data.Aeson                 as J
 newtype Name
   = Name { unName :: Text }
   deriving ( Eq, Ord, Show, Hashable, IsString, Lift, Semigroup
-           , Monoid, J.ToJSONKey, J.FromJSONKey, J.ToJSON, J.FromJSON)
+           , Monoid, J.ToJSONKey, J.ToJSON)
+
+-- Ref: http://facebook.github.io/graphql/June2018/#sec-Names
+isValidName :: Name -> Bool
+isValidName (Name text) =
+  TDFA.match compiledRegex $ T.unpack text
+  where
+    compiledRegex = TDFA.makeRegex ("^[_a-zA-Z][_a-zA-Z0-9]*$" :: BL.ByteString) :: TDFA.Regex
+
+parseName :: Text -> J.Parser Name
+parseName text =
+  bool (fail $ T.unpack errorMessage) (pure name) $ isValidName name
+  where
+    name = Name text
+    errorMessage = text <> " is not valid GraphQL name"
+
+instance J.FromJSON Name where
+  parseJSON = J.withText "Text" parseName
+
+instance J.FromJSONKey Name where
+  fromJSONKey = J.FromJSONKeyTextParser parseName
 
 newtype Document
   = Document { getDefinitions :: [Definition] }

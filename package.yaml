@@ -48,6 +48,9 @@ dependencies:
 # for the generator
 - hedgehog
 
+# for regex
+- regex-tdfa >= 1.2
+
 default-extensions:
 - NoImplicitPrelude
 
