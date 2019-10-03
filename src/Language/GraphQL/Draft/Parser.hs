@@ -5,11 +5,19 @@
 -- | Description: Parse text into GraphQL ASTs
 module Language.GraphQL.Draft.Parser
   ( executableDocument
-  , schemaDocument
-  , value
   , parseExecutableDoc
+
+  , schemaDocument
   , parseSchemaDoc
+
+  , value
   , parseValueConst
+
+  , graphQLType
+  , parseGraphQLType
+
+  , Parser
+  , runParser
   ) where
 
 import           Protolude                     hiding (option)
@@ -37,12 +45,12 @@ executableDocument =
   (AST.ExecutableDocument <$> many1 definitionExecutable)
   <?> "query document error!"
 
-parse :: AT.Parser a -> Text -> Either Text a
-parse parser t =
+runParser :: AT.Parser a -> Text -> Either Text a
+runParser parser t =
   either (Left . toS) return $ AT.parseOnly (parser <* AT.endOfInput) t
 
 parseExecutableDoc :: Text -> Either Text AST.ExecutableDocument
-parseExecutableDoc = parse executableDocument
+parseExecutableDoc = runParser executableDocument
 
 -- | Parser for a schema document.
 schemaDocument :: Parser AST.SchemaDocument
@@ -51,7 +59,7 @@ schemaDocument =
   <?> "type document error"
 
 parseSchemaDoc :: Text -> Either Text AST.SchemaDocument
-parseSchemaDoc = parse schemaDocument
+parseSchemaDoc = runParser schemaDocument
 
 definitionExecutable :: Parser AST.ExecutableDefinition
 definitionExecutable =
@@ -87,7 +95,7 @@ variableDefinition :: Parser AST.VariableDefinition
 variableDefinition =
   AST.VariableDefinition <$> variable
                          <*  tok ":"
-                         <*> type_
+                         <*> graphQLType
                          <*> optional defaultValue
 
 defaultValue :: Parser AST.DefaultValue
@@ -161,7 +169,7 @@ typeCondition = namedType
 
 -- * Values
 parseValueConst :: Text -> Either Text AST.ValueConst
-parseValueConst = parse valueConst
+parseValueConst = runParser valueConst
 
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
@@ -186,7 +194,7 @@ number =  do
     (Nothing, Left r)  -> pure (Right (floor r))
     (Nothing, Right i) -> pure (Right i)
 
--- This will try to pick the first type it can parse. If you are working with
+-- This will try to pick the first type it can runParser. If you are working with
 -- explicit types use the `typedValue` parser.
 value :: Parser AST.Value
 value = tok (
@@ -268,17 +276,20 @@ directive = AST.Directive
 
 -- * Type Reference
 
-type_ :: Parser AST.GType
-type_ =
+graphQLType :: Parser AST.GType
+graphQLType =
     (flip AST.TypeList <$> listType <*> nullability)
     <|> (flip AST.TypeNamed <$> namedType <*> nullability)
-    <?> "type_ error!"
+    <?> "graphQLType error!"
+
+parseGraphQLType :: Text -> Either Text AST.GType
+parseGraphQLType = runParser graphQLType
 
 namedType :: Parser AST.NamedType
 namedType = AST.NamedType <$> nameParser
 
 listType :: Parser AST.ListType
-listType = AST.ListType <$> brackets type_
+listType = AST.ListType <$> brackets graphQLType
 
 nullability :: Parser AST.Nullability
 nullability =
@@ -321,7 +332,7 @@ fieldDefinition = AST.FieldDefinition
   <*> nameParser
   <*> optempty argumentsDefinition
   <*  tok ":"
-  <*> type_
+  <*> graphQLType
   <*> optempty directives
 
 argumentsDefinition :: Parser AST.ArgumentsDefinition
@@ -391,7 +402,7 @@ inputValueDefinition = AST.InputValueDefinition
   <$> optDesc
   <*> nameParser
   <*  tok ":"
-  <*> type_
+  <*> graphQLType
   <*> optional defaultValue
 
 -- * Internal
