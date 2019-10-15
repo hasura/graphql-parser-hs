@@ -48,6 +48,7 @@ module Language.GraphQL.Draft.Syntax
   , DefaultValue
   , Directive(..)
   , GType(..)
+  , getBaseType
   , Nullability(..)
   , showGT
   , ToGType(..)
@@ -393,6 +394,11 @@ data GType
   = TypeNamed !Nullability !NamedType
   | TypeList !Nullability !ListType
   deriving (Eq, Ord, Show, Lift, Generic)
+
+getBaseType :: GType -> NamedType
+getBaseType = \case
+  TypeNamed _ namedType -> namedType
+  TypeList _ listType -> getBaseType $ unListType listType
 
 class ToGType a where
   toGT :: a -> GType
