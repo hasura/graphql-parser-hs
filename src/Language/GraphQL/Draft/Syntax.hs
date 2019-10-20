@@ -57,6 +57,7 @@ module Language.GraphQL.Draft.Syntax
   , showLT
   , isNullable
   , isNotNull
+  , isListType
   , showNT
   , NamedType(..)
   , ListType(..)
@@ -437,6 +438,12 @@ isNullable :: GType -> Bool
 isNullable = \case
   (TypeNamed nullability _) -> unNullability nullability
   (TypeList nullability _)  -> unNullability nullability
+
+isListType :: GType -> Bool
+isListType = \case
+  (TypeList _ _)  -> True
+  (TypeNamed _ _) -> False
+
 
 isNotNull :: GType -> Bool
 isNotNull = not . isNullable
