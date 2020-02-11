@@ -134,19 +134,19 @@ variableDefinitions vars = mconcat [ charP '('
 
 variableDefinition :: (Printer a) => VariableDefinition -> a
 variableDefinition (VariableDefinition var ty defVal) =
-  variable var <> ": " <> type_ ty <> maybe mempty defaultValue defVal
+  variable var <> ": " <> graphQLType ty <> maybe mempty defaultValue defVal
 
 defaultValue :: (Printer a) => DefaultValue -> a
 defaultValue v = " =" <> charP ' ' <> valueC v
 
 -- | Type Reference
 
-type_ :: (Printer a) => GType -> a
-type_ (TypeNamed n x) = nameP (unNamedType x) <> nonNull n
-type_ (TypeList  n x) = listType x <> nonNull n
+graphQLType :: (Printer a) => GType -> a
+graphQLType (TypeNamed n x) = nameP (unNamedType x) <> nonNull n
+graphQLType (TypeList  n x) = listType x <> nonNull n
 
 listType :: (Printer a) => ListType -> a
-listType (ListType ty) = charP '[' <> type_ ty <> charP ']'
+listType (ListType ty) = charP '[' <> graphQLType ty <> charP ']'
 
 nonNull :: (Printer a) => Nullability -> a
 nonNull n = bool (charP '!') mempty $ unNullability n
