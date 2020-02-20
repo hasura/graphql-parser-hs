@@ -12,6 +12,7 @@ module Language.GraphQL.Draft.Parser
 
   , value
   , parseValueConst
+  , nameParser
 
   , graphQLType
   , parseGraphQLType
@@ -24,6 +25,7 @@ import           Protolude                     hiding (option)
 
 import           Control.Applicative           (many, optional, (<|>))
 import           Control.Monad.Fail            (fail)
+import           Prelude                       hiding (fail)
 import           Data.Aeson.Parser             (jstring)
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
@@ -174,7 +176,7 @@ parseValueConst = runParser valueConst
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
   (fmap (either AST.VCFloat AST.VCInt) number <?> "number")
-  <|> AST.VCNull     <$  tok "null"
+  <|> AST.VCNull     <$  ident "null"
   <|> AST.VCBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VCString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
@@ -200,7 +202,7 @@ value :: Parser AST.Value
 value = tok (
   AST.VVariable <$> (variable <?> "variable")
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull     <$  tok "null"
+  <|> AST.VNull     <$  ident "null"
   <|> AST.VBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
@@ -211,8 +213,9 @@ value = tok (
   )
 
 booleanValue :: Parser Bool
-booleanValue = True  <$ tok "true"
-   <|> False <$ tok "false"
+booleanValue
+  =   True  <$ ident "true"
+  <|> False <$ ident "false"
 
 stringValue :: Parser AST.StringValue
 stringValue = do
@@ -410,6 +413,24 @@ inputValueDefinition = AST.InputValueDefinition
 tok :: AT.Parser a -> AT.Parser a
 tok p = p <* whiteSpace
 {-# INLINE tok #-}
+
+ident :: AT.Parser a -> AT.Parser a
+ident p = p <* ends <* whiteSpace
+{-# INLINE ident #-}
+
+ends :: AT.Parser ()
+ends = do
+  mc <- AT.peekChar
+  case mc of
+    Nothing -> pure ()
+    Just c  -> 
+      if AT.inClass identChars c
+         then mzero
+         else pure ()
+
+-- TODO: Speed this up.
+identChars :: String
+identChars = ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
 
 comment :: Parser ()
 comment =
