@@ -176,7 +176,7 @@ parseValueConst = runParser valueConst
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
   (fmap (either AST.VCFloat AST.VCInt) number <?> "number")
-  <|> AST.VCNull     <$  ident "null"
+  <|> AST.VCNull     <$  literal "null"
   <|> AST.VCBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VCString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
@@ -202,7 +202,7 @@ value :: Parser AST.Value
 value = tok (
   AST.VVariable <$> (variable <?> "variable")
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull     <$  ident "null"
+  <|> AST.VNull     <$  literal "null"
   <|> AST.VBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
@@ -214,8 +214,8 @@ value = tok (
 
 booleanValue :: Parser Bool
 booleanValue
-  =   True  <$ ident "true"
-  <|> False <$ ident "false"
+  =   True  <$ literal "true"
+  <|> False <$ literal "false"
 
 stringValue :: Parser AST.StringValue
 stringValue = do
@@ -414,23 +414,19 @@ tok :: AT.Parser a -> AT.Parser a
 tok p = p <* whiteSpace
 {-# INLINE tok #-}
 
-ident :: AT.Parser a -> AT.Parser a
-ident p = p <* ends <* whiteSpace
-{-# INLINE ident #-}
+literal :: AT.Parser a -> AT.Parser a
+literal p = p <* ends <* whiteSpace
+{-# INLINE literal #-}
 
 ends :: AT.Parser ()
 ends = do
   mc <- AT.peekChar
   case mc of
     Nothing -> pure ()
-    Just c  -> 
-      if AT.inClass identChars c
+    Just c  ->
+      if isNonFirstChar c
          then mzero
          else pure ()
-
--- TODO: Speed this up.
-identChars :: String
-identChars = ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ "_"
 
 comment :: Parser ()
 comment =
@@ -461,16 +457,16 @@ whiteSpace = do
 nameParser :: AT.Parser AST.Name
 nameParser =
   AST.Name <$> tok ((<>) <$> AT.takeWhile1 isFirstChar
-                     <*> AT.takeWhile isNonFirstChar)
-  where
-
-    isFirstChar x = isAsciiLower x || isAsciiUpper x || x == '_'
-    {-# INLINE isFirstChar #-}
-
-    isNonFirstChar x = isFirstChar x || isDigit x
-    {-# INLINE isNonFirstChar #-}
-
+                         <*> AT.takeWhile isNonFirstChar)
 {-# INLINE nameParser #-}
+
+isFirstChar :: Char -> Bool
+isFirstChar x = isAsciiLower x || isAsciiUpper x || x == '_'
+{-# INLINE isFirstChar #-}
+
+isNonFirstChar :: Char -> Bool
+isNonFirstChar x = isFirstChar x || isDigit x
+{-# INLINE isNonFirstChar #-}
 
 parens :: Parser a -> Parser a
 parens = between "(" ")"
