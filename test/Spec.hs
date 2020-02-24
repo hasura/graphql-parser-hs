@@ -21,10 +21,6 @@ import qualified Language.GraphQL.Draft.Printer.LazyText   as PP.TLB
 import qualified Language.GraphQL.Draft.Printer.Pretty     as PP
 import qualified Language.GraphQL.Draft.Printer.Text       as PP.TB
 
--- import Text.Groom
-
-import Prelude hiding (print)
-
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
 

@@ -414,6 +414,15 @@ tok :: AT.Parser a -> AT.Parser a
 tok p = p <* whiteSpace
 {-# INLINE tok #-}
 
+-- |
+-- Literal functions in the same fashion as `tok`,
+-- however there are issues using `tok` when the token may be followed by additional /a-z0-9/i characters.
+-- This manifests in bugs such as #20 where columns in on_conflict clauses prefixed with keywords
+-- e.g. "nullColumn" actually end up parsing as "[null, Column]".
+--
+-- Adding in a seperate lexing pass would probably be the right way to resolve this behaviour.
+-- This is a simple initial fix to address the bug with more involved changes being able to be
+-- considered seperately.
 literal :: AT.Parser a -> AT.Parser a
 literal p = p <* ends <* whiteSpace
 {-# INLINE literal #-}
