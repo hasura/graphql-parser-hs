@@ -1,6 +1,7 @@
 version: 2
 jobs:
   build:
+    resource_class: large
     docker:
       - image: fpco/stack-build:lts-13.12
     steps:
