@@ -14,11 +14,12 @@ import           Language.GraphQL.Draft.Generator.Document
 import           Language.GraphQL.Draft.Parser             (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
 
+import Keywords
+
 import qualified Language.GraphQL.Draft.Printer.ByteString as PP.BB
 import qualified Language.GraphQL.Draft.Printer.LazyText   as PP.TLB
 import qualified Language.GraphQL.Draft.Printer.Pretty     as PP
 import qualified Language.GraphQL.Draft.Printer.Text       as PP.TB
-
 
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
@@ -42,12 +43,13 @@ runTest = void . tests
 
 tests :: TestLimit -> IO Bool
 tests nTests =
-  checkParallel $ Group "Test.printer.parser"
+  checkParallel $ Group "Test.printer.parser" $
     [ ("property [ parse (prettyPrint ast) == ast ]", propParserPrettyPrinter nTests)
     , ("property [ parse (textBuilderPrint ast) == ast ]", propParserTextPrinter nTests)
     , ("property [ parse (lazyTextBuilderPrint ast) == ast ]", propParserLazyTextPrinter nTests)
     , ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBSPrinter nTests)
     ]
+    ++ Keywords.primitiveTests
 
 propParserPrettyPrinter :: TestLimit -> Property
 propParserPrettyPrinter = mkPropParserPrinter PP.renderExecutableDoc

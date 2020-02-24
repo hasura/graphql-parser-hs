@@ -78,6 +78,7 @@ benchmarks:
 tests:
   graphql-parser-test:
     main:                Spec.hs
+    other-modules:       Keywords
     source-dirs:         test
     ghc-options:
     - -threaded

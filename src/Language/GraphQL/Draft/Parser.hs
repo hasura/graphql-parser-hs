@@ -12,6 +12,7 @@ module Language.GraphQL.Draft.Parser
 
   , value
   , parseValueConst
+  , nameParser
 
   , graphQLType
   , parseGraphQLType
@@ -174,7 +175,7 @@ parseValueConst = runParser valueConst
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
   (fmap (either AST.VCFloat AST.VCInt) number <?> "number")
-  <|> AST.VCNull     <$  tok "null"
+  <|> AST.VCNull     <$  literal "null"
   <|> AST.VCBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VCString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
@@ -200,7 +201,7 @@ value :: Parser AST.Value
 value = tok (
   AST.VVariable <$> (variable <?> "variable")
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull     <$  tok "null"
+  <|> AST.VNull     <$  literal "null"
   <|> AST.VBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
@@ -211,8 +212,9 @@ value = tok (
   )
 
 booleanValue :: Parser Bool
-booleanValue = True  <$ tok "true"
-   <|> False <$ tok "false"
+booleanValue
+  =   True  <$ literal "true"
+  <|> False <$ literal "false"
 
 stringValue :: Parser AST.StringValue
 stringValue = do
@@ -411,6 +413,29 @@ tok :: AT.Parser a -> AT.Parser a
 tok p = p <* whiteSpace
 {-# INLINE tok #-}
 
+-- |
+-- Literal functions in the same fashion as `tok`,
+-- however there are issues using `tok` when the token may be followed by additional /a-z0-9/i characters.
+-- This manifests in bugs such as #20 where columns in on_conflict clauses prefixed with keywords
+-- e.g. "nullColumn" actually end up parsing as "[null, Column]".
+--
+-- Adding in a seperate lexing pass would probably be the right way to resolve this behaviour.
+-- This is a simple initial fix to address the bug with more involved changes being able to be
+-- considered seperately.
+literal :: AT.Parser a -> AT.Parser a
+literal p = p <* ends <* whiteSpace
+{-# INLINE literal #-}
+
+ends :: AT.Parser ()
+ends = do
+  mc <- AT.peekChar
+  case mc of
+    Nothing -> pure ()
+    Just c  ->
+      if isNonFirstChar c
+         then mzero
+         else pure ()
+
 comment :: Parser ()
 comment =
   AT.char '#' *>
@@ -440,16 +465,16 @@ whiteSpace = do
 nameParser :: AT.Parser AST.Name
 nameParser =
   AST.Name <$> tok ((<>) <$> AT.takeWhile1 isFirstChar
-                     <*> AT.takeWhile isNonFirstChar)
-  where
-
-    isFirstChar x = isAsciiLower x || isAsciiUpper x || x == '_'
-    {-# INLINE isFirstChar #-}
-
-    isNonFirstChar x = isFirstChar x || isDigit x
-    {-# INLINE isNonFirstChar #-}
-
+                         <*> AT.takeWhile isNonFirstChar)
 {-# INLINE nameParser #-}
+
+isFirstChar :: Char -> Bool
+isFirstChar x = isAsciiLower x || isAsciiUpper x || x == '_'
+{-# INLINE isFirstChar #-}
+
+isNonFirstChar :: Char -> Bool
+isNonFirstChar x = isFirstChar x || isDigit x
+{-# INLINE isNonFirstChar #-}
 
 parens :: Parser a -> Parser a
 parens = between "(" ")"

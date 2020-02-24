@@ -1,6 +1,7 @@
 version: 2
 jobs:
   build:
+    resource_class: large
     docker:
       - image: fpco/stack-build:lts-13.12
     steps:
@@ -21,3 +22,8 @@ jobs:
           paths:
             - "~/.stack"
             - ".stack-work"
+workflows:
+  version: 2
+  workflow_v20190224:
+    jobs:
+    - build
