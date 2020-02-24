@@ -25,7 +25,6 @@ import           Protolude                     hiding (option)
 
 import           Control.Applicative           (many, optional, (<|>))
 import           Control.Monad.Fail            (fail)
-import           Prelude                       hiding (fail)
 import           Data.Aeson.Parser             (jstring)
 import qualified Data.Attoparsec.ByteString    as A
 import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
