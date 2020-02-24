@@ -2,7 +2,7 @@
 
 -- | Regression tests for issue #20 https://github.com/hasura/graphql-parser-hs/issues/20
 
-module PrimitiveColumns (primitiveTests) where
+module Keywords (primitiveTests) where
 
 import Hedgehog
 import Protolude

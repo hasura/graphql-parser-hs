@@ -14,7 +14,7 @@ import           Language.GraphQL.Draft.Generator.Document
 import           Language.GraphQL.Draft.Parser             (parseExecutableDoc)
 import           Language.GraphQL.Draft.Syntax
 
-import PrimitiveColumns
+import Keywords
 
 import qualified Language.GraphQL.Draft.Printer.ByteString as PP.BB
 import qualified Language.GraphQL.Draft.Printer.LazyText   as PP.TLB
@@ -53,7 +53,7 @@ tests nTests =
     , ("property [ parse (lazyTextBuilderPrint ast) == ast ]", propParserLazyTextPrinter nTests)
     , ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBSPrinter nTests)
     ]
-    ++ PrimitiveColumns.primitiveTests
+    ++ Keywords.primitiveTests
 
 propParserPrettyPrinter :: TestLimit -> Property
 propParserPrettyPrinter = mkPropParserPrinter PP.renderExecutableDoc
