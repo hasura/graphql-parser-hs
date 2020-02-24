@@ -78,6 +78,7 @@ benchmarks:
 tests:
   graphql-parser-test:
     main:                Spec.hs
+    other-modules:       PrimitiveColumns
     source-dirs:         test
     ghc-options:
     - -threaded
