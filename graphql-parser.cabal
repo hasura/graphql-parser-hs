@@ -1,6 +1,10 @@
--- This file has been generated from package.yaml by hpack version 0.9.1.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: 7308d13493928552f44b710a082dd9565e8c7fe65cfd138ad60fcfe10d46d637
 
 name:           graphql-parser
 version:        0.1.0.0
@@ -13,11 +17,9 @@ copyright:      2018 Hasura Technologies Pvt. Ltd.
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
-
 extra-source-files:
-    ChangeLog.md
     README.md
+    ChangeLog.md
 
 source-repository head
   type: git
@@ -29,23 +31,23 @@ library
   default-extensions: NoImplicitPrelude
   ghc-options: -O2 -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
   build-depends:
-      base >= 4.7 && < 5
-    , protolude
+      aeson
     , attoparsec
-    , text
-    , aeson
-    , scientific
+    , base >=4.7 && <5
+    , bytestring
     , containers
+    , filepath
+    , hedgehog
+    , prettyprinter
+    , protolude
+    , regex-tdfa >=1.2
+    , scientific
+    , template-haskell
+    , text
+    , text-builder
+    , th-lift-instances
     , unordered-containers
     , vector
-    , template-haskell
-    , th-lift-instances
-    , filepath
-    , prettyprinter
-    , bytestring
-    , text-builder
-    , hedgehog
-    , regex-tdfa >= 1.2
   exposed-modules:
       Language.GraphQL.Draft.Generator.Document
       Language.GraphQL.Draft.Generator.Primitives
@@ -60,62 +62,67 @@ library
       Language.GraphQL.Draft.Printer.Text
       Language.GraphQL.Draft.Syntax
       Language.GraphQL.Draft.TH
+  other-modules:
+      Paths_graphql_parser
   default-language: Haskell2010
 
 test-suite graphql-parser-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
+  other-modules:
+      Keywords
   hs-source-dirs:
       test
   default-extensions: NoImplicitPrelude
   ghc-options: -O2 -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >= 4.7 && < 5
-    , protolude
+      aeson
     , attoparsec
-    , text
-    , aeson
-    , scientific
-    , containers
-    , unordered-containers
-    , vector
-    , template-haskell
-    , th-lift-instances
-    , filepath
-    , prettyprinter
+    , base >=4.7 && <5
     , bytestring
-    , text-builder
-    , hedgehog
-    , regex-tdfa >= 1.2
+    , containers
+    , filepath
     , graphql-parser
     , hedgehog
+    , prettyprinter
+    , protolude
+    , regex-tdfa >=1.2
+    , scientific
+    , template-haskell
+    , text
+    , text-builder
+    , th-lift-instances
+    , unordered-containers
+    , vector
   default-language: Haskell2010
 
 benchmark graphql-parser-bench
   type: exitcode-stdio-1.0
   main-is: Benchmark.hs
+  other-modules:
+      Paths_graphql_parser
   hs-source-dirs:
       bench
   default-extensions: NoImplicitPrelude
   ghc-options: -O2 -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wall -O2
   build-depends:
-      base >= 4.7 && < 5
-    , protolude
+      aeson
     , attoparsec
-    , text
-    , aeson
-    , scientific
+    , base >=4.7 && <5
+    , bytestring
     , containers
+    , criterion
+    , filepath
+    , graphql-parser
+    , hedgehog
+    , prettyprinter
+    , protolude
+    , regex-tdfa >=1.2
+    , scientific
+    , template-haskell
+    , text
+    , text-builder
+    , th-lift-instances
     , unordered-containers
     , vector
-    , template-haskell
-    , th-lift-instances
-    , filepath
-    , prettyprinter
-    , bytestring
-    , text-builder
-    , hedgehog
-    , regex-tdfa >= 1.2
-    , graphql-parser
-    , criterion
   default-language: Haskell2010

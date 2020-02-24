@@ -21,3 +21,8 @@ jobs:
           paths:
             - "~/.stack"
             - ".stack-work"
+workflows:
+  version: 2
+  workflow_v20190224:
+    jobs:
+    - build
