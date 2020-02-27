@@ -69,27 +69,27 @@ module Language.GraphQL.Draft.Syntax (
   , InlineFragment(..)
   ) where
 
-import qualified Data.Aeson                 as J
-import qualified Data.ByteString.Lazy       as BL
-import qualified Data.Text                  as T
-import qualified Text.Regex.TDFA            as TDFA
-import qualified Data.HashMap.Strict as M
-import qualified Language.Haskell.TH.Syntax as TH
+import qualified Data.Aeson                          as J
+import qualified Data.ByteString.Lazy                as BL
+import qualified Data.HashMap.Strict                 as M
+import qualified Data.Text                           as T
+import qualified Language.Haskell.TH.Syntax          as TH
+import qualified Text.Regex.TDFA                     as TDFA
 
-import           Instances.TH.Lift          ()
-import           Language.Haskell.TH.Syntax (Lift, Q)
-import Data.Hashable
-import GHC.Generics (Generic)
-import Data.Text (Text)
-import Data.String (IsString(..))
-import Data.Void
-import Data.HashMap.Strict (HashMap)
-import Data.Int (Int32)
-import Control.Monad
-import Control.Monad.Fail (MonadFail)
-import Data.Bool (bool)
+import           Control.Monad
+import           Control.Monad.Fail                  (MonadFail)
+import           Data.Bool                           (bool)
+import           Data.Hashable
+import           Data.HashMap.Strict                 (HashMap)
+import           Data.Int                            (Int32)
+import           Data.String                         (IsString (..))
+import           Data.Text                           (Text)
+import           Data.Void
+import           GHC.Generics                        (Generic)
+import           Instances.TH.Lift                   ()
+import           Language.Haskell.TH.Syntax          (Lift, Q)
 
-import {-# SOURCE #-} Language.GraphQL.Draft.Parser (parseExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Parser       (parseExecutableDoc)
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer.Text (renderExecutableDoc)
 
 newtype Name = Name { unName :: Text }
@@ -276,14 +276,14 @@ data Value var
 instance Hashable var => Hashable (Value var)
 instance Lift var => Lift (Value var) where
   lift (VVariable a) = [| VVariable a |]
-  lift VNull = [| VNull |]
-  lift (VInt a) = [| VInt a |]
-  lift (VFloat a) = [| VFloat a |]
-  lift (VString a) = [| VString a |]
-  lift (VBoolean a) = [| VBoolean a |]
-  lift (VEnum a) = [| VEnum a |]
-  lift (VList a) = [| VList a |]
-  lift (VObject a) = [| VObject $(liftHashMap a) |]
+  lift VNull         = [| VNull |]
+  lift (VInt a)      = [| VInt a |]
+  lift (VFloat a)    = [| VFloat a |]
+  lift (VString a)   = [| VString a |]
+  lift (VBoolean a)  = [| VBoolean a |]
+  lift (VEnum a)     = [| VEnum a |]
+  lift (VList a)     = [| VList a |]
+  lift (VObject a)   = [| VObject $(liftHashMap a) |]
 
 literal :: Value Void -> Value var
 literal = fmap absurd

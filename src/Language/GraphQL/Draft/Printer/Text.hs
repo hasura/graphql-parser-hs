@@ -1,6 +1,6 @@
 module Language.GraphQL.Draft.Printer.Text where
 
-import           Data.Text                     (Text)
+import           Data.Text                      (Text)
 import           Text.Builder
 
 import           Language.GraphQL.Draft.Printer

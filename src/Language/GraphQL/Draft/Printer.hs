@@ -1,16 +1,16 @@
 module Language.GraphQL.Draft.Printer where
 
-import qualified Data.HashMap.Strict as M
+import qualified Data.HashMap.Strict           as M
 
-import Data.Void
-import Data.HashMap.Strict (HashMap)
-import Data.Text (Text)
-import Data.Int (Int32)
-import Data.String (IsString)
-import Data.Bool (bool)
-import Data.List (intersperse)
-import Data.Foldable (fold)
-import Data.Maybe (fromMaybe)
+import           Data.Bool                     (bool)
+import           Data.Foldable                 (fold)
+import           Data.HashMap.Strict           (HashMap)
+import           Data.Int                      (Int32)
+import           Data.List                     (intersperse)
+import           Data.Maybe                    (fromMaybe)
+import           Data.String                   (IsString)
+import           Data.Text                     (Text)
+import           Data.Void
 
 import           Language.GraphQL.Draft.Syntax
 

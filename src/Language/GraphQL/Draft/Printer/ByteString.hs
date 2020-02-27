@@ -5,7 +5,7 @@ import qualified Data.Text.Lazy                 as LT
 import qualified Data.Text.Lazy.Encoding        as LT
 
 import           Data.ByteString.Builder
-import Data.Text (Text)
+import           Data.Text                      (Text)
 
 import           Language.GraphQL.Draft.Printer
 

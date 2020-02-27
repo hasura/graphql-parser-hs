@@ -21,26 +21,24 @@ module Language.GraphQL.Draft.Parser
   , runParser
   ) where
 
-import qualified Data.Attoparsec.Text          as AT
 import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.HashMap.Strict as M
+import qualified Data.Attoparsec.Text          as AT
+import qualified Data.HashMap.Strict           as M
+import qualified Data.Text                     as T
+import qualified Data.Text.Encoding            as T
 
 import           Control.Applicative
 import           Control.Monad
-import           Data.Functor
 import           Data.Aeson.Parser             (jstring)
-import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
-                                                match, option, scan, scientific,
-                                                sepBy1, (<?>))
-import           Data.Char                     (isAsciiLower, isAsciiUpper,
-                                                isDigit)
+import           Data.Attoparsec.Text          (Parser, anyChar, char, many1, match, option, scan,
+                                                scientific, sepBy1, (<?>))
+import           Data.Char                     (isAsciiLower, isAsciiUpper, isDigit)
+import           Data.Functor
+import           Data.HashMap.Strict           (HashMap)
+import           Data.Int                      (Int32)
 import           Data.Scientific               (floatingOrInteger)
 import           Data.Text                     (Text)
-import Data.HashMap.Strict (HashMap)
-import Data.Void (Void)
-import Data.Int (Int32)
+import           Data.Void                     (Void)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
 
