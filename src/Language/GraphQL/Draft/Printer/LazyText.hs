@@ -2,7 +2,6 @@ module Language.GraphQL.Draft.Printer.LazyText where
 
 import           Data.Text.Lazy                 (Text)
 import           Data.Text.Lazy.Builder
-import           Protolude                      hiding (Text)
 
 import           Language.GraphQL.Draft.Printer
 import           Language.GraphQL.Draft.Syntax
@@ -24,7 +23,7 @@ instance Printer Builder where
   doubleP = fromString . show
   {-# INLINE doubleP #-}
 
-renderExecutableDoc :: ExecutableDocument -> Text
+renderExecutableDoc :: ExecutableDocument Name -> Text
 renderExecutableDoc = render executableDocument
 
 render :: (a -> Builder) -> a -> Text

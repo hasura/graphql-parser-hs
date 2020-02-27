@@ -1,6 +1,6 @@
 module Language.GraphQL.Draft.Printer.Text where
 
-import           Protolude
+import           Data.Text                     (Text)
 import           Text.Builder
 
 import           Language.GraphQL.Draft.Printer
@@ -24,7 +24,7 @@ instance Printer Builder where
   doubleP = fixedDouble 256
   {-# INLINE doubleP #-}
 
-renderExecutableDoc :: ExecutableDocument -> Text
+renderExecutableDoc :: ExecutableDocument Name -> Text
 renderExecutableDoc = render executableDocument
 
 render :: (a -> Builder) -> a -> Text

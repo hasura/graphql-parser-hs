@@ -1,12 +1,16 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-
 module Language.GraphQL.Draft.Printer where
 
-import           Prelude                       (String)
-import           Protolude
+import qualified Data.HashMap.Strict as M
+
+import Data.Void
+import Data.HashMap.Strict (HashMap)
+import Data.Text (Text)
+import Data.Int (Int32)
+import Data.String (IsString)
+import Data.Bool (bool)
+import Data.List (intersperse)
+import Data.Foldable (fold)
+import Data.Maybe (fromMaybe)
 
 import           Language.GraphQL.Draft.Syntax
 
@@ -23,62 +27,61 @@ class (Monoid a, IsString a) => Printer a where
   nameP    :: Name -> a
   nameP    = textP . unName
 
-  nodeP :: TypedOperationDefinition -> a
+  nodeP :: Variable var => TypedOperationDefinition var -> a
   nodeP = node
 
-  selectionSetP :: SelectionSet -> a
+  selectionSetP :: Variable var => SelectionSet var -> a
   selectionSetP = selectionSet
-
 
 -- | the pretty printer implementation
 
-executableDocument :: (Printer a) => ExecutableDocument -> a
+executableDocument :: (Variable var, Printer a) => ExecutableDocument var -> a
 executableDocument ed =
   mconcat $ intersperse (charP '\n') $ map executableDefinition $
   getExecutableDefinitions ed
 
-executableDefinition :: (Printer a) => ExecutableDefinition -> a
+executableDefinition :: (Variable var, Printer a) => ExecutableDefinition var -> a
 executableDefinition = \case
   ExecutableDefinitionOperation d -> operationDefinition d
   ExecutableDefinitionFragment  d -> fragmentDefinition d
 
-operationDefinition :: (Printer a) => OperationDefinition -> a
+operationDefinition :: (Variable var, Printer a) => OperationDefinition var -> a
 operationDefinition = \case
   OperationDefinitionUnTyped selSet -> selectionSetP selSet
   OperationDefinitionTyped op       -> typedOperationDefinition op
 
-typedOperationDefinition :: (Printer a) => TypedOperationDefinition -> a
+typedOperationDefinition :: (Variable var, Printer a) => TypedOperationDefinition var -> a
 typedOperationDefinition op =
   operationType (_todType op) <> charP ' ' <> nodeP op
 
-operationType :: (Printer a) => OperationType -> a
+operationType :: Printer a => OperationType -> a
 operationType = \case
   OperationTypeQuery        -> "query"
   OperationTypeMutation     -> "mutation"
   OperationTypeSubscription -> "subscription"
 
 -- TODO: add horizontal nesting
-node :: (Printer a) => TypedOperationDefinition -> a
+node :: (Variable var, Printer a) => TypedOperationDefinition var -> a
 node (TypedOperationDefinition _ name vars dirs sels) =
-  nameP (fromMaybe "" name)
+     maybe mempty nameP name
   <> optempty variableDefinitions vars
   <> optempty directives dirs
   <> charP ' '
   <> selectionSetP sels
 
 -- TODO: add horizontal nesting
-selectionSet :: (Printer a) => SelectionSet -> a
+selectionSet :: (Variable var, Printer a) => SelectionSet var -> a
 selectionSet [] = mempty
 selectionSet xs =
   "{ " <> mconcat (intersperse (charP ' ') (map selection xs)) <> " }"
 
-selection :: (Printer a) => Selection -> a
+selection :: (Variable var, Printer a) => Selection var -> a
 selection = \case
   SelectionField fld          -> field fld
   SelectionFragmentSpread fs  -> fragmentSpread fs
   SelectionInlineFragment ilf -> inlineFragment ilf
 
-field :: (Printer a) => Field -> a
+field :: (Variable var, Printer a) => Field var -> a
 field (Field alias name args dirs selSets) =
   optAlias alias
   <> nameP name
@@ -87,73 +90,75 @@ field (Field alias name args dirs selSets) =
   <> charP ' '
   <> selectionSetP selSets
 
-optAlias :: (Printer a) => Maybe Alias -> a
-optAlias = maybe mempty (\(Alias a) -> nameP a <> textP ": ")
+optAlias :: Printer a => Maybe Name -> a
+optAlias = maybe mempty (\a -> nameP a <> textP ": ")
 
-fragmentSpread :: (Printer a) => FragmentSpread -> a
+fragmentSpread :: (Variable var, Printer a) => FragmentSpread var -> a
 fragmentSpread (FragmentSpread name ds) =
   "..." <> nameP name <> optempty directives ds
 
-inlineFragment :: (Printer a) => InlineFragment -> a
+inlineFragment :: (Variable var, Printer a) => InlineFragment var -> a
 inlineFragment (InlineFragment tc ds sels) =
   "... "
-  <> bool mempty (textP "on") (isJust tc)
-  <> nameP (fold $ fmap unNamedType tc)
+  <> maybe mempty ((textP "on" <>) . nameP) tc
   <> optempty directives ds
   <> selectionSetP sels
 
-fragmentDefinition :: (Printer a) => FragmentDefinition -> a
+fragmentDefinition :: Printer a => FragmentDefinition -> a
 fragmentDefinition (FragmentDefinition name tc dirs sels) =
   "fragment "
   <> nameP name
   <> " on "
-  <> nameP (unNamedType tc)
+  <> nameP tc
   <> optempty directives dirs
   <> selectionSetP sels
 
-directives :: (Printer a) => [Directive] -> a
+directives :: (Variable var, Printer a) => [Directive var] -> a
 directives = mconcat . intersperse (charP ' ') . map directive
 
-directive :: (Printer a) => Directive -> a
+directive :: (Variable var, Printer a) => Directive var -> a
 directive (Directive name args) =
   charP '@' <> nameP name <> optempty arguments args
 
-arguments :: (Printer a) => [Argument] -> a
-arguments xs = charP '(' <> args <> charP ')'
-  where args = mconcat $ intersperse (charP ',') $ map argument xs
+arguments :: (Variable var, Printer a) => HashMap Name (Value var) -> a
+arguments xs = charP '(' <> objectFields xs <> charP ')'
 
-argument :: (Printer a) => Argument -> a
-argument (Argument name val) = nameP name <> ": " <> value val
-
-variableDefinitions :: (Printer a) => [VariableDefinition] -> a
+variableDefinitions :: Printer a => [VariableDefinition] -> a
 variableDefinitions vars = mconcat [ charP '('
                                    , mconcat vars'
                                    , charP ')'
                                    ]
   where vars' = intersperse (charP ',') $ map variableDefinition vars
 
-variableDefinition :: (Printer a) => VariableDefinition -> a
+variableDefinition :: Printer a => VariableDefinition -> a
 variableDefinition (VariableDefinition var ty defVal) =
   variable var <> ": " <> graphQLType ty <> maybe mempty defaultValue defVal
 
-defaultValue :: (Printer a) => DefaultValue -> a
-defaultValue v = " =" <> charP ' ' <> valueC v
+defaultValue :: Printer a => Value Void -> a
+defaultValue v = " = " <> value v
 
 -- | Type Reference
 
-graphQLType :: (Printer a) => GType -> a
-graphQLType (TypeNamed n x) = nameP (unNamedType x) <> nonNull n
+graphQLType :: Printer a => GType -> a
+graphQLType (TypeNamed n x) = nameP x <> nonNull n
 graphQLType (TypeList  n x) = listType x <> nonNull n
 
-listType :: (Printer a) => ListType -> a
-listType (ListType ty) = charP '[' <> graphQLType ty <> charP ']'
+listType :: Printer a => GType -> a
+listType ty = charP '[' <> graphQLType ty <> charP ']'
 
-nonNull :: (Printer a) => Nullability -> a
+nonNull :: Printer a => Nullability -> a
 nonNull n = bool (charP '!') mempty $ unNullability n
 
 -- | Primitives
 
-value :: (Printer a) => Value -> a
+class Variable var where
+  variable :: Printer a => var -> a
+instance Variable Void where
+  variable = absurd
+instance Variable Name where
+  variable v = charP '$' <> nameP v
+
+value :: (Variable var, Printer a) => Value var -> a
 value = \case
   VVariable v -> variable v
   VInt i      -> intP i
@@ -165,55 +170,26 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
-stringValue :: (Printer a) => StringValue -> a
-stringValue (StringValue s) =
-  mconcat [ charP '"', textP s, charP '"' ]
+stringValue :: Printer a => Text -> a
+stringValue s = mconcat [ charP '"', textP s, charP '"' ]
 
-variable :: (Printer a) => Variable -> a
-variable (Variable v) = charP '$' <> nameP v
-
-listValue :: (Printer a) => ListValue -> a
-listValue (ListValueG xs) = mconcat [ charP '[' , li , charP ']' ]
+listValue :: (Variable var, Printer a) => [Value var] -> a
+listValue xs = mconcat [ charP '[' , li , charP ']' ]
   where
     li = mconcat $ intersperse (charP ',') $ map value xs
 
-objectValue :: (Printer a) => ObjectValue -> a
-objectValue (ObjectValueG o) = mconcat [ charP '{', vals, charP '}' ]
-  where
-    vals = mconcat $ intersperse (charP ',') $ map objectField o
+objectValue :: (Variable var, Printer a) => HashMap Name (Value var) -> a
+objectValue o = charP '{' <> objectFields o <> charP '}'
 
-objectField :: (Printer a) => ObjectField -> a
-objectField (ObjectFieldG name val) =
-  mconcat [ nameP name, charP ':', value val ]
+objectFields :: (Variable var, Printer a) => HashMap Name (Value var) -> a
+objectFields o = mconcat $ intersperse (charP ',') $ map objectField $ M.toList o
+  where objectField (name, val) = nameP name <> ": " <> value val
 
-valueC :: (Printer a) => ValueConst -> a
-valueC = \case
-  VCInt i      -> intP i
-  VCFloat d    -> doubleP d
-  VCString s   -> stringValue s
-  VCBoolean b  -> fromBool b
-  VCNull       -> "null"
-  VCList xs    -> listValueC xs
-  VCObject o   -> objectValueC o
-  VCEnum ev    -> nameP $ unEnumValue ev
-
-listValueC :: (Printer a) => ListValueC -> a
-listValueC (ListValueG xs) = mconcat [ charP '[' , li , charP ']' ]
-  where
-    li = mconcat $ intersperse (charP ',') $ map valueC xs
-
-objectValueC :: (Printer a) => ObjectValueC -> a
-objectValueC (ObjectValueG o) = mconcat [ charP '{', vals, charP '}' ]
-  where
-    vals = mconcat $ intersperse (charP ',') $ map objectFieldC o
-
-objectFieldC :: (Printer a) => ObjectFieldC -> a
-objectFieldC (ObjectFieldG name val) =
-  nameP name <> ": " <> valueC val
-
-fromBool :: (Printer a) => Bool -> a
+fromBool :: Printer a => Bool -> a
 fromBool True  = "true"
 fromBool False = "false"
 
-optempty :: (Eq a, Monoid a, Monoid b) => (a -> b) -> a -> b
-optempty f xs = if xs == mempty then mempty else f xs
+optempty :: (Foldable f, Monoid b) => (f a -> b) -> f a -> b
+optempty f xs
+  | null xs   = mempty
+  | otherwise = f xs
