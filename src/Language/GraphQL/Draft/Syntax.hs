@@ -82,6 +82,9 @@ module Language.GraphQL.Draft.Syntax
 
 import           Control.Monad.Fail         (fail)
 import           Data.Bool                  (not)
+import           Data.Coerce                (coerce)
+import           Data.Foldable              (toList)
+import           Data.Scientific            (floatingOrInteger)
 import           Instances.TH.Lift          ()
 import           Language.Haskell.TH.Syntax (Lift)
 import           Protolude
@@ -293,28 +296,6 @@ type TypeCondition = NamedType
 
 -- * Values
 
--- data ValueLeaf
---   = VLInt !Int32
---   | VLFloat !Double
---   | VLBoolean !Bool
---   | VLString !StringValue
---   | VLEnum !EnumValue
---   | VLNull
---   deriving (Ord, Show, Eq, Lift)
-
--- data ValueConst
---   = VCLeaf !ValueLeaf
---   | VCList !ListValueC
---   | VCObject !ObjectValueC
---   deriving (Ord, Show, Eq, Lift)
-
--- data Value
---   = VVariable !Variable
---   | VLeaf !ValueLeaf
---   | VList !ListValue
---   | VObject !ObjectValue
---   deriving (Ord, Show, Eq, Lift)
-
 data ValueConst
   = VCInt !Int32
   | VCFloat !Double
@@ -327,6 +308,17 @@ data ValueConst
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable ValueConst
+
+instance J.FromJSON ValueConst where
+  parseJSON J.Null       = pure VCNull
+  parseJSON (J.Bool b)   = pure $ VCBoolean b
+  parseJSON (J.String s) = pure $ VCString $ coerce s
+  parseJSON (J.Number n) = pure $ either VCFloat VCInt $ floatingOrInteger n
+  parseJSON (J.Array xs) = VCList . ListValueG . toList <$> traverse J.parseJSON xs
+  parseJSON (J.Object o) = VCObject . ObjectValueG . fmap toObjFld . toList <$> traverse J.parseJSON o
+    where
+      toObjFld :: (T.Text, ValueConst) -> ObjectFieldG ValueConst
+      toObjFld (k, v) = ObjectFieldG (coerce k) v
 
 data Value
   = VVariable !Variable
@@ -370,9 +362,8 @@ data ObjectFieldG a
 
 instance (Hashable a) => Hashable (ObjectFieldG a)
 
-type ObjectField = ObjectFieldG Value
+type ObjectField  = ObjectFieldG Value
 type ObjectFieldC = ObjectFieldG ValueConst
-
 type DefaultValue = ValueConst
 
 -- * Directives
@@ -443,7 +434,6 @@ isListType :: GType -> Bool
 isListType = \case
   (TypeList _ _)  -> True
   (TypeNamed _ _) -> False
-
 
 isNotNull :: GType -> Bool
 isNotNull = not . isNullable
