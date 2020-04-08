@@ -6,14 +6,17 @@
 module Language.GraphQL.Draft.Parser
   ( executableDocument
   , parseExecutableDoc
-
+  -- * Parsers for 'AST.TypeSystemDefinition'.
+  , schemaDefinition
+  , parseTypeSysDefinition
+  -- * Parsers for 'AST.SchemaDocument'.
   , schemaDocument
   , parseSchemaDoc
-
+  -- * Small utility parsers.
   , value
   , parseValueConst
   , nameParser
-
+  -- * Parsers for GraphQL types.
   , graphQLType
   , parseGraphQLType
 
@@ -52,6 +55,32 @@ runParser parser t =
 
 parseExecutableDoc :: Text -> Either Text AST.ExecutableDocument
 parseExecutableDoc = runParser executableDocument
+
+-- * Schema definition.
+
+-- | Parser for a 'AST.SchemaDefinition'.
+schemaDefinition :: Parser AST.SchemaDefinition
+schemaDefinition = tok "schema" *> braces (
+    AST.SchemaDefinition
+      <$> optional directives
+      <*> many1 rootOperationParser
+  )
+
+-- | Parser for a 'AST.RootOperationTypeDefinition'.
+rootOperationParser :: Parser AST.RootOperationTypeDefinition
+rootOperationParser =
+  AST.RootOperationTypeDefinition
+    <$> (operationTypeParser <* tok ":")
+    <*> (AST.NamedType <$> nameParser)
+
+-- | Parser for a 'AST.TypeSystemDefinition'.
+typeSystemDefinition :: Parser [AST.TypeSystemDefinition]
+typeSystemDefinition = whiteSpace *> (concat <$> many1 (
+      (\(AST.SchemaDocument d) -> AST.TypeSystemDefinitionType <$> d) <$> schemaDocument
+  <|> (: []) . AST.TypeSystemDefinitionSchema <$> schemaDefinition ))
+
+parseTypeSysDefinition :: Text -> Either Text [AST.TypeSystemDefinition]
+parseTypeSysDefinition = runParser typeSystemDefinition
 
 -- | Parser for a schema document.
 schemaDocument :: Parser AST.SchemaDocument
