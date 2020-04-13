@@ -439,6 +439,14 @@ comment =
   AT.skipWhile (\c -> c /= '\n' && c /= '\r' )
 {-# INLINE comment #-}
 
+multilineComment :: Parser ()
+multilineComment = void $ "\"\"\"" *> loop
+  where 
+    loop = "\"\"\"" 
+       <|> ("\"" *> loop)
+       <|> ("\"\"" *> loop)
+       <|> (AT.takeWhile1 (/= '"') *> loop)
+
 isSpaceLike :: Char -> Bool
 isSpaceLike c =
   c == '\t' || c == ' ' || c == '\n' || c == '\r' || c == ','
@@ -447,7 +455,7 @@ isSpaceLike c =
 whiteSpace :: AT.Parser ()
 whiteSpace = do
   AT.skipWhile isSpaceLike
-  (comment *> whiteSpace) <|> pure ()
+  (comment *> whiteSpace) <|> (multilineComment *> whiteSpace) <|> pure ()
 
 -- whiteSpace :: AT.Parser ()
 -- whiteSpace =
