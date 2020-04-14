@@ -17,12 +17,8 @@ instance Printer Builder where
   charP   = char
   {-# INLINE charP #-}
 
-  intP    = decimal
-  {-# INLINE intP #-}
-
-  -- TODO: fixedDouble? is there any other function that we can use?
-  doubleP = fixedDouble 256
-  {-# INLINE doubleP #-}
+  scientificP    = string . show
+  {-# INLINE scientificP #-}
 
 renderExecutableDoc :: ExecutableDocument -> Text
 renderExecutableDoc = render executableDocument

@@ -21,11 +21,8 @@ instance Printer Builder where
   charP = charUtf8
   {-# INLINE charP #-}
 
-  intP = int32Dec
-  {-# INLINE intP #-}
-
-  doubleP = doubleDec
-  {-# INLINE doubleP #-}
+  scientificP = stringUtf8 . show
+  {-# INLINE scientificP #-}
 
 
 render :: (a -> Builder) -> a -> BL.ByteString

@@ -7,18 +7,18 @@ module Language.GraphQL.Draft.Printer where
 
 import           Prelude                       (String)
 import           Protolude
+import           Data.Scientific               (Scientific)
 
 import           Language.GraphQL.Draft.Syntax
 
 
 class (Monoid a, IsString a) => Printer a where
-  stringP  :: String -> a
-  textP    :: Text -> a
-  charP    :: Char -> a
-  intP     :: Int32 -> a
-  doubleP  :: Double -> a
+  stringP     :: String -> a
+  textP       :: Text -> a
+  charP       :: Char -> a
+  scientificP :: Scientific -> a
 
-  {-# MINIMAL stringP, textP, charP, intP, doubleP #-}
+  {-# MINIMAL stringP, textP, charP, scientificP #-}
 
   nameP    :: Name -> a
   nameP    = textP . unName
@@ -155,15 +155,14 @@ nonNull n = bool (charP '!') mempty $ unNullability n
 
 value :: (Printer a) => Value -> a
 value = \case
-  VVariable v -> variable v
-  VInt i      -> intP i
-  VFloat d    -> doubleP d
-  VString s   -> stringValue s
-  VBoolean b  -> fromBool b
-  VNull       -> "null"
-  VList xs    -> listValue xs
-  VObject o   -> objectValue o
-  VEnum ev    -> nameP $ unEnumValue ev
+  VVariable v    -> variable v
+  VScientific sc -> scientificP sc
+  VString s      -> stringValue s
+  VBoolean b     -> fromBool b
+  VNull          -> "null"
+  VList xs       -> listValue xs
+  VObject o      -> objectValue o
+  VEnum ev       -> nameP $ unEnumValue ev
 
 stringValue :: (Printer a) => StringValue -> a
 stringValue (StringValue s) =
@@ -188,14 +187,13 @@ objectField (ObjectFieldG name val) =
 
 valueC :: (Printer a) => ValueConst -> a
 valueC = \case
-  VCInt i      -> intP i
-  VCFloat d    -> doubleP d
-  VCString s   -> stringValue s
-  VCBoolean b  -> fromBool b
-  VCNull       -> "null"
-  VCList xs    -> listValueC xs
-  VCObject o   -> objectValueC o
-  VCEnum ev    -> nameP $ unEnumValue ev
+  VCScientific sc -> scientificP sc
+  VCString s      -> stringValue s
+  VCBoolean b     -> fromBool b
+  VCNull          -> "null"
+  VCList xs       -> listValueC xs
+  VCObject o      -> objectValueC o
+  VCEnum ev       -> nameP $ unEnumValue ev
 
 listValueC :: (Printer a) => ListValueC -> a
 listValueC (ListValueG xs) = mconcat [ charP '[' , li , charP ']' ]

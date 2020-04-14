@@ -33,7 +33,7 @@ import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
 import qualified Data.Attoparsec.Text          as AT
 import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
-import           Data.Scientific               (floatingOrInteger)
+import           Data.Scientific               (Scientific, floatingOrInteger)
 import           Data.Text                     (find)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
@@ -174,40 +174,33 @@ parseValueConst = runParser valueConst
 
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
-  (fmap (either AST.VCFloat AST.VCInt) number <?> "number")
-  <|> AST.VCNull     <$  literal "null"
-  <|> AST.VCBoolean  <$> (booleanValue <?> "booleanValue")
-  <|> AST.VCString   <$> (stringValue <?> "stringValue")
+      AST.VCScientific <$> (number <?> "number")
+  <|> AST.VCNull       <$  literal "null"
+  <|> AST.VCBoolean    <$> (booleanValue <?> "booleanValue")
+  <|> AST.VCString     <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
-  <|> AST.VCEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VCList     <$> (listValueC <?> "listValue")
-  <|> AST.VCObject   <$> (objectValueC <?> "objectValue")
+  <|> AST.VCEnum       <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VCList       <$> (listValueC <?> "listValue")
+  <|> AST.VCObject     <$> (objectValueC <?> "objectValue")
   <?> "value (const) error!"
   )
 
-number :: Parser (Either Double Int32)
-number =  do
-  (numText, num) <- match (tok scientific)
-  case (Data.Text.find (== '.') numText, floatingOrInteger num) of
-    (Just _, Left r)   -> pure (Left r)
-    (Just _, Right i)  -> pure (Left (fromIntegral i))
-    -- TODO: Handle maxBound, Int32 in spec.
-    (Nothing, Left r)  -> pure (Right (floor r))
-    (Nothing, Right i) -> pure (Right i)
+number :: Parser Scientific
+number = tok scientific
 
 -- This will try to pick the first type it can runParser. If you are working with
 -- explicit types use the `typedValue` parser.
 value :: Parser AST.Value
 value = tok (
-  AST.VVariable <$> (variable <?> "variable")
-  <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull     <$  literal "null"
-  <|> AST.VBoolean  <$> (booleanValue <?> "booleanValue")
-  <|> AST.VString   <$> (stringValue <?> "stringValue")
+      AST.VVariable   <$> (variable <?> "variable")
+  <|> AST.VScientific <$> (number <?> "number")
+  <|> AST.VNull       <$  literal "null"
+  <|> AST.VBoolean    <$> (booleanValue <?> "booleanValue")
+  <|> AST.VString     <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
-  <|> AST.VEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VList     <$> (listValue <?> "listValue")
-  <|> AST.VObject   <$> (objectValue <?> "objectValue")
+  <|> AST.VEnum       <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VList       <$> (listValue <?> "listValue")
+  <|> AST.VObject     <$> (objectValue <?> "objectValue")
   <?> "value error!"
   )
 

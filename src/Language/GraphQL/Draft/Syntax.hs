@@ -83,7 +83,7 @@ module Language.GraphQL.Draft.Syntax
 import           Control.Monad.Fail         (fail)
 import           Data.Bool                  (not)
 import           Instances.TH.Lift          ()
-import           Language.Haskell.TH.Syntax (Lift)
+import           Language.Haskell.TH.Syntax (Lift(..), Exp(LitE), Lit(RationalL))
 import           Protolude
 
 import qualified Data.Aeson                 as J
@@ -91,6 +91,7 @@ import qualified Data.Aeson.Types           as J
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.Text                  as T
 import qualified Text.Regex.TDFA            as TDFA
+import qualified Data.Scientific            as S
 
 -- * Documents
 
@@ -294,7 +295,7 @@ type TypeCondition = NamedType
 -- * Values
 
 -- data ValueLeaf
---   = VLInt !Int32
+--   = VLInt !Int64
 --   | VLFloat !Double
 --   | VLBoolean !Bool
 --   | VLString !StringValue
@@ -315,9 +316,13 @@ type TypeCondition = NamedType
 --   | VObject !ObjectValue
 --   deriving (Ord, Show, Eq, Lift)
 
+-- Orphane instance allowing us to use Scientific values in Template Haskell
+-- Oxford brackets [| ... |]
+instance Lift S.Scientific where
+  lift sc = return (LitE (RationalL (toRational sc)))
+
 data ValueConst
-  = VCInt !Int32
-  | VCFloat !Double
+  = VCScientific !S.Scientific
   | VCString !StringValue
   | VCBoolean !Bool
   | VCNull
@@ -330,8 +335,7 @@ instance Hashable ValueConst
 
 data Value
   = VVariable !Variable
-  | VInt !Int32
-  | VFloat !Double
+  | VScientific !S.Scientific
   | VString !StringValue
   | VBoolean !Bool
   | VNull

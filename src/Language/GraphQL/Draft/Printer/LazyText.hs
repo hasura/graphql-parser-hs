@@ -18,11 +18,8 @@ instance Printer Builder where
   charP   = singleton
   {-# INLINE charP #-}
 
-  intP    = fromString . show
-  {-# INLINE intP #-}
-
-  doubleP = fromString . show
-  {-# INLINE doubleP #-}
+  scientificP = fromString . show
+  {-# INLINE scientificP #-}
 
 renderExecutableDoc :: ExecutableDocument -> Text
 renderExecutableDoc = render executableDocument
