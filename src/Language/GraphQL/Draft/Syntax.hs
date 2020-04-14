@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 -- | Description: The GraphQL AST
 module Language.GraphQL.Draft.Syntax
@@ -83,8 +84,9 @@ module Language.GraphQL.Draft.Syntax
 import           Control.Monad.Fail         (fail)
 import           Data.Bool                  (not)
 import           Instances.TH.Lift          ()
-import           Language.Haskell.TH.Syntax (Lift(..), Exp(LitE), Lit(RationalL))
-import           Protolude
+import           Language.Haskell.TH.Syntax (Lift(..), Lit(RationalL))
+import           Language.Haskell.TH.Lib    (litE)
+import           Protolude                  hiding (lift)
 
 import qualified Data.Aeson                 as J
 import qualified Data.Aeson.Types           as J
@@ -316,11 +318,6 @@ type TypeCondition = NamedType
 --   | VObject !ObjectValue
 --   deriving (Ord, Show, Eq, Lift)
 
--- Orphane instance allowing us to use Float values in Template Haskell
--- Oxford brackets [| ... |]
-instance Lift S.Scientific where
-  lift sc = return (LitE (RationalL (toRational sc)))
-
 data ValueConst
   = VCInt !Integer
   | VCFloat !S.Scientific
@@ -330,7 +327,17 @@ data ValueConst
   | VCEnum !EnumValue
   | VCList !ListValueC
   | VCObject !ObjectValueC
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Generic)
+
+instance Lift ValueConst where
+  lift (VCInt i) = [e|VCInt $(lift i)|]
+  lift (VCFloat sc) = [e|VCFloat $(litE (RationalL (toRational sc)))|]
+  lift (VCString s) = [e|VCString $(lift s)|]
+  lift (VCBoolean b) = [e|VCBoolean $(lift b)|]
+  lift (VCNull) = [e|VCNull|]
+  lift (VCEnum ev) = [e|VCEnum $(lift ev)|]
+  lift (VCList xs) = [e|VCList $(lift xs)|]
+  lift (VCObject o) = [e|VCObject $(lift o)|]
 
 instance Hashable ValueConst
 
@@ -344,7 +351,18 @@ data Value
   | VEnum !EnumValue
   | VList !ListValue
   | VObject !ObjectValue
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Generic)
+
+instance Lift Value where
+  lift (VVariable v) = [e|VVariable $(lift v)|]
+  lift (VInt i) = [e|VInt $(lift i)|]
+  lift (VFloat sc) = [e|VFloat $(litE (RationalL (toRational sc)))|]
+  lift (VString s) = [e|VString $(lift s)|]
+  lift (VBoolean b) = [e|VBoolean $(lift b)|]
+  lift (VNull) = [e|VNull|]
+  lift (VEnum ev) = [e|VEnum $(lift ev)|]
+  lift (VList xs) = [e|VList $(lift xs)|]
+  lift (VObject o) = [e|VObject $(lift o)|]
 
 instance Hashable Value
 
