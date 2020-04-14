@@ -30,7 +30,7 @@ main = do
   case parseArgs args of
     TMQuick   -> runTest 20
     TMDev     -> runTest 100
-    TMRelease -> runTest 20
+    TMRelease -> runTest 200
   where
     parseArgs = foldr parseArg TMDev
     parseArg str _ = case str of
