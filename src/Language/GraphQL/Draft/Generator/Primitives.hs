@@ -37,9 +37,9 @@ genValue =
   -- TODO: use maxbound of int32/double or something?
   Gen.recursive
   Gen.choice [ pure VNull
-             , VScientific <$> fromIntegral <$> Gen.int32 (Range.linear 1 99999)
+             , VInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 99999)
              , VEnum <$> genEnumValue
-             , VScientific <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
+             , VFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
              , VString <$> genStringValue
              , VBoolean <$> Gen.bool
              , VVariable <$> genVariable
@@ -71,12 +71,12 @@ genDefaultValue = genValueConst
 
 genValueConst :: Gen ValueConst
 genValueConst =
-  -- TODO: use maxbound of int64/double or something?
+  -- TODO: use maxbound of int32/double or something?
   Gen.recursive
   Gen.choice [ pure VCNull
-             , VCScientific <$> fromIntegral <$> Gen.int32 (Range.linear 1 9)
+             , VCInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 9)
              , VCEnum <$> genEnumValue
-             , VCScientific <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
+             , VCFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
              , VCString <$> genStringValue
              , VCBoolean <$> Gen.bool
              ]

@@ -33,7 +33,7 @@ import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
 import qualified Data.Attoparsec.Text          as AT
 import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
-import           Data.Scientific               (Scientific, floatingOrInteger)
+import           Data.Scientific               (Scientific)
 import           Data.Text                     (find)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
@@ -174,33 +174,37 @@ parseValueConst = runParser valueConst
 
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
-      AST.VCScientific <$> (number <?> "number")
-  <|> AST.VCNull       <$  literal "null"
-  <|> AST.VCBoolean    <$> (booleanValue <?> "booleanValue")
-  <|> AST.VCString     <$> (stringValue <?> "stringValue")
+      (fmap (either AST.VCFloat AST.VCInt) number <?> "number")
+  <|> AST.VCNull     <$  literal "null"
+  <|> AST.VCBoolean  <$> (booleanValue <?> "booleanValue")
+  <|> AST.VCString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
-  <|> AST.VCEnum       <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VCList       <$> (listValueC <?> "listValue")
-  <|> AST.VCObject     <$> (objectValueC <?> "objectValue")
+  <|> AST.VCEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VCList     <$> (listValueC <?> "listValue")
+  <|> AST.VCObject   <$> (objectValueC <?> "objectValue")
   <?> "value (const) error!"
   )
 
-number :: Parser Scientific
-number = tok scientific
+number :: Parser (Either Scientific Integer)
+number = do
+  (numText, num) <- match (tok scientific)
+  pure $ case Data.Text.find (== '.') numText of
+    Just _ -> Left num
+    Nothing -> Right (floor num)
 
 -- This will try to pick the first type it can runParser. If you are working with
 -- explicit types use the `typedValue` parser.
 value :: Parser AST.Value
 value = tok (
-      AST.VVariable   <$> (variable <?> "variable")
-  <|> AST.VScientific <$> (number <?> "number")
-  <|> AST.VNull       <$  literal "null"
-  <|> AST.VBoolean    <$> (booleanValue <?> "booleanValue")
-  <|> AST.VString     <$> (stringValue <?> "stringValue")
+      AST.VVariable <$> (variable <?> "variable")
+  <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
+  <|> AST.VNull     <$  literal "null"
+  <|> AST.VBoolean  <$> (booleanValue <?> "booleanValue")
+  <|> AST.VString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
-  <|> AST.VEnum       <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VList       <$> (listValue <?> "listValue")
-  <|> AST.VObject     <$> (objectValue <?> "objectValue")
+  <|> AST.VEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VList     <$> (listValue <?> "listValue")
+  <|> AST.VObject   <$> (objectValue <?> "objectValue")
   <?> "value error!"
   )
 

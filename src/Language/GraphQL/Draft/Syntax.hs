@@ -295,7 +295,7 @@ type TypeCondition = NamedType
 -- * Values
 
 -- data ValueLeaf
---   = VLInt !Int64
+--   = VLInt !Int32
 --   | VLFloat !Double
 --   | VLBoolean !Bool
 --   | VLString !StringValue
@@ -316,13 +316,14 @@ type TypeCondition = NamedType
 --   | VObject !ObjectValue
 --   deriving (Ord, Show, Eq, Lift)
 
--- Orphane instance allowing us to use Scientific values in Template Haskell
+-- Orphane instance allowing us to use Float values in Template Haskell
 -- Oxford brackets [| ... |]
 instance Lift S.Scientific where
   lift sc = return (LitE (RationalL (toRational sc)))
 
 data ValueConst
-  = VCScientific !S.Scientific
+  = VCInt !Integer
+  | VCFloat !S.Scientific
   | VCString !StringValue
   | VCBoolean !Bool
   | VCNull
@@ -335,7 +336,8 @@ instance Hashable ValueConst
 
 data Value
   = VVariable !Variable
-  | VScientific !S.Scientific
+  | VInt !Integer
+  | VFloat !S.Scientific
   | VString !StringValue
   | VBoolean !Bool
   | VNull

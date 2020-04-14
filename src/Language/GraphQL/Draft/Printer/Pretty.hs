@@ -37,8 +37,11 @@ instance Printer (Doc Text) where
   charP         = pretty
   {-# INLINE charP #-}
 
-  scientificP sc = pretty $ (show sc :: Text)
-  {-# INLINE scientificP #-}
+  intP          = pretty
+  {-# INLINE intP #-}
+
+  floatP sc = pretty $ (show sc :: Text)
+  {-# INLINE floatP #-}
 
   nameP         = pretty
   {-# INLINE nameP #-}

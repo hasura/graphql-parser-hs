@@ -17,8 +17,11 @@ instance Printer Builder where
   charP   = char
   {-# INLINE charP #-}
 
-  scientificP    = string . show
-  {-# INLINE scientificP #-}
+  intP    = decimal
+  {-# INLINE intP #-}
+
+  floatP    = text . show
+  {-# INLINE floatP #-}
 
 renderExecutableDoc :: ExecutableDocument -> Text
 renderExecutableDoc = render executableDocument

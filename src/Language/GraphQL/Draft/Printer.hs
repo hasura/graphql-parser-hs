@@ -13,12 +13,13 @@ import           Language.GraphQL.Draft.Syntax
 
 
 class (Monoid a, IsString a) => Printer a where
-  stringP     :: String -> a
-  textP       :: Text -> a
-  charP       :: Char -> a
-  scientificP :: Scientific -> a
+  stringP :: String -> a
+  textP   :: Text -> a
+  charP   :: Char -> a
+  intP    :: Integer -> a
+  floatP  :: Scientific -> a
 
-  {-# MINIMAL stringP, textP, charP, scientificP #-}
+  {-# MINIMAL stringP, textP, charP, intP, floatP #-}
 
   nameP    :: Name -> a
   nameP    = textP . unName
@@ -155,14 +156,15 @@ nonNull n = bool (charP '!') mempty $ unNullability n
 
 value :: (Printer a) => Value -> a
 value = \case
-  VVariable v    -> variable v
-  VScientific sc -> scientificP sc
-  VString s      -> stringValue s
-  VBoolean b     -> fromBool b
-  VNull          -> "null"
-  VList xs       -> listValue xs
-  VObject o      -> objectValue o
-  VEnum ev       -> nameP $ unEnumValue ev
+  VVariable v -> variable v
+  VInt i      -> intP i
+  VFloat sc   -> floatP sc
+  VString s   -> stringValue s
+  VBoolean b  -> fromBool b
+  VNull       -> "null"
+  VList xs    -> listValue xs
+  VObject o   -> objectValue o
+  VEnum ev    -> nameP $ unEnumValue ev
 
 stringValue :: (Printer a) => StringValue -> a
 stringValue (StringValue s) =
@@ -187,13 +189,14 @@ objectField (ObjectFieldG name val) =
 
 valueC :: (Printer a) => ValueConst -> a
 valueC = \case
-  VCScientific sc -> scientificP sc
-  VCString s      -> stringValue s
-  VCBoolean b     -> fromBool b
-  VCNull          -> "null"
-  VCList xs       -> listValueC xs
-  VCObject o      -> objectValueC o
-  VCEnum ev       -> nameP $ unEnumValue ev
+  VCInt i      -> intP i
+  VCFloat sc   -> floatP sc
+  VCString s   -> stringValue s
+  VCBoolean b  -> fromBool b
+  VCNull       -> "null"
+  VCList xs    -> listValueC xs
+  VCObject o   -> objectValueC o
+  VCEnum ev    -> nameP $ unEnumValue ev
 
 listValueC :: (Printer a) => ListValueC -> a
 listValueC (ListValueG xs) = mconcat [ charP '[' , li , charP ']' ]
