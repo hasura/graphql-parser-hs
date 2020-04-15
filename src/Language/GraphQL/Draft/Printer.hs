@@ -7,18 +7,19 @@ module Language.GraphQL.Draft.Printer where
 
 import           Prelude                       (String)
 import           Protolude
+import           Data.Scientific               (Scientific)
 
 import           Language.GraphQL.Draft.Syntax
 
 
 class (Monoid a, IsString a) => Printer a where
-  stringP  :: String -> a
-  textP    :: Text -> a
-  charP    :: Char -> a
-  intP     :: Int32 -> a
-  doubleP  :: Double -> a
+  stringP :: String -> a
+  textP   :: Text -> a
+  charP   :: Char -> a
+  intP    :: Integer -> a
+  floatP  :: Scientific -> a
 
-  {-# MINIMAL stringP, textP, charP, intP, doubleP #-}
+  {-# MINIMAL stringP, textP, charP, intP, floatP #-}
 
   nameP    :: Name -> a
   nameP    = textP . unName
@@ -157,7 +158,7 @@ value :: (Printer a) => Value -> a
 value = \case
   VVariable v -> variable v
   VInt i      -> intP i
-  VFloat d    -> doubleP d
+  VFloat sc   -> floatP sc
   VString s   -> stringValue s
   VBoolean b  -> fromBool b
   VNull       -> "null"
@@ -189,7 +190,7 @@ objectField (ObjectFieldG name val) =
 valueC :: (Printer a) => ValueConst -> a
 valueC = \case
   VCInt i      -> intP i
-  VCFloat d    -> doubleP d
+  VCFloat sc   -> floatP sc
   VCString s   -> stringValue s
   VCBoolean b  -> fromBool b
   VCNull       -> "null"

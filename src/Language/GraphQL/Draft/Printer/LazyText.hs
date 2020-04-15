@@ -21,8 +21,8 @@ instance Printer Builder where
   intP    = fromString . show
   {-# INLINE intP #-}
 
-  doubleP = fromString . show
-  {-# INLINE doubleP #-}
+  floatP  = fromString . show
+  {-# INLINE floatP #-}
 
 renderExecutableDoc :: ExecutableDocument -> Text
 renderExecutableDoc = render executableDocument

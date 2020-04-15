@@ -33,7 +33,7 @@ import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
 import qualified Data.Attoparsec.Text          as AT
 import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
-import           Data.Scientific               (floatingOrInteger)
+import           Data.Scientific               (Scientific)
 import           Data.Text                     (find)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
@@ -174,7 +174,7 @@ parseValueConst = runParser valueConst
 
 valueConst :: Parser AST.ValueConst
 valueConst = tok (
-  (fmap (either AST.VCFloat AST.VCInt) number <?> "number")
+      (fmap (either AST.VCFloat AST.VCInt) number <?> "number")
   <|> AST.VCNull     <$  literal "null"
   <|> AST.VCBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VCString   <$> (stringValue <?> "stringValue")
@@ -185,21 +185,18 @@ valueConst = tok (
   <?> "value (const) error!"
   )
 
-number :: Parser (Either Double Int32)
-number =  do
+number :: Parser (Either Scientific Integer)
+number = do
   (numText, num) <- match (tok scientific)
-  case (Data.Text.find (== '.') numText, floatingOrInteger num) of
-    (Just _, Left r)   -> pure (Left r)
-    (Just _, Right i)  -> pure (Left (fromIntegral i))
-    -- TODO: Handle maxBound, Int32 in spec.
-    (Nothing, Left r)  -> pure (Right (floor r))
-    (Nothing, Right i) -> pure (Right i)
+  pure $ case Data.Text.find (== '.') numText of
+    Just _ -> Left num
+    Nothing -> Right (floor num)
 
 -- This will try to pick the first type it can runParser. If you are working with
 -- explicit types use the `typedValue` parser.
 value :: Parser AST.Value
 value = tok (
-  AST.VVariable <$> (variable <?> "variable")
+      AST.VVariable <$> (variable <?> "variable")
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
   <|> AST.VNull     <$  literal "null"
   <|> AST.VBoolean  <$> (booleanValue <?> "booleanValue")

@@ -6,6 +6,8 @@ import           Protolude
 import qualified Hedgehog.Gen                  as Gen
 import qualified Hedgehog.Range                as Range
 
+import           Data.Scientific (fromFloatDigits)
+
 import           Language.GraphQL.Draft.Syntax
 
 
@@ -35,9 +37,9 @@ genValue =
   -- TODO: use maxbound of int32/double or something?
   Gen.recursive
   Gen.choice [ pure VNull
-             , VInt <$> Gen.int32 (Range.linear 1 99999)
+             , VInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 99999)
              , VEnum <$> genEnumValue
-             , VFloat <$> Gen.double (Range.linearFrac 1.1 999999.99999)
+             , VFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
              , VString <$> genStringValue
              , VBoolean <$> Gen.bool
              , VVariable <$> genVariable
@@ -72,9 +74,9 @@ genValueConst =
   -- TODO: use maxbound of int32/double or something?
   Gen.recursive
   Gen.choice [ pure VCNull
-             , VCInt <$> Gen.int32 (Range.linear 1 9)
+             , VCInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 9)
              , VCEnum <$> genEnumValue
-             , VCFloat <$> Gen.double (Range.linearFrac 1.1 9.9)
+             , VCFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
              , VCString <$> genStringValue
              , VCBoolean <$> Gen.bool
              ]
