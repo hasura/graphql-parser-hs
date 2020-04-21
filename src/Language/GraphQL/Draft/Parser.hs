@@ -237,7 +237,7 @@ stringValue = do
     -- Turns out this is really tricky, so we're going to cheat by
     -- reconstructing a literal string (by putting quotes around it) and
     -- delegating all the hard work to Aeson.
-    unescapeText str = A.parseOnly jstring ("\"" <> toS str <> "\"")
+    unescapeText str = A.parseOnly jstring ("\"" <> encodeUtf8 str <> "\"")
 
 -- Notice it can be empty
 listValueG :: Parser a -> Parser (AST.ListValueG a)
