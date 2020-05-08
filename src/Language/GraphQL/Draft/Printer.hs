@@ -98,7 +98,7 @@ fragmentSpread (FragmentSpread name ds) =
 inlineFragment :: (Printer a) => InlineFragment -> a
 inlineFragment (InlineFragment tc ds sels) =
   "... "
-  <> bool mempty (textP "on") (isJust tc)
+  <> bool mempty (textP "on ") (isJust tc)
   <> nameP (fold $ fmap unNamedType tc)
   <> optempty directives ds
   <> selectionSetP sels
