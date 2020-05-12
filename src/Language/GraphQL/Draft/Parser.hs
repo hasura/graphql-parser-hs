@@ -188,8 +188,11 @@ valueConst = tok (
 number :: Parser (Either Scientific Integer)
 number = do
   (numText, num) <- match (tok scientific)
-  pure $ case Data.Text.find (== '.') numText of
+  pure $ case Data.Text.find (\c -> c == '.' || c == 'e' || c == 'E') numText of
+      -- Number specified with decimals and/or scientific notation, so
+      -- store as a 'Scientific'.
     Just _ -> Left num
+      -- No '.' and not in scientific notation, so safe to convert to integer.
     Nothing -> Right (floor num)
 
 -- This will try to pick the first type it can runParser. If you are working with
