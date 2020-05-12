@@ -133,7 +133,7 @@ instance Hashable Definition
 
 newtype ExecutableDocument var
   = ExecutableDocument { getExecutableDefinitions :: [ExecutableDefinition var] }
-  deriving (Ord, Show, Eq, Lift, Hashable)
+  deriving (Ord, Show, Eq, Lift, Hashable, Functor, Foldable, Traversable)
 
 instance J.FromJSON (ExecutableDocument Name) where
   parseJSON = J.withText "ExecutableDocument" $ \t ->
@@ -147,7 +147,7 @@ instance J.ToJSON (ExecutableDocument Name) where
 data ExecutableDefinition var
   = ExecutableDefinitionOperation (OperationDefinition var)
   | ExecutableDefinitionFragment FragmentDefinition
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (ExecutableDefinition var)
 
 partitionExDefs
@@ -196,7 +196,7 @@ newtype SchemaDocument
 data OperationDefinition var
   = OperationDefinitionTyped (TypedOperationDefinition var)
   | OperationDefinitionUnTyped (SelectionSet var)
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (OperationDefinition var)
 
 data TypedOperationDefinition var = TypedOperationDefinition
@@ -205,7 +205,7 @@ data TypedOperationDefinition var = TypedOperationDefinition
   , _todVariableDefinitions :: [VariableDefinition]
   , _todDirectives          :: [Directive var]
   , _todSelectionSet        :: SelectionSet var
-  } deriving (Ord, Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (TypedOperationDefinition var)
 
 data VariableDefinition = VariableDefinition
@@ -221,7 +221,7 @@ data Selection var
   = SelectionField (Field var)
   | SelectionFragmentSpread (FragmentSpread var)
   | SelectionInlineFragment (InlineFragment var)
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (Selection var)
 
 data Field var = Field
@@ -230,7 +230,7 @@ data Field var = Field
   , _fArguments    :: HashMap Name (Value var)
   , _fDirectives   :: [Directive var]
   , _fSelectionSet :: SelectionSet var
-  } deriving (Ord, Show, Eq, Generic)
+  } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (Field var)
 instance Lift var => Lift (Field var) where
   lift Field{..} =
@@ -242,14 +242,14 @@ instance Lift var => Lift (Field var) where
 data FragmentSpread var = FragmentSpread
   { _fsName       :: Name
   , _fsDirectives :: [Directive var]
-  } deriving (Ord, Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (FragmentSpread var)
 
 data InlineFragment var = InlineFragment
   { _ifTypeCondition :: Maybe Name
   , _ifDirectives    :: [Directive var]
   , _ifSelectionSet  :: SelectionSet var
-  } deriving (Ord, Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (InlineFragment var)
 
 data FragmentDefinition = FragmentDefinition
@@ -272,7 +272,7 @@ data Value var
   | VEnum EnumValue
   | VList [Value var]
   | VObject (HashMap Name (Value var))
-  deriving (Show, Eq, Ord, Functor, Generic)
+  deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (Value var)
 instance Lift var => Lift (Value var) where
   lift (VVariable a) = [| VVariable a |]
@@ -293,7 +293,7 @@ literal = fmap absurd
 data Directive var = Directive
   { _dName      :: Name
   , _dArguments :: HashMap Name (Value var)
-  } deriving (Ord, Show, Eq, Generic)
+  } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (Directive var)
 instance Lift var => Lift (Directive var) where
   lift Directive{..} = [| Directive{ _dName, _dArguments = $(liftHashMap _dArguments) } |]
