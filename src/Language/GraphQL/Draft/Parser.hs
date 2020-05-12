@@ -188,21 +188,12 @@ valueConst = tok (
 number :: Parser (Either Scientific Integer)
 number = do
   (numText, num) <- match (tok scientific)
-  pure $ case Data.Text.find (== '.') numText of
-      -- Number specified with decimals, so store as a 'Scientific'
+  pure $ case Data.Text.find (\c -> c == '.' || c == 'e' || c == 'E') numText of
+      -- Number specified with decimals and/or scientific notation, so
+      -- store as a 'Scientific'.
     Just _ -> Left num
-      -- Even if there is no '.' in the text, the number may still not
-      -- be integral (e.g. in 3E-7).  Conversely, even a number with a
-      -- negative exponent may still be integral, e.g. 300E-2.  But
-      -- the careful thing to do is to only convert to an 'Integer'
-      -- for numbers with nonnegative exponents.  Note that we can't
-      -- simply delegate this decision to
-      -- 'Data.Scientific.floatingOrInteger' since 'Scientific' does
-      -- not have a 'RealFloat' instance.
-    Nothing ->
-      if base10Exponent num >= 0
-      then Right (floor num)
-      else Left num
+      -- No '.' and not in scientific notation, so safe to convert to integer.
+    Nothing -> Right (floor num)
 
 -- This will try to pick the first type it can runParser. If you are working with
 -- explicit types use the `typedValue` parser.
