@@ -33,7 +33,7 @@ import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
 import qualified Data.Attoparsec.Text          as AT
 import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
-import           Data.Scientific               (Scientific, base10Exponent)
+import           Data.Scientific               (Scientific)
 import           Data.Text                     (find)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
