@@ -8,14 +8,14 @@ module Language.GraphQL.Draft.Parser
   , parseExecutableDoc
   -- * Parsers for 'AST.TypeSystemDefinition'.
   , schemaDefinition
-  , parseTypeSysDefinition
+  , typeSystemDefinition
   -- * Parsers for 'AST.SchemaDocument'.
   , schemaDocument
   , parseSchemaDoc
   -- * Small utility parsers.
   , value
   , parseValueConst
-  , nameParser
+  , name
   -- * Parsers for GraphQL types.
   , graphQLType
   , parseGraphQLType
@@ -63,24 +63,21 @@ schemaDefinition :: Parser AST.SchemaDefinition
 schemaDefinition = tok "schema" *> braces (
     AST.SchemaDefinition
       <$> optional directives
-      <*> many1 rootOperationParser
+      <*> many1 rootOperationTypeDefinition
   )
 
 -- | Parser for a 'AST.RootOperationTypeDefinition'.
-rootOperationParser :: Parser AST.RootOperationTypeDefinition
-rootOperationParser =
+rootOperationTypeDefinition :: Parser AST.RootOperationTypeDefinition
+rootOperationTypeDefinition =
   AST.RootOperationTypeDefinition
-    <$> (operationTypeParser <* tok ":")
-    <*> (AST.NamedType <$> nameParser)
+    <$> (operationType <* tok ":")
+    <*> (AST.NamedType <$> name)
 
 -- | Parser for a 'AST.TypeSystemDefinition'.
 typeSystemDefinition :: Parser [AST.TypeSystemDefinition]
-typeSystemDefinition = whiteSpace *> (concat <$> many1 (
+typeSystemDefinition = concat <$> many1 (
       (\(AST.SchemaDocument d) -> AST.TypeSystemDefinitionType <$> d) <$> schemaDocument
-  <|> (: []) . AST.TypeSystemDefinitionSchema <$> schemaDefinition ))
-
-parseTypeSysDefinition :: Text -> Either Text [AST.TypeSystemDefinition]
-parseTypeSysDefinition = runParser typeSystemDefinition
+  <|> (: []) . AST.TypeSystemDefinitionSchema <$> schemaDefinition )
 
 -- | Parser for a schema document.
 schemaDocument :: Parser AST.SchemaDocument
@@ -103,8 +100,8 @@ operationDefinition =
   <|> (AST.OperationDefinitionUnTyped <$> selectionSet)
   <?> "operationDefinition error!"
 
-operationTypeParser :: Parser AST.OperationType
-operationTypeParser =
+operationType :: Parser AST.OperationType
+operationType =
   AST.OperationTypeQuery <$ tok "query"
   <|> AST.OperationTypeMutation <$ tok "mutation"
   <|> AST.OperationTypeSubscription <$ tok "subscription"
@@ -112,8 +109,8 @@ operationTypeParser =
 typedOperationDef :: Parser AST.TypedOperationDefinition
 typedOperationDef =
   AST.TypedOperationDefinition
-  <$> operationTypeParser
-  <*> optional nameParser
+  <$> operationType
+  <*> optional name
   <*> optempty variableDefinitions
   <*> optempty directives
   <*> selectionSet
@@ -132,7 +129,7 @@ defaultValue :: Parser AST.DefaultValue
 defaultValue = tok "=" *> valueConst
 
 variable :: Parser AST.Variable
-variable = AST.Variable <$ tok "$" <*> nameParser
+variable = AST.Variable <$ tok "$" <*> name
 
 selectionSet :: Parser AST.SelectionSet
 selectionSet = braces $ many1 selection
@@ -146,10 +143,10 @@ selection = AST.SelectionField <$> field
 
 aliasAndFld :: Parser (Maybe AST.Alias, AST.Name)
 aliasAndFld = do
-  n <- nameParser
+  n <- name
   colonM <- optional (tok ":")
   case colonM of
-    Just _  -> (,) (Just $ AST.Alias n) <$> nameParser
+    Just _  -> (,) (Just $ AST.Alias n) <$> name
     Nothing -> return (Nothing, n)
 {-# INLINE aliasAndFld #-}
 
@@ -165,7 +162,7 @@ arguments :: Parser [AST.Argument]
 arguments = parens $ many1 argument
 
 argument :: Parser AST.Argument
-argument = AST.Argument <$> nameParser <* tok ":" <*> value
+argument = AST.Argument <$> name <* tok ":" <*> value
 
 -- * Fragments
 
@@ -174,7 +171,7 @@ fragmentSpread :: Parser AST.FragmentSpread
 -- See https://facebook.github.io/graphql/#FragmentSpread
 fragmentSpread = AST.FragmentSpread
   <$  tok "..."
-  <*> nameParser
+  <*> name
   <*> optempty directives
 
 -- InlineFragment tried first in order to guard against 'on' keyword
@@ -188,7 +185,7 @@ inlineFragment = AST.InlineFragment
 fragmentDefinition :: Parser AST.FragmentDefinition
 fragmentDefinition = AST.FragmentDefinition
   <$  tok "fragment"
-  <*> nameParser
+  <*> name
   <*  tok "on"
   <*> typeCondition
   <*> optempty directives
@@ -208,7 +205,7 @@ valueConst = tok (
   <|> AST.VCBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VCString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
-  <|> AST.VCEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VCEnum     <$> (fmap AST.EnumValue name <?> "name")
   <|> AST.VCList     <$> (listValueC <?> "listValue")
   <|> AST.VCObject   <$> (objectValueC <?> "objectValue")
   <?> "value (const) error!"
@@ -234,7 +231,7 @@ value = tok (
   <|> AST.VBoolean  <$> (booleanValue <?> "booleanValue")
   <|> AST.VString   <$> (stringValue <?> "stringValue")
   -- `true` and `false` have been tried before
-  <|> AST.VEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VEnum     <$> (fmap AST.EnumValue name <?> "name")
   <|> AST.VList     <$> (listValue <?> "listValue")
   <|> AST.VObject   <$> (objectValue <?> "objectValue")
   <?> "value error!"
@@ -292,7 +289,7 @@ objectValueC :: Parser AST.ObjectValueC
 objectValueC = objectValueG valueConst
 
 objectFieldG :: Parser a -> Parser (AST.ObjectFieldG a)
-objectFieldG p = AST.ObjectFieldG <$> nameParser <* tok ":" <*> p
+objectFieldG p = AST.ObjectFieldG <$> name <* tok ":" <*> p
 
 -- * Directives
 
@@ -302,7 +299,7 @@ directives = many1 directive
 directive :: Parser AST.Directive
 directive = AST.Directive
   <$  tok "@"
-  <*> nameParser
+  <*> name
   <*> optempty arguments
 
 -- * Type Reference
@@ -317,7 +314,7 @@ parseGraphQLType :: Text -> Either Text AST.GType
 parseGraphQLType = runParser graphQLType
 
 namedType :: Parser AST.NamedType
-namedType = AST.NamedType <$> nameParser
+namedType = AST.NamedType <$> name
 
 listType :: Parser AST.ListType
 listType = AST.ListType <$> brackets graphQLType
@@ -346,7 +343,7 @@ objectTypeDefinition :: Parser AST.ObjectTypeDefinition
 objectTypeDefinition = AST.ObjectTypeDefinition
   <$> optDesc
   <*  tok "type"
-  <*> nameParser
+  <*> name
   <*> optempty interfaces
   <*> optempty directives
   <*> fieldDefinitions
@@ -360,7 +357,7 @@ fieldDefinitions = braces $ many1 fieldDefinition
 fieldDefinition :: Parser AST.FieldDefinition
 fieldDefinition = AST.FieldDefinition
   <$> optDesc
-  <*> nameParser
+  <*> name
   <*> optempty argumentsDefinition
   <*  tok ":"
   <*> graphQLType
@@ -373,7 +370,7 @@ interfaceTypeDefinition :: Parser AST.InterfaceTypeDefinition
 interfaceTypeDefinition = AST.InterfaceTypeDefinition
   <$> optDesc
   <*  tok "interface"
-  <*> nameParser
+  <*> name
   <*> optempty directives
   <*> fieldDefinitions
 
@@ -381,7 +378,7 @@ unionTypeDefinition :: Parser AST.UnionTypeDefinition
 unionTypeDefinition = AST.UnionTypeDefinition
   <$> optDesc
   <*  tok "union"
-  <*> nameParser
+  <*> name
   <*> optempty directives
   <*  tok "="
   <*> unionMembers
@@ -393,14 +390,14 @@ scalarTypeDefinition :: Parser AST.ScalarTypeDefinition
 scalarTypeDefinition = AST.ScalarTypeDefinition
   <$> optDesc
   <*  tok "scalar"
-  <*> nameParser
+  <*> name
   <*> optempty directives
 
 enumTypeDefinition :: Parser AST.EnumTypeDefinition
 enumTypeDefinition = AST.EnumTypeDefinition
   <$> optDesc
   <*  tok "enum"
-  <*> nameParser
+  <*> name
   <*> optempty directives
   <*> enumValueDefinitions
 
@@ -415,13 +412,13 @@ enumValueDefinition = AST.EnumValueDefinition
 
 -- TODO: should not be one of true/false/null
 enumValue :: Parser AST.EnumValue
-enumValue = AST.EnumValue <$> nameParser
+enumValue = AST.EnumValue <$> name
 
 inputObjectTypeDefinition :: Parser AST.InputObjectTypeDefinition
 inputObjectTypeDefinition = AST.InputObjectTypeDefinition
   <$> optDesc
   <*  tok "input"
-  <*> nameParser
+  <*> name
   <*> optempty directives
   <*> inputValueDefinitions
 
@@ -431,7 +428,7 @@ inputValueDefinitions = braces $ many1 inputValueDefinition
 inputValueDefinition :: Parser AST.InputValueDefinition
 inputValueDefinition = AST.InputValueDefinition
   <$> optDesc
-  <*> nameParser
+  <*> name
   <*  tok ":"
   <*> graphQLType
   <*> optional defaultValue
@@ -491,11 +488,11 @@ whiteSpace = do
 --      | st                             -> Just True
 -- {-# INLINE whiteSpace #-}
 
-nameParser :: AT.Parser AST.Name
-nameParser =
+name :: AT.Parser AST.Name
+name =
   AST.Name <$> tok ((<>) <$> AT.takeWhile1 isFirstChar
                          <*> AT.takeWhile isNonFirstChar)
-{-# INLINE nameParser #-}
+{-# INLINE name #-}
 
 isFirstChar :: Char -> Bool
 isFirstChar x = isAsciiLower x || isAsciiUpper x || x == '_'
