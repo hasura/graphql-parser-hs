@@ -60,10 +60,10 @@ parseExecutableDoc = runParser executableDocument
 
 -- | Parser for a 'AST.SchemaDefinition'.
 schemaDefinition :: Parser AST.SchemaDefinition
-schemaDefinition = tok "schema" *> braces (
+schemaDefinition = tok "schema" *> (
     AST.SchemaDefinition
       <$> optional directives
-      <*> many1 rootOperationTypeDefinition
+      <*> braces (many1 rootOperationTypeDefinition)
   )
 
 -- | Parser for a 'AST.RootOperationTypeDefinition'.
