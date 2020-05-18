@@ -229,8 +229,8 @@ objectFields several = foldM insertField M.empty =<< several objectField
   where
     objectField = (,) <$> nameParser <* tok ":" <*> value
     insertField obj (k, v)
-      | k `M.member` obj = pure (M.insert k v obj)
-      | otherwise        = fail $ "multiple “" <> T.unpack (AST.unName k) <> "” fields"
+      | k `M.member` obj = fail $ "multiple “" <> T.unpack (AST.unName k) <> "” fields"
+      | otherwise        = pure (M.insert k v obj)
 
 -- * Directives
 
