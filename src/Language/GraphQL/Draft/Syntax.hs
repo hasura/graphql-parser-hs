@@ -70,12 +70,6 @@ module Language.GraphQL.Draft.Syntax (
   , FragmentSpread(..)
   , NoFragments
   , InlineFragment(..)
-
-  -- * Lenses
-  , HasVariables(..)
-  , HasVariables'
-  , HasFragments(..)
-  , HasFragments'
   ) where
 
 import qualified Data.Aeson                          as J
@@ -85,7 +79,6 @@ import qualified Data.Text                           as T
 import qualified Language.Haskell.TH.Syntax          as TH
 import qualified Text.Regex.TDFA                     as TDFA
 
-import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Fail                  (MonadFail)
 import           Data.Bool                           (bool)
@@ -128,27 +121,6 @@ instance J.FromJSON Name where
 
 instance J.FromJSONKey Name where
   fromJSONKey = J.FromJSONKeyTextParser parseName
-
--- * Lenses
-
-class HasVariables s t a b | s -> a, t -> b, s b -> t a, t a -> s b where
-  variables :: Traversal s t a b
-
-class HasFragments s t a b | s -> a, t -> b, s b -> t a, t a -> s b where
-  fragments :: Traversal s t a b
-
-type HasVariables' s a = HasVariables s s a a
-type HasFragments' s a = HasFragments s s a a
-
-instance HasVariables s t a b => HasVariables [s] [t] a b where
-  variables = traverse.variables
-instance HasVariables s t a b => HasVariables (HashMap k s) (HashMap k t) a b where
-  variables = traverse.variables
-
-instance HasFragments s t a b => HasFragments [s] [t] a b where
-  fragments = traverse.fragments
-instance HasFragments s t a b => HasFragments (HashMap k s) (HashMap k t) a b where
-  fragments = traverse.fragments
 
 -- * Documents
 
@@ -257,22 +229,6 @@ data Selection frag var
   deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (Selection frag var)
 
-instance Traversable frag => HasVariables (Selection frag var) (Selection frag var') var var' where
-  variables f (SelectionField field) =
-    SelectionField <$> variables f field
-  variables f (SelectionFragmentSpread fragment) =
-    SelectionFragmentSpread <$> traverse f fragment
-  variables f (SelectionInlineFragment fragment) =
-    SelectionInlineFragment <$> variables f fragment
-
-instance HasFragments (Selection frag var) (Selection frag' var) (frag var) (frag' var) where
-  fragments f (SelectionField field) =
-    SelectionField <$> fragments f field
-  fragments f (SelectionFragmentSpread fragment) =
-    SelectionFragmentSpread <$> f fragment
-  fragments f (SelectionInlineFragment fragment) =
-    SelectionInlineFragment <$> fragments f fragment
-
 data Field frag var = Field
   { _fAlias        :: Maybe Name
   , _fName         :: Name
@@ -285,18 +241,6 @@ instance (Lift (frag var), Lift var) => Lift (Field frag var) where
   lift Field{..} =
     [| Field { _fAlias, _fName, _fDirectives, _fSelectionSet
              , _fArguments = $(liftHashMap _fArguments) } |]
-
-instance Traversable frag => HasVariables (Field frag var) (Field frag var') var var' where
-  variables f Field{..} = do
-    _fArguments <- variables f _fArguments
-    _fDirectives <- variables f _fDirectives
-    _fSelectionSet <- variables f _fSelectionSet
-    pure Field{..}
-
-instance HasFragments (Field frag var) (Field frag' var) (frag var) (frag' var) where
-  fragments f Field{..} = do
-    _fSelectionSet <- fragments f _fSelectionSet
-    pure Field{..}
 
 -- * Fragments
 
@@ -321,17 +265,6 @@ data InlineFragment frag var = InlineFragment
   , _ifSelectionSet  :: SelectionSet frag var
   } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (InlineFragment frag var)
-
-instance Traversable frag => HasVariables (InlineFragment frag var) (InlineFragment frag var') var var' where
-  variables f InlineFragment{..} = do
-    _ifDirectives <- variables f _ifDirectives
-    _ifSelectionSet <- variables f _ifSelectionSet
-    pure InlineFragment{..}
-
-instance HasFragments (InlineFragment frag var) (InlineFragment frag' var) (frag var) (frag' var) where
-  fragments f InlineFragment{..} = do
-    _ifSelectionSet <- fragments f _ifSelectionSet
-    pure InlineFragment{..}
 
 data FragmentDefinition = FragmentDefinition
   { _fdName          :: Name
@@ -365,8 +298,6 @@ instance Lift var => Lift (Value var) where
   lift (VEnum a)     = [| VEnum a |]
   lift (VList a)     = [| VList a |]
   lift (VObject a)   = [| VObject $(liftHashMap a) |]
-instance HasVariables (Value a) (Value b) a b where
-  variables = traverse
 
 literal :: Value Void -> Value var
 literal = fmap absurd
@@ -380,8 +311,6 @@ data Directive var = Directive
 instance Hashable var => Hashable (Directive var)
 instance Lift var => Lift (Directive var) where
   lift Directive{..} = [| Directive{ _dName, _dArguments = $(liftHashMap _dArguments) } |]
-instance HasVariables (Directive var) (Directive var') var var' where
-  variables = traverse
 
 -- * Type Reference
 

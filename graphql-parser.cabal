@@ -41,7 +41,6 @@ library
     , containers
     , filepath
     -- , hedgehog
-    , lens
     , prettyprinter
     -- , protolude
     , regex-tdfa >=1.2
