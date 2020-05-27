@@ -66,7 +66,7 @@ definitionExecutable =
   AST.ExecutableDefinitionOperation <$> operationDefinition
   <|> AST.ExecutableDefinitionFragment <$> fragmentDefinition
 
-operationDefinition :: Parser (AST.OperationDefinition AST.Name)
+operationDefinition :: Parser (AST.OperationDefinition AST.FragmentSpread AST.Name)
 operationDefinition =
   AST.OperationDefinitionTyped <$> typedOperationDef
   <|> (AST.OperationDefinitionUnTyped <$> selectionSet)
@@ -77,7 +77,7 @@ operationTypeParser =
   <|> AST.OperationTypeMutation <$ tok "mutation"
   <|> AST.OperationTypeSubscription <$ tok "subscription"
 
-typedOperationDef :: Parser (AST.TypedOperationDefinition AST.Name)
+typedOperationDef :: Parser (AST.TypedOperationDefinition AST.FragmentSpread AST.Name)
 typedOperationDef =
   AST.TypedOperationDefinition
   <$> operationTypeParser
@@ -106,10 +106,10 @@ instance Variable Void where
 instance Variable AST.Name where
   variable = tok "$" *> nameParser <?> "variable"
 
-selectionSet :: Variable var => Parser (AST.SelectionSet var)
+selectionSet :: Variable var => Parser (AST.SelectionSet AST.FragmentSpread var)
 selectionSet = braces $ many1 selection
 
-selection :: Variable var => Parser (AST.Selection var)
+selection :: Variable var => Parser (AST.Selection AST.FragmentSpread var)
 selection = AST.SelectionField <$> field
             -- Inline first to catch `on` case
         <|> AST.SelectionInlineFragment <$> inlineFragment
@@ -124,7 +124,7 @@ aliasAndFld = do
     Nothing -> return (Nothing, n)
 {-# INLINE aliasAndFld #-}
 
-field :: Variable var => Parser (AST.Field var)
+field :: Variable var => Parser (AST.Field AST.FragmentSpread var)
 field = do
   (alM, n) <- aliasAndFld
   AST.Field alM n
@@ -143,7 +143,7 @@ fragmentSpread = AST.FragmentSpread
   <*> optempty directives
 
 -- InlineFragment tried first in order to guard against 'on' keyword
-inlineFragment :: Variable var => Parser (AST.InlineFragment var)
+inlineFragment :: Variable var => Parser (AST.InlineFragment AST.FragmentSpread var)
 inlineFragment = AST.InlineFragment
   <$  tok "..."
   <*> optional (tok "on" *> nameParser)
