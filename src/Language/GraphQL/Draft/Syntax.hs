@@ -68,7 +68,7 @@ module Language.GraphQL.Draft.Syntax (
   , Selection(..)
   , Field(..)
   , FragmentSpread(..)
-  , NoFragments
+  , NoFragments(..)
   , InlineFragment(..)
   ) where
 
