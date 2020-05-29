@@ -392,7 +392,7 @@ ends = do
   mc <- AT.peekChar
   case mc of
     Nothing -> pure ()
-    Just c  -> guard (isNonFirstChar c)
+    Just c  -> guard (not (isNonFirstChar c))
 
 comment :: Parser ()
 comment =
