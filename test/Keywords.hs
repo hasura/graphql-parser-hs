@@ -4,15 +4,15 @@
 
 module Keywords (primitiveTests) where
 
-import Hedgehog
-import Protolude
-import GHC.Base (fail)
+import           GHC.Base                            (fail)
+import           Hedgehog
+import           Protolude
 
-import Language.GraphQL.Draft.Syntax
-import Language.GraphQL.Draft.Parser
+import           Language.GraphQL.Draft.Parser
+import           Language.GraphQL.Draft.Syntax
 
-import qualified Language.GraphQL.Draft.Printer.Text as PP.TB
 import qualified Language.GraphQL.Draft.Printer      as P
+import qualified Language.GraphQL.Draft.Printer.Text as PP.TB
 
 primitiveTests :: IsString s => [(s, Property)]
 primitiveTests =
@@ -24,7 +24,7 @@ primitiveTests =
 propNullNameValue :: Property
 propNullNameValue = property $ either (fail . Protolude.show) (ast ===) astRoundTrip
   where
-    astRoundTrip = (runParser value) printed
+    astRoundTrip = runParser value printed
     printed      = PP.TB.render P.value ast
     ast          = VList (ListValueG { unListValue = [
                     VEnum (EnumValue{unEnumValue = Name{unName = "nullColumn"}})]})
@@ -32,7 +32,7 @@ propNullNameValue = property $ either (fail . Protolude.show) (ast ===) astRound
 propBoolNameValue :: Property
 propBoolNameValue = property $ either (fail . Protolude.show) (ast ===) astRoundTrip
   where
-    astRoundTrip = (runParser value) printed
+    astRoundTrip = runParser value printed
     printed      = PP.TB.render P.value ast
     ast          = VList (ListValueG { unListValue = [
                     VEnum (EnumValue{unEnumValue = Name{unName = "trueColumn"}})]})
@@ -40,6 +40,6 @@ propBoolNameValue = property $ either (fail . Protolude.show) (ast ===) astRound
 propNullNameName :: Property
 propNullNameName = property $ either (fail . Protolude.show) (ast ===) astRoundTrip
   where
-    astRoundTrip = (runParser nameParser) printed
+    astRoundTrip = runParser name printed
     printed      = PP.TB.render P.nameP ast
     ast          = Name "nullColumntwo"
