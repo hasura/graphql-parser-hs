@@ -30,9 +30,11 @@ import qualified Data.Text.Encoding            as T
 import           Control.Applicative
 import           Control.Monad
 import           Data.Aeson.Parser             (jstring)
-import           Data.Attoparsec.Text          (Parser, anyChar, char, many1, match, option, scan,
-                                                scientific, sepBy1, (<?>))
-import           Data.Char                     (isAsciiLower, isAsciiUpper, isDigit)
+import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
+                                                match, option, scan, scientific,
+                                                sepBy1, (<?>))
+import           Data.Char                     (isAsciiLower, isAsciiUpper,
+                                                isDigit)
 import           Data.Functor
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Int                      (Int32)
@@ -178,12 +180,14 @@ value = tok (
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
   <|> AST.VNull     <$  literal "null"
   <|> AST.VBoolean  <$> booleanLiteral
-  <|> AST.VString   <$> stringLiteral
+  <|> mkVString     <$> stringLiteral
   -- `true` and `false` have been tried before
   <|> AST.VEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
   <|> AST.VList     <$> listLiteral
   <|> AST.VObject   <$> objectLiteral
   <?> "value")
+  where
+    mkVString = AST.VString AST.GraphQLLiteral
 
 booleanLiteral :: Parser Bool
 booleanLiteral

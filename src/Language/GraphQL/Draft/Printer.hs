@@ -167,7 +167,7 @@ value = \case
   VVariable v -> variableP v
   VInt i      -> intP i
   VFloat d    -> doubleP d
-  VString s   -> stringValue s
+  VString _ s -> stringValue s
   VBoolean b  -> fromBool b
   VNull       -> "null"
   VList xs    -> listValue xs

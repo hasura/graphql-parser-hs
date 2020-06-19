@@ -11,6 +11,7 @@ module Language.GraphQL.Draft.Syntax (
   , unsafeMkName
   , litName
   , Description(..)
+  , Origin(..)
   , Value(..)
   , literal
   , EnumValue(..)
@@ -276,12 +277,18 @@ instance Hashable FragmentDefinition
 
 -- * Values
 
+data Origin = GraphQLLiteral
+            | ExternalValue
+  deriving (Show, Ord, Eq, Lift, Generic)
+
+instance Hashable Origin
+
 data Value var
   = VVariable var
   | VNull
   | VInt Int32
   | VFloat Double
-  | VString Text
+  | VString Origin Text -- see note [The origin of VString]
   | VBoolean Bool
   | VEnum EnumValue
   | VList [Value var]
@@ -293,7 +300,7 @@ instance Lift var => Lift (Value var) where
   lift VNull         = [| VNull |]
   lift (VInt a)      = [| VInt a |]
   lift (VFloat a)    = [| VFloat a |]
-  lift (VString a)   = [| VString a |]
+  lift (VString o a) = [| VString o a |]
   lift (VBoolean a)  = [| VBoolean a |]
   lift (VEnum a)     = [| VEnum a |]
   lift (VList a)     = [| VList a |]
@@ -301,6 +308,153 @@ instance Lift var => Lift (Value var) where
 
 literal :: Value Void -> Value var
 literal = fmap absurd
+
+{- Note [The origin of VSTring]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All abstractions are leaky. And, sometimes, the leak manifests itself quite far
+from where it originated. Here, the reason why we need to know where a VString
+came from has to do with how we parse and typecheck enum values in an incoming
+query in Hasura's graphql server.
+
+
+
+To understand why, let's start with the GraphQL spec. The spec lists, for each
+input type, what implicit conversion / coercion can be performed. An int literal
+can be silently promoted to float, for instance. More subtle: if a list of a
+given type T is expected, it is allowed to only give one value of said type T,
+which will then be promoted to a list of one element. And finally, the relevant
+point: an Enum value CANNOT be coerced from a String. To quote section 3.9:
+
+    GraphQL has a constant literal to represent enum input values. GraphQL
+    string literals must not be accepted as an enum input and instead raise a
+    query error.
+
+    Query variable transport serializations which have a different
+    representation for non-string symbolic values (for example, EDN) should only
+    allow such values as enum input values. Otherwise, for most transport
+    serializations that do not, strings may be interpreted as the enum input
+    value with the same name.
+
+This in itself is enough to summarize why we need the origin of the VString: a
+conversion is allowed from String to Enum value IF AND ONLY IF said String
+originated from a serialization that does not differentiate between strings and
+enum values, like JSON.
+
+
+
+But why would our parsers need to convert from a JSON value to a 'Value' in the
+first place? Why can't they decide whether a JSON string is an enum value or a
+string based on the context in which it is interpreted? To answer that, let's
+talk about our parsers.
+
+Inside our parsing logic, all parsers for an input value expect a 'Value'. They
+can there check that the types match, and perform any required input
+coercion. For instance, the parser for a float could look like this:
+
+    float :: Parser Double
+    float = \case
+      VInt   i -> pure $ fromIntegral i
+      VFLoat f -> pure f
+      other    -> typeMismatch "Float" $ describe other
+
+For more complicated types, we combine together smaller parsers. An extremely
+important property of those parsers is that they don't check how a type should
+be structured by looking it up in an external source of truth: THEY ARE THE
+SOURCE OF TRUTH. They are made in a way that can be statically introspected, and
+the definition of a type can be extracted from how we parse it.
+
+What that means, in turn, is that the place where we can tell that we are
+expecting an enum value, and that we should parse an incoming JSON string as an
+emum is in the `enum` combinator.
+
+Finally, the last piece of the puzzle: variable substitution. 'Value' is
+polymorphic over variables: in practice, the type we use for variables contains
+a `Value Void`. When we perform variable substitution, we simply replace the
+'Value' by the one inside the variable.
+
+With all of that in mind, let's see how else we could solve the problem of
+making sure JSON strings can be properly converted into enums.
+
+
+
+Solution 1: type-aware literal conversion
+
+The easiest way to deal with JSON values, and indeed the one on which our
+current solution is based, is to convert them into 'Value's before parsing
+begins. But each JSON string on the inside would need to be checked against the
+schema, to know whether it should be translated into a 'VString' or a
+'VEnumValue'. Let's take a contrived example: a variable defined as such:
+
+    x: {
+      "foo": {
+        "bar": {
+          "baz": "RED"
+        }
+      }
+    }
+
+To check whether this "RED" string should be interpreted as an enum value or
+not, we would need to identify the type, of all fields in all objects all the
+way up, while also performing some of the same input type coercion checks that
+the parsers already have to do: maybe the field "bar" actually expects a list of
+values, but as we've seen it is legal to only provide one value for a list.
+
+We would basically have to duplicate / rewrite a significant (and, crucically, a
+delicate and error-prone) part of the parsers logic just to convert JSON values
+to GraphQL 'Value's.
+
+
+
+Solution 2: JSON values inside the variable
+
+Another approach would have been to change the type we use for variables, the
+type argument to 'Value', and for it to store either a GraphQL value, or an
+uninterpreted JSON value. With this, each leaf parser could decide how to deal
+with the underlying JSON value, and decide whether a String should be allowed to
+be cast to enum.
+
+Where this approach failed is for variable substitution. Since we're still using
+Value as the input to our parser, we would need to convert the JSON value into a
+GraphQL 'Value' upon performing variable substitution. But since we would not be
+in the leaf parsers, we would have to, again, introspect the schema to know how
+to handle the strings, same problem as solution 1.
+
+
+
+Solution 3: changing the parsers input
+
+The next logical step was to change the input of our parsers to be instead a new
+union type:
+
+    data InputValue a = JSONValue Aeson.Value
+                      | GraphQLValue (Value a)
+
+    data Variable = Variable (InputValue Void)
+
+    type ParserInput = InputValue Variable
+
+That way, when performing variable substitution, we could promote the variable's
+JSON value to the level of InputValue. But... this wasn't over. Consider the
+case of the 'object' combinator, finding a JSON value. If it tries to convert
+the entire object, then we run into the same issue again: it will need knowledge
+of the entire object, down to the leaves, which means the same problem as the
+two previous solutions.
+
+This could be solved by only lazily converting lists and objects... But in their
+current implementation, 'VObject' and 'VList' expect values of type
+'Value'. Those would need to be made parametric too... and that would break
+everything.
+
+
+
+As a result, there was no way to fix this issue without either deeply changing
+how some parts of the parsers work, or without fundamentally chaning the 'Value'
+type. Hence this solution to simply tag the 'VString', to indicate whether it
+originated from a GraphQL literal or if it was converted from another format.
+
+-}
+
 
 -- * Directives
 
