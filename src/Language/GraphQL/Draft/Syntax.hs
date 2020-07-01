@@ -71,6 +71,13 @@ module Language.GraphQL.Draft.Syntax (
   , FragmentSpread(..)
   , NoFragments
   , InlineFragment(..)
+
+  -- ** Fragment conversion functions
+  , inline
+  , fmapFieldFragment
+  , fmapSelectionSetFragment
+  , fmapSelectionFragment
+  , fmapInlineFragment
   ) where
 
 import qualified Data.Aeson                          as J
@@ -647,3 +654,23 @@ instance Hashable TypeSystemDirectiveLocation
 
 liftHashMap :: (Lift k, Lift v) => HashMap k v -> Q TH.Exp
 liftHashMap a = [| M.fromList $(TH.lift $ M.toList a) |]
+
+inline :: NoFragments var -> FragmentSpread var
+inline x = case x of {}
+
+fmapFieldFragment :: (frag var -> frag' var) -> Field frag var -> Field frag' var
+fmapFieldFragment f field =
+  field {_fSelectionSet = fmapSelectionSetFragment f (_fSelectionSet field)}
+
+fmapSelectionSetFragment :: (frag var -> frag' var) -> SelectionSet frag var -> SelectionSet frag' var
+fmapSelectionSetFragment f = fmap (fmapSelectionFragment f)
+
+fmapSelectionFragment :: (frag var -> frag' var) -> Selection frag var -> Selection frag' var
+fmapSelectionFragment f (SelectionField field) = SelectionField $ fmapFieldFragment f field
+fmapSelectionFragment f (SelectionFragmentSpread frag) = SelectionFragmentSpread $ f frag
+fmapSelectionFragment f (SelectionInlineFragment inlineFrag) =
+  SelectionInlineFragment $ fmapInlineFragment f inlineFrag
+
+fmapInlineFragment :: (frag var -> frag' var) -> (InlineFragment frag var) -> (InlineFragment frag' var)
+fmapInlineFragment f inlineFragment =
+  inlineFragment {_ifSelectionSet = fmapSelectionSetFragment f (_ifSelectionSet inlineFragment)}
