@@ -12,6 +12,7 @@ module Language.GraphQL.Draft.Parser
 
   , Variable(..)
   , value
+  , PossibleTypes(..)
   , nameParser
 
   , graphQLType
@@ -107,6 +108,11 @@ instance Variable Void where
   variable = empty
 instance Variable AST.Name where
   variable = tok "$" *> nameParser <?> "variable"
+
+class PossibleTypes pos where
+  possibleTypes :: Parser pos
+instance PossibleTypes () where
+  possibleTypes = pure ()
 
 selectionSet :: Variable var => Parser (AST.SelectionSet AST.FragmentSpread var)
 selectionSet = braces $ many1 selection
@@ -265,7 +271,7 @@ nullability =
 
 -- * Type Definition
 
-typeDefinition :: Parser AST.TypeDefinition
+typeDefinition :: Parser (AST.TypeDefinition ())
 typeDefinition =
       AST.TypeDefinitionObject        <$> objectTypeDefinition
   <|> AST.TypeDefinitionInterface     <$> interfaceTypeDefinition
@@ -305,13 +311,14 @@ fieldDefinition = AST.FieldDefinition
 argumentsDefinition :: Parser AST.ArgumentsDefinition
 argumentsDefinition = parens $ many1 inputValueDefinition
 
-interfaceTypeDefinition :: Parser AST.InterfaceTypeDefinition
+interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition pos)
 interfaceTypeDefinition = AST.InterfaceTypeDefinition
   <$> optDesc
   <*  tok "interface"
   <*> nameParser
   <*> optempty directives
   <*> fieldDefinitions
+  <*> possibleTypes
 
 unionTypeDefinition :: Parser AST.UnionTypeDefinition
 unionTypeDefinition = AST.UnionTypeDefinition

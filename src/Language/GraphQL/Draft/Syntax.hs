@@ -178,7 +178,7 @@ partitionExDefs = foldr f ([], [], [])
 
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema SchemaDefinition
-  | TypeSystemDefinitionType TypeDefinition
+  | TypeSystemDefinitionType (TypeDefinition ())
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
@@ -203,7 +203,13 @@ data OperationType
 instance Hashable OperationType
 
 newtype SchemaDocument
-  = SchemaDocument [TypeDefinition]
+  = SchemaDocument [TypeDefinition ()] -- No 'possibleTypes' specified for interfaces
+  deriving (Ord, Show, Eq, Lift, Hashable)
+
+-- | A variant of 'SchemaDocument' that additionally stores, for each interface,
+-- the list of object types that implement that interface
+newtype SchemaIntrospection
+  = SchemaIntrospection [TypeDefinition [Name]]
   deriving (Ord, Show, Eq, Lift, Hashable)
 
 data OperationDefinition frag var
@@ -520,15 +526,15 @@ isNotNull = not . isNullable
 
 -- * Type definition
 
-data TypeDefinition
+data TypeDefinition possibleTypes
   = TypeDefinitionScalar ScalarTypeDefinition
   | TypeDefinitionObject ObjectTypeDefinition
-  | TypeDefinitionInterface InterfaceTypeDefinition
+  | TypeDefinitionInterface (InterfaceTypeDefinition possibleTypes)
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
   | TypeDefinitionInputObject InputObjectTypeDefinition
   deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable TypeDefinition
+instance Hashable possibleTypes => Hashable (TypeDefinition possibleTypes)
 
 newtype Description
   = Description { unDescription :: Text }
@@ -562,13 +568,14 @@ data InputValueDefinition = InputValueDefinition
   } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable InputValueDefinition
 
-data InterfaceTypeDefinition = InterfaceTypeDefinition
+data InterfaceTypeDefinition possibleTypes = InterfaceTypeDefinition
   { _itdDescription      :: Maybe Description
   , _itdName             :: Name
   , _itdDirectives       :: [Directive Void]
   , _itdFieldsDefinition :: [FieldDefinition]
+  , _itdPossibleTypes    :: possibleTypes
   } deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable InterfaceTypeDefinition
+instance Hashable possibleTypes => Hashable (InterfaceTypeDefinition possibleTypes)
 
 data UnionTypeDefinition = UnionTypeDefinition
   { _utdDescription :: Maybe Description
