@@ -29,6 +29,7 @@ module Language.GraphQL.Draft.Syntax (
   , Document(..)
   , ExecutableDocument(..)
   , SchemaDocument(..)
+  , SchemaIntrospection(..)
 
   -- * Definitions
   , Definition(..)
