@@ -1,6 +1,4 @@
-{-# LANGUAGE ApplicativeDo        #-}
 {-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 -- | Description: The GraphQL AST
 module Language.GraphQL.Draft.Syntax (
@@ -88,7 +86,6 @@ import qualified Language.Haskell.TH.Syntax          as TH
 import qualified Text.Regex.TDFA                     as TDFA
 
 import           Control.Monad
-import           Control.Monad.Fail                  (MonadFail)
 import           Data.Bool                           (bool)
 import           Data.Hashable
 import           Data.HashMap.Strict                 (HashMap)
@@ -252,9 +249,9 @@ data Field frag var = Field
   } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (Field frag var)
 instance (Lift (frag var), Lift var) => Lift (Field frag var) where
-  lift Field{..} =
-    [| Field { _fAlias, _fName, _fDirectives, _fSelectionSet
-             , _fArguments = $(liftHashMap _fArguments) } |]
+  liftTyped Field{..} =
+    [|| Field { _fAlias, _fName, _fDirectives, _fSelectionSet
+             , _fArguments = $$(liftTypedHashMap _fArguments) } ||]
 
 -- * Fragments
 
@@ -309,15 +306,15 @@ data Value var
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (Value var)
 instance Lift var => Lift (Value var) where
-  lift (VVariable a) = [| VVariable a |]
-  lift VNull         = [| VNull |]
-  lift (VInt a)      = [| VInt a |]
-  lift (VFloat a)    = [| VFloat a |]
-  lift (VString o a) = [| VString o a |]
-  lift (VBoolean a)  = [| VBoolean a |]
-  lift (VEnum a)     = [| VEnum a |]
-  lift (VList a)     = [| VList a |]
-  lift (VObject a)   = [| VObject $(liftHashMap a) |]
+  liftTyped (VVariable a) = [|| VVariable a ||]
+  liftTyped VNull         = [|| VNull ||]
+  liftTyped (VInt a)      = [|| VInt a ||]
+  liftTyped (VFloat a)    = [|| VFloat a ||]
+  liftTyped (VString o a) = [|| VString o a ||]
+  liftTyped (VBoolean a)  = [|| VBoolean a ||]
+  liftTyped (VEnum a)     = [|| VEnum a ||]
+  liftTyped (VList a)     = [|| VList a ||]
+  liftTyped (VObject a)   = [|| VObject $$(liftTypedHashMap a) ||]
 
 literal :: Value Void -> Value var
 literal = fmap absurd
@@ -477,7 +474,7 @@ data Directive var = Directive
   } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (Directive var)
 instance Lift var => Lift (Directive var) where
-  lift Directive{..} = [| Directive{ _dName, _dArguments = $(liftHashMap _dArguments) } |]
+  liftTyped Directive{..} = [|| Directive{ _dName, _dArguments = $$(liftTypedHashMap _dArguments) } ||]
 
 -- * Type Reference
 
@@ -659,8 +656,8 @@ data TypeSystemDirectiveLocation
   deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable TypeSystemDirectiveLocation
 
-liftHashMap :: (Lift k, Lift v) => HashMap k v -> Q TH.Exp
-liftHashMap a = [| M.fromList $(TH.lift $ M.toList a) |]
+liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
+liftTypedHashMap a = [|| M.fromList $$(TH.liftTyped $ M.toList a) ||]
 
 inline :: NoFragments var -> FragmentSpread var
 inline x = case x of {}
