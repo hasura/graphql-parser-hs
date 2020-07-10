@@ -208,7 +208,7 @@ newtype SchemaDocument
 -- the list of object types that implement that interface
 newtype SchemaIntrospection
   = SchemaIntrospection [TypeDefinition [Name]]
-  deriving (Ord, Show, Eq, Lift, Hashable)
+  deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
 data OperationDefinition frag var
   = OperationDefinitionTyped (TypedOperationDefinition frag var)
