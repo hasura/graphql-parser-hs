@@ -201,7 +201,7 @@ instance Hashable OperationType
 
 newtype SchemaDocument
   = SchemaDocument [TypeDefinition ()] -- No 'possibleTypes' specified for interfaces
-  deriving (Ord, Show, Eq, Lift, Hashable)
+  deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
 -- the list of object types that implement that interface
