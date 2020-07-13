@@ -4,8 +4,8 @@ import qualified Data.HashMap.Strict           as M
 
 import           Data.Bool                     (bool)
 import           Data.HashMap.Strict           (HashMap)
-import           Data.Int                      (Int32)
 import           Data.List                     (intersperse)
+import           Data.Scientific
 import           Data.String                   (IsString)
 import           Data.Text                     (Text)
 import           Data.Void
@@ -17,8 +17,8 @@ class (Monoid a, IsString a) => Printer a where
   stringP  :: String -> a
   textP    :: Text -> a
   charP    :: Char -> a
-  intP     :: Int32 -> a
-  doubleP  :: Double -> a
+  intP     :: Integer -> a
+  doubleP  :: Scientific -> a
 
   {-# MINIMAL stringP, textP, charP, intP, doubleP #-}
 

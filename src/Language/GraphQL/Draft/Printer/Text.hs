@@ -20,8 +20,7 @@ instance Printer Builder where
   intP    = decimal
   {-# INLINE intP #-}
 
-  -- TODO: fixedDouble? is there any other function that we can use?
-  doubleP = fixedDouble 256
+  doubleP = string . show
   {-# INLINE doubleP #-}
 
 renderExecutableDoc :: ExecutableDocument Name -> Text

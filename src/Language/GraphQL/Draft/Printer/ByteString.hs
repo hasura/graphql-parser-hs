@@ -19,10 +19,10 @@ instance Printer Builder where
   charP = charUtf8
   {-# INLINE charP #-}
 
-  intP = int32Dec
+  intP = integerDec
   {-# INLINE intP #-}
 
-  doubleP = doubleDec
+  doubleP = stringUtf8 . show
   {-# INLINE doubleP #-}
 
 

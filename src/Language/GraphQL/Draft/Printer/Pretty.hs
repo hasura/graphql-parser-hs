@@ -1,7 +1,8 @@
 -- | This module defines a printer for the @GraphQL@ language.
 module Language.GraphQL.Draft.Printer.Pretty where
 
-import           Data.Text                             (Text)
+import           Data.Scientific
+import           Data.Text
 import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Render.Text
 
@@ -30,7 +31,7 @@ instance Printer (Doc Text) where
   intP          = pretty
   {-# INLINE intP #-}
 
-  doubleP       = pretty
+  doubleP sc    = pretty $ pack $ show sc
   {-# INLINE doubleP #-}
 
   nameP         = pretty

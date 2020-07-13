@@ -38,9 +38,8 @@ import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
 import           Data.Functor
 import           Data.HashMap.Strict           (HashMap)
-import           Data.Int                      (Int32)
-import           Data.Scientific               (floatingOrInteger)
-import           Data.Text                     (Text)
+import           Data.Scientific               (Scientific)
+import           Data.Text                     (Text, find)
 import           Data.Void                     (Void)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
@@ -168,15 +167,12 @@ fragmentDefinition = AST.FragmentDefinition
   <*> selectionSet
 
 -- * Values
-number :: Parser (Either Double Int32)
-number =  do
+number :: Parser (Either Scientific Integer)
+number = do
   (numText, num) <- match (tok scientific)
-  case (T.find (== '.') numText, floatingOrInteger num) of
-    (Just _, Left r)   -> pure (Left r)
-    (Just _, Right i)  -> pure (Left (fromIntegral i))
-    -- TODO: Handle maxBound, Int32 in spec.
-    (Nothing, Left r)  -> pure (Right (floor r))
-    (Nothing, Right i) -> pure (Right i)
+  pure $ case Data.Text.find (== '.') numText of
+    Just _ -> Left num
+    Nothing -> Right (floor num)
 
 -- This will try to pick the first type it can runParser. If you are working with
 -- explicit types use the `typedValue` parser.

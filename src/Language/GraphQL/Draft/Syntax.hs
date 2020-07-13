@@ -90,7 +90,7 @@ import           Control.Monad
 import           Data.Bool                           (bool)
 import           Data.Hashable
 import           Data.HashMap.Strict                 (HashMap)
-import           Data.Int                            (Int32)
+import           Data.Scientific
 import           Data.String                         (IsString (..))
 import           Data.Text                           (Text)
 import           Data.Void
@@ -297,8 +297,8 @@ instance Hashable Origin
 data Value var
   = VVariable var
   | VNull
-  | VInt Int32
-  | VFloat Double
+  | VInt Integer
+  | VFloat Scientific
   | VString Origin Text -- see note [The origin of VString]
   | VBoolean Bool
   | VEnum EnumValue
@@ -310,7 +310,7 @@ instance Lift var => Lift (Value var) where
   liftTyped (VVariable a) = [|| VVariable a ||]
   liftTyped VNull         = [|| VNull ||]
   liftTyped (VInt a)      = [|| VInt a ||]
-  liftTyped (VFloat a)    = [|| VFloat a ||]
+  liftTyped (VFloat a)    = [|| VFloat $ fromRational $ $$(TH.liftTyped $ toRational a) ||]
   liftTyped (VString o a) = [|| VString o a ||]
   liftTyped (VBoolean a)  = [|| VBoolean a ||]
   liftTyped (VEnum a)     = [|| VEnum a ||]
