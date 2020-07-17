@@ -105,12 +105,13 @@ newtype Name = Name { unName :: Text }
   deriving (Eq, Ord, Show, Hashable, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
 
 -- | Ref: http://facebook.github.io/graphql/June2018/#sec-Names
+compiledGraphQLNameRegex :: TDFA.Regex
+compiledGraphQLNameRegex = TDFA.makeRegex ("^[_a-zA-Z][_a-zA-Z0-9]*$" :: BL.ByteString) :: TDFA.Regex
+
 mkName :: Text -> Maybe Name
 mkName text
-  | TDFA.match compiledRegex $ T.unpack text = Just (Name text)
-  | otherwise                                = Nothing
-  where
-    compiledRegex = TDFA.makeRegex ("^[_a-zA-Z][_a-zA-Z0-9]*$" :: BL.ByteString) :: TDFA.Regex
+  | TDFA.match compiledGraphQLNameRegex $ T.unpack text = Just (Name text)
+  | otherwise                                           = Nothing
 
 unsafeMkName :: Text -> Name
 unsafeMkName = Name
