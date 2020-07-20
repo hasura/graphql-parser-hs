@@ -105,6 +105,7 @@ newtype Name = Name { unName :: Text }
   deriving (Eq, Ord, Show, Hashable, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
 
 -- | Ref: http://facebook.github.io/graphql/June2018/#sec-Names
+{-# NOINLINE compiledGraphQLNameRegex #-}
 compiledGraphQLNameRegex :: TDFA.Regex
 compiledGraphQLNameRegex = TDFA.makeRegex ("^[_a-zA-Z][_a-zA-Z0-9]*$" :: BL.ByteString) :: TDFA.Regex
 
