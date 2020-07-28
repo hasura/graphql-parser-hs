@@ -9,7 +9,6 @@ module Language.GraphQL.Draft.Syntax (
   , unsafeMkName
   , litName
   , Description(..)
-  , Origin(..)
   , Value(..)
   , literal
   , EnumValue(..)
@@ -306,7 +305,7 @@ instance Lift var => Lift (Value var) where
   liftTyped VNull         = [|| VNull ||]
   liftTyped (VInt a)      = [|| VInt a ||]
   liftTyped (VFloat a)    = [|| VFloat $ fromRational $ $$(TH.liftTyped $ toRational a) ||]
-  liftTyped (VString o a) = [|| VString o a ||]
+  liftTyped (VString a)   = [|| VString a ||]
   liftTyped (VBoolean a)  = [|| VBoolean a ||]
   liftTyped (VEnum a)     = [|| VEnum a ||]
   liftTyped (VList a)     = [|| VList a ||]

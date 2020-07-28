@@ -173,7 +173,7 @@ number = do
   pure $ case Data.Text.find (\c -> c == '.' || c == 'e' || c == 'E') numText of
       -- Number specified with decimals and/or scientific notation, so
       -- store as a 'Scientific'.
-    Just _ -> Left num
+    Just _  -> Left num
       -- No '.' and not in scientific notation, so safe to convert to integer.
     Nothing -> Right (floor num)
 
@@ -185,14 +185,12 @@ value = tok (
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
   <|> AST.VNull     <$  literal "null"
   <|> AST.VBoolean  <$> booleanLiteral
-  <|> mkVString     <$> stringLiteral
+  <|> AST.VString   <$> stringLiteral
   -- `true` and `false` have been tried before
   <|> AST.VEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
   <|> AST.VList     <$> listLiteral
   <|> AST.VObject   <$> objectLiteral
   <?> "value")
-  where
-    mkVString = AST.VString AST.GraphQLLiteral
 
 booleanLiteral :: Parser Bool
 booleanLiteral
