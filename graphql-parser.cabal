@@ -55,10 +55,6 @@ library
   exposed-modules:
     Language.GraphQL.Draft.Parser
     Language.GraphQL.Draft.Printer
-    Language.GraphQL.Draft.Printer.ByteString
-    Language.GraphQL.Draft.Printer.LazyText
-    Language.GraphQL.Draft.Printer.Pretty
-    Language.GraphQL.Draft.Printer.Text
     Language.GraphQL.Draft.Syntax
 
 test-suite graphql-parser-test

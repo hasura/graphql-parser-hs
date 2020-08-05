@@ -96,12 +96,16 @@ import           Data.Void
 import           GHC.Generics                        (Generic)
 import           Instances.TH.Lift                   ()
 import           Language.Haskell.TH.Syntax          (Lift, Q)
+import           Data.Text.Prettyprint.Doc           (Pretty(..))
 
 import {-# SOURCE #-} Language.GraphQL.Draft.Parser       (parseExecutableDoc)
-import {-# SOURCE #-} Language.GraphQL.Draft.Printer.Text (renderExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Printer      (renderExecutableDoc)
 
 newtype Name = Name { unName :: Text }
   deriving (Eq, Ord, Show, Hashable, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
+
+instance Pretty Name where
+  pretty = pretty. unName
 
 -- | Ref: http://facebook.github.io/graphql/June2018/#sec-Names
 compiledGraphQLNameRegex :: TDFA.Regex

@@ -6,12 +6,17 @@ import           Data.Bool                     (bool)
 import           Data.HashMap.Strict           (HashMap)
 import           Data.List                     (intersperse)
 import           Data.Scientific
+import qualified Data.ByteString.Builder       as BS
+import qualified Data.Text.Lazy                as LT hiding (singleton)
+import qualified Data.Text.Lazy.Encoding       as LT
+import qualified Data.Text.Lazy.Builder        as LT
+import qualified Data.Text.Prettyprint.Doc     as PP
 import           Data.String                   (IsString)
-import           Data.Text                     (Text)
+import           Data.Text                     (Text, pack)
+import qualified Text.Builder                  as Text
 import           Data.Void
 
 import           Language.GraphQL.Draft.Syntax
-
 
 class (Monoid a, IsString a) => Printer a where
   stringP  :: String -> a
@@ -31,12 +36,82 @@ class (Monoid a, IsString a) => Printer a where
   selectionSetP :: (Print (frag var), Print var) => SelectionSet frag var -> a
   selectionSetP = selectionSet
 
+instance Printer BS.Builder where
+  stringP = BS.stringUtf8
+  {-# INLINE stringP #-}
+
+  textP = LT.encodeUtf8Builder . LT.fromStrict
+  {-# INLINE textP #-}
+
+  charP = BS.charUtf8
+  {-# INLINE charP #-}
+
+  intP = BS.integerDec
+  {-# INLINE intP #-}
+
+  doubleP = BS.stringUtf8 . show
+  {-# INLINE doubleP #-}
+
+instance Printer LT.Builder where
+  stringP = LT.fromString
+  {-# INLINE stringP #-}
+
+  textP   = LT.fromText
+  {-# INLINE textP #-}
+
+  charP   = LT.singleton
+  {-# INLINE charP #-}
+
+  intP    = LT.fromString . show
+  {-# INLINE intP #-}
+
+  doubleP = LT.fromString . show
+  {-# INLINE doubleP #-}
+
+instance Printer (PP.Doc Text) where
+  stringP       = PP.pretty
+  {-# INLINE stringP #-}
+
+  textP         = PP.pretty
+  {-# INLINE textP #-}
+
+  charP         = PP.pretty
+  {-# INLINE charP #-}
+
+  intP          = PP.pretty
+  {-# INLINE intP #-}
+
+  doubleP sc    = PP.pretty $ pack $ show sc
+  {-# INLINE doubleP #-}
+
+  nameP         = PP.pretty
+  {-# INLINE nameP #-}
+
+instance Printer Text.Builder where
+  stringP = Text.string
+  {-# INLINE stringP #-}
+
+  textP   = Text.text
+  {-# INLINE textP #-}
+
+  charP   = Text.char
+  {-# INLINE charP #-}
+
+  intP    = Text.decimal
+  {-# INLINE intP #-}
+
+  doubleP = Text.string . show
+  {-# INLINE doubleP #-}
+
 class Print a where
   printP :: Printer b => a -> b
 instance Print Void where
   printP = absurd
 instance Print Name where
   printP = nameP
+
+renderExecutableDoc :: ExecutableDocument Name -> Text
+renderExecutableDoc = Text.run . executableDocument
 
 -- | the pretty printer implementation
 
