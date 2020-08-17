@@ -1,27 +1,34 @@
 version: 2
 jobs:
   build:
-    resource_class: large
     docker:
-      - image: fpco/stack-build:lts-13.12
+    - image: jberryman/graphql-engine-server-builder-8.10:2020-04-29
+    resource_class: large
+    working_directory: ~/graphql-parser
     steps:
       - checkout
-      - restore_cache:
-          name: Restore Cached Dependencies
-          keys:
-            - graphql-parser-hs-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
+      # - restore_cache:
+      #     name: Restore Cached Dependencies
+      #     keys:
+      #       - cabal-store-v2-{{ checksum "cabal.project" }}-{{ checksum "graphql-parser.cabal" }}-{{ checksum "cabal.project.freeze" }}
+      #       - cabal-store-v2-{{ checksum "cabal.project" }}-{{ checksum "graphql-parser.cabal" }}-
+      #       - cabal-store-v2-{{ checksum "cabal.project" }}-
+      #       - cabal-store-v2-
+      - run:
+          name: Update dependencies
+          command: cabal update
       - run:
           name: Build
           command: cabal new-build
       - run:
           name: Run tests
-          command: cabal new-test release
-      - save_cache:
-          name: Cache Dependencies
-          key: graphql-parser-hs-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
-          paths:
-            - "~/.stack"
-            - ".stack-work"
+          command: cabal new-test --test-options release
+      # - save_cache:
+      #     name: Cache Dependencies
+      #     key: cabal-store-v2-{{ checksum "cabal.project" }}-{{ checksum "graphql-parser.cabal" }}-{{ checksum "cabal.project.freeze" }}
+      #     paths:
+      #       - ~/.cabal/packages
+      #       - ~/.cabal/store
 workflows:
   version: 2
   workflow_v20190224:
