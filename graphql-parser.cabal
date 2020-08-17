@@ -34,9 +34,9 @@ library
   import: common-all
   hs-source-dirs: src
   build-depends:
+    , base >=4.7 && <5
     , aeson
     , attoparsec
-    , base >=4.7 && <5
     , bytestring
     , containers
     , filepath
@@ -65,10 +65,10 @@ test-suite graphql-parser-test
   other-modules:
     Keywords
   build-depends:
-    , attoparsec
     , base >=4.7 && <5
-    , bytestring
     , graphql-parser
+    , attoparsec
+    , bytestring
     , hedgehog
     , prettyprinter
     , scientific
@@ -82,22 +82,10 @@ benchmark graphql-parser-bench
   hs-source-dirs: bench
   main-is: Benchmark.hs
   build-depends:
-    -- , aeson
-    -- , attoparsec
     , base >=4.7 && <5
-    -- , bytestring
-    -- , containers
-    -- , criterion
-    -- , filepath
     , graphql-parser
-    -- , hedgehog
-    -- , prettyprinter
-    -- , protolude
-    -- , regex-tdfa >=1.2
-    -- , scientific
-    -- , template-haskell
-    -- , text
-    -- , text-builder
-    -- , th-lift-instances
-    -- , unordered-containers
-    -- , vector
+    , bytestring
+    , criterion
+    , prettyprinter
+    , text
+    , text-builder

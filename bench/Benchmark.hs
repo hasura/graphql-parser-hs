@@ -1,17 +1,20 @@
+import           Control.Monad
 import           Criterion.Main
-import           Protolude
 
-import           Language.GraphQL.Draft.Generator.Document
-import           Language.GraphQL.Draft.Parser             (parseExecutableDoc)
+import qualified Data.ByteString.Builder               as BS
+import qualified Data.Text                             as T
+import qualified Data.Text.Lazy.Builder                as TL
+import qualified Data.Text.Prettyprint.Doc             as PP
+import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
+import qualified Text.Builder                          as TB
+
+import           Language.GraphQL.Draft.Generator
+import           Language.GraphQL.Draft.Parser         (parseExecutableDoc)
+import           Language.GraphQL.Draft.Printer
 import           Language.GraphQL.Draft.Syntax
 
-import qualified Language.GraphQL.Draft.Printer.ByteString as PP.BB
-import qualified Language.GraphQL.Draft.Printer.LazyText   as PP.TLB
-import qualified Language.GraphQL.Draft.Printer.Pretty     as PP
-import qualified Language.GraphQL.Draft.Printer.Text       as PP.TB
 
-
-genDocs :: Int -> IO [(Int, ExecutableDocument)]
+genDocs :: Int -> IO [(Int, ExecutableDocument Name)]
 genDocs num =
   forM [1..num] $ \n -> (,) <$> pure n <*> generate genExecutableDocument
 
@@ -22,7 +25,7 @@ main = do
       grp2 = mkBBGrp docs
       grp3 = mkTBGrp docs
       grp4 = mkTLBGrp docs
-      renderedDocs = map (\(n, q) -> (n, PP.renderExecutableDoc q)) docs
+      renderedDocs = map (\(n, q) -> (n, renderExecutableDoc q)) docs
       grp5 = mkPGrp renderedDocs
   defaultMain [grp1, grp2, grp3, grp4, grp5]
   where
@@ -32,13 +35,19 @@ main = do
 
     mkPPGrp gqs =
       bgroup "rendering executableDocument (prettyprinter)" $
-      map (\(n, gq) -> bench (show n) $ nf PP.renderExecutableDoc gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf (renderPP . executableDocument) gq) gqs
 
     mkBBGrp gqs = bgroup "rendering executableDocument (bytestring builder)" $
-      map (\(n, gq) -> bench (show n) $ nf PP.BB.renderExecutableDoc gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf (renderBB . executableDocument) gq) gqs
 
     mkTBGrp gqs = bgroup "rendering executableDocument (text builder)" $
-      map (\(n, gq) -> bench (show n) $ nf PP.TB.renderExecutableDoc gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf (renderTB . executableDocument) gq) gqs
 
     mkTLBGrp gqs = bgroup "rendering executableDocument (lazy text builder)" $
-      map (\(n, gq) -> bench (show n) $ nf PP.TLB.renderExecutableDoc gq) gqs
+      map (\(n, gq) -> bench (show n) $ nf (renderTLB . executableDocument) gq) gqs
+
+    renderPP :: PP.Doc T.Text -> T.Text
+    renderPP  = PP.renderStrict . PP.layoutPretty PP.defaultLayoutOptions
+    renderBB  = BS.toLazyByteString
+    renderTB  = TB.run
+    renderTLB = TL.toLazyText
