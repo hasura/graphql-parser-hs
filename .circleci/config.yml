@@ -11,11 +11,11 @@ jobs:
           keys:
             - graphql-parser-hs-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
       - run:
-          name: Resolve/Update Dependencies
-          command: stack setup
+          name: Build
+          command: cabal new-build
       - run:
           name: Run tests
-          command: stack test --test-arguments release
+          command: cabal new-test release
       - save_cache:
           name: Cache Dependencies
           key: graphql-parser-hs-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
