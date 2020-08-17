@@ -246,7 +246,6 @@ genFieldDefinition = FieldDefinition
 genFieldDefinitions :: Gen [FieldDefinition]
 genFieldDefinitions = mkList genFieldDefinition
 
-
 genDirectiveDefinition :: Gen DirectiveDefinition
 genDirectiveDefinition = DirectiveDefinition
                          <$> Gen.maybe genDescription
@@ -307,27 +306,27 @@ genSelection =
 
 genFragmentSpread :: Generator a => Gen (FragmentSpread a)
 genFragmentSpread = FragmentSpread
-                           <$> genName
-                           <*> genDirectives
+                    <$> genName
+                    <*> genDirectives
 
 genInlineFragment :: Generator a => Gen (InlineFragment FragmentSpread a)
 genInlineFragment = InlineFragment
-                           <$> Gen.maybe genName
-                           <*> genDirectives
-                           <*> genSelectionSet
+                    <$> Gen.maybe genName
+                    <*> genDirectives
+                    <*> genSelectionSet
 
 genField :: Generator a => Gen (Field FragmentSpread a)
 genField = Field
-                  <$> Gen.maybe genName
-                  <*> genName
-                  <*> (M.fromList <$> mkList genArgument)
-                  <*> genDirectives
-                  <*> genSelectionSet
+           <$> Gen.maybe genName
+           <*> genName
+           <*> (M.fromList <$> mkList genArgument)
+           <*> genDirectives
+           <*> genSelectionSet
 
 genDirective :: Generator a => Gen (Directive a)
 genDirective = Directive
-                      <$> genName
-                      <*> (M.fromList <$> mkList genArgument)
+               <$> genName
+               <*> (M.fromList <$> mkList genArgument)
 
 genDirectives :: Generator a => Gen [Directive a]
 genDirectives = mkList genDirective
