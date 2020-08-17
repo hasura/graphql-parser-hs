@@ -15,6 +15,19 @@ import           Language.GraphQL.Draft.Syntax
 
 
 
+-- | *Generator*
+
+class Generator a where
+  genValue :: Gen (Value a)
+
+instance Generator Void where
+  genValue = genValueWith []
+
+instance Generator Name where
+  genValue = genValueWith [genName]
+
+
+
 -- | *Document*
 
 generate :: MonadIO m => Gen a -> m a
@@ -24,13 +37,9 @@ genDocument :: Gen Document
 genDocument =
   Document <$> Gen.list (Range.linear 1 3) genDefinition
 
-genExecutableDocument :: Gen (ExecutableDocument Name)
+genExecutableDocument :: Generator a => Gen (ExecutableDocument a)
 genExecutableDocument =
-  ExecutableDocument <$> Gen.list (Range.linear 1 3) (genExecutableDefinition genValue)
-
-genVoidExecutableDocument :: Gen (ExecutableDocument Void)
-genVoidExecutableDocument =
-  ExecutableDocument <$> Gen.list (Range.linear 1 3) (genExecutableDefinition genDefaultValue)
+  ExecutableDocument <$> Gen.list (Range.linear 1 3) genExecutableDefinition
 
 genSchemaDocument :: Gen SchemaDocument
 genSchemaDocument =
@@ -67,44 +76,26 @@ genDescription = Description <$> genText
 
 -- | *Values*
 
-genValue :: Gen (Value Name)
-genValue =
-  -- TODO: use maxbound of int32/double or something?
-  Gen.recursive
-  Gen.choice
-  [ pure VNull
-  , VInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 99999)
-  , VEnum <$> genEnumValue
-  , VFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
-  , VString <$> genText
-  , VBoolean <$> Gen.bool
-  , VVariable <$> genName
-  ]
-  [ VList <$> (genListValue genValue)
-  , VObject <$> (genObjectValue genValue)
-  ]
-
-genDefaultValue :: Gen (Value Void)
-genDefaultValue =
-  -- TODO: use maxbound of int32/double or something?
-  Gen.recursive
-  Gen.choice
-  [ pure VNull
-  , VInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 99999)
-  , VEnum <$> genEnumValue
-  , VFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
-  , VString <$> genText
-  , VBoolean <$> Gen.bool
-  ]
-  [ VList <$> (genListValue genDefaultValue)
-  , VObject <$> (genObjectValue genDefaultValue)
-  ]
+genValueWith :: [Gen a] -> Gen (Value a)
+genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
+  where
+    recursive = [ VList <$> (genListValue $ genValueWith varGens)
+                , VObject <$> (genObjectValue $ genValueWith varGens)
+                ]
+    -- TODO: use maxbound of int32/double or something?
+    nonRecursive = [ pure VNull
+                   , VInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 99999)
+                   , VEnum <$> genEnumValue
+                   , VFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
+                   , VString <$> genText
+                   , VBoolean <$> Gen.bool
+                   ] <> [VVariable <$> var | var <- varGens]
 
 genEnumValue :: Gen EnumValue
 genEnumValue = EnumValue <$> genName
 
 genListValue :: Gen (Value a) -> Gen [Value a]
-genListValue genVal = Gen.list (Range.linear 1 4) genVal
+genListValue = mkList
 
 genObjectValue :: Gen (Value a) -> Gen (M.HashMap Name (Value a))
 genObjectValue genVal = M.fromList <$> mkList genObjectField
@@ -117,44 +108,43 @@ genObjectValue genVal = M.fromList <$> mkList genObjectField
 
 genDefinition :: Gen Definition
 genDefinition =
-  Gen.choice [ DefinitionExecutable <$> genExecutableDefinition genValue
+  Gen.choice [ DefinitionExecutable <$> genExecutableDefinition
              , DefinitionTypeSystem <$> genTypeSystemDefinition
              ]
 
-genExecutableDefinition :: Gen (Value a) -> Gen (ExecutableDefinition a)
-genExecutableDefinition genVal =
-  Gen.choice [ ExecutableDefinitionOperation <$> genOperationDefinition genVal
+genExecutableDefinition :: Generator a => Gen (ExecutableDefinition a)
+genExecutableDefinition =
+  Gen.choice [ ExecutableDefinitionOperation <$> genOperationDefinition
              , ExecutableDefinitionFragment <$> genFragmentDefinition
              ]
 
-genOperationDefinition :: Gen (Value a) -> Gen (OperationDefinition FragmentSpread a)
-genOperationDefinition genVal =
-  Gen.choice [ OperationDefinitionTyped <$> genTypedOperationDefinition genVal
-             , OperationDefinitionUnTyped <$> genSelectionSet genVal
+genOperationDefinition :: Generator a => Gen (OperationDefinition FragmentSpread a)
+genOperationDefinition =
+  Gen.choice [ OperationDefinitionTyped <$> genTypedOperationDefinition
+             , OperationDefinitionUnTyped <$> genSelectionSet
              ]
 
 
-genTypedOperationDefinition :: Gen (Value a) -> Gen (TypedOperationDefinition FragmentSpread a)
-genTypedOperationDefinition genVal =
-  TypedOperationDefinition
-  <$> genOperationType
-  <*> Gen.maybe genName
-  <*> mkList genVariableDefinition
-  <*> genDirectives genVal
-  <*> genSelectionSet genVal
+genTypedOperationDefinition :: Generator a => Gen (TypedOperationDefinition FragmentSpread a)
+genTypedOperationDefinition = TypedOperationDefinition
+                              <$> genOperationType
+                              <*> Gen.maybe genName
+                              <*> mkList genVariableDefinition
+                              <*> genDirectives
+                              <*> genSelectionSet
 
 genVariableDefinition :: Gen VariableDefinition
 genVariableDefinition = VariableDefinition
                         <$> genName
                         <*> genType
-                        <*> Gen.maybe genDefaultValue
+                        <*> Gen.maybe genValue
 
 genFragmentDefinition :: Gen FragmentDefinition
 genFragmentDefinition = FragmentDefinition
                         <$> genName
                         <*> genName
-                        <*> genDirectives genDefaultValue
-                        <*> genSelectionSet genDefaultValue
+                        <*> genDirectives
+                        <*> genSelectionSet
 
 genTypeSystemDefinition :: Gen TypeSystemDefinition
 genTypeSystemDefinition =
@@ -164,7 +154,7 @@ genTypeSystemDefinition =
 
 genSchemaDefinition :: Gen SchemaDefinition
 genSchemaDefinition = SchemaDefinition
-                      <$> Gen.maybe (genDirectives genDefaultValue)
+                      <$> Gen.maybe genDirectives
                       <*> mkList genRootOperationTypeDefinition
 
 genRootOperationTypeDefinition :: Gen RootOperationTypeDefinition
@@ -193,21 +183,21 @@ genScalarTypeDefinition :: Gen ScalarTypeDefinition
 genScalarTypeDefinition = ScalarTypeDefinition
                           <$> Gen.maybe genDescription
                           <*> genName
-                          <*> genDirectives genDefaultValue
+                          <*> genDirectives
 
 genObjectTypeDefinition :: Gen ObjectTypeDefinition
 genObjectTypeDefinition = ObjectTypeDefinition
                           <$> Gen.maybe genDescription
                           <*> genName
                           <*> mkList genName
-                          <*> genDirectives genDefaultValue
+                          <*> genDirectives
                           <*> genFieldDefinitions
 
 genInterfaceTypeDefinition :: Gen (InterfaceTypeDefinition ())
 genInterfaceTypeDefinition = InterfaceTypeDefinition
                              <$> Gen.maybe genDescription
                              <*> genName
-                             <*> genDirectives genDefaultValue
+                             <*> genDirectives
                              <*> genFieldDefinitions
                              <*> pure ()
 
@@ -215,21 +205,21 @@ genUnionTypeDefinition :: Gen UnionTypeDefinition
 genUnionTypeDefinition = UnionTypeDefinition
                          <$> Gen.maybe genDescription
                          <*> genName
-                         <*> genDirectives genDefaultValue
+                         <*> genDirectives
                          <*> mkList genName
 
 genEnumTypeDefinition :: Gen EnumTypeDefinition
 genEnumTypeDefinition = EnumTypeDefinition
                         <$> Gen.maybe genDescription
                         <*> genName
-                        <*> genDirectives genDefaultValue
+                        <*> genDirectives
                         <*> mkList genEnumValueDefinition
 
 genInputObjectTypeDefinition :: Gen InputObjectTypeDefinition
 genInputObjectTypeDefinition = InputObjectTypeDefinition
                                <$> Gen.maybe genDescription
                                <*> genName
-                               <*> genDirectives genDefaultValue
+                               <*> genDirectives
                                <*> mkList genInputValueDefinition
 
 genInputValueDefinition :: Gen InputValueDefinition
@@ -237,13 +227,13 @@ genInputValueDefinition = InputValueDefinition
                           <$> Gen.maybe genDescription
                           <*> genName
                           <*> genType
-                          <*> Gen.maybe genDefaultValue
+                          <*> Gen.maybe genValue
 
 genEnumValueDefinition :: Gen EnumValueDefinition
 genEnumValueDefinition = EnumValueDefinition
                          <$> Gen.maybe genDescription
                          <*> genEnumValue
-                         <*> genDirectives genDefaultValue
+                         <*> genDirectives
 
 genFieldDefinition :: Gen FieldDefinition
 genFieldDefinition = FieldDefinition
@@ -251,7 +241,7 @@ genFieldDefinition = FieldDefinition
                      <*> genName
                      <*> mkList genInputValueDefinition
                      <*> genType
-                     <*> genDirectives genDefaultValue
+                     <*> genDirectives
 
 genFieldDefinitions :: Gen [FieldDefinition]
 genFieldDefinitions = mkList genFieldDefinition
@@ -263,7 +253,6 @@ genDirectiveDefinition = DirectiveDefinition
                          <*> genName
                          <*> genArgumentsDefinition
                          <*> Gen.list (Range.linear 1 10) genDirectiveLocation
-
 
 genArgumentsDefinition :: Gen ArgumentsDefinition
 genArgumentsDefinition = Gen.list (Range.linear 1 10) genInputValueDefinition
@@ -300,51 +289,55 @@ genTypeSystemDirectiveLocation =
               , TSDLINPUT_FIELD_DEFINITION
              ]
 
-genSelectionSet :: Gen (Value a) -> Gen (SelectionSet FragmentSpread a)
-genSelectionSet genVal = mkList $ genSelection genVal
 
-genSelection :: Gen (Value a) -> Gen (Selection FragmentSpread a)
-genSelection genVal =
+
+-- | *Structure*
+
+genSelectionSet :: Generator a => Gen (SelectionSet FragmentSpread a)
+genSelectionSet = mkList genSelection
+
+genSelection :: Generator a => Gen (Selection FragmentSpread a)
+genSelection =
   Gen.recursive
-  Gen.choice [ SelectionFragmentSpread <$> genFragmentSpread genVal
+  Gen.choice [ SelectionFragmentSpread <$> genFragmentSpread
              ]
-             [ SelectionField          <$> genField genVal
-             , SelectionInlineFragment <$> genInlineFragment genVal
+             [ SelectionField          <$> genField
+             , SelectionInlineFragment <$> genInlineFragment
              ]
 
-genFragmentSpread :: Gen (Value a) -> Gen (FragmentSpread a)
-genFragmentSpread genVal = FragmentSpread
+genFragmentSpread :: Generator a => Gen (FragmentSpread a)
+genFragmentSpread = FragmentSpread
                            <$> genName
-                           <*> genDirectives genVal
+                           <*> genDirectives
 
-genInlineFragment :: Gen (Value a) -> Gen (InlineFragment FragmentSpread a)
-genInlineFragment genVal = InlineFragment
+genInlineFragment :: Generator a => Gen (InlineFragment FragmentSpread a)
+genInlineFragment = InlineFragment
                            <$> Gen.maybe genName
-                           <*> genDirectives genVal
-                           <*> genSelectionSet genVal
+                           <*> genDirectives
+                           <*> genSelectionSet
 
-genField :: Gen (Value a) -> Gen (Field FragmentSpread a)
-genField genVal = Field
+genField :: Generator a => Gen (Field FragmentSpread a)
+genField = Field
                   <$> Gen.maybe genName
                   <*> genName
-                  <*> (M.fromList <$> mkList (genArgument genVal))
-                  <*> genDirectives genVal
-                  <*> genSelectionSet genVal
+                  <*> (M.fromList <$> mkList genArgument)
+                  <*> genDirectives
+                  <*> genSelectionSet
 
-genDirective :: Gen (Value a) -> Gen (Directive a)
-genDirective genVal = Directive
+genDirective :: Generator a => Gen (Directive a)
+genDirective = Directive
                       <$> genName
-                      <*> (M.fromList <$> mkList (genArgument genVal))
+                      <*> (M.fromList <$> mkList genArgument)
 
-genDirectives :: Gen (Value a) -> Gen [Directive a]
-genDirectives = mkList . genDirective
+genDirectives :: Generator a => Gen [Directive a]
+genDirectives = mkList genDirective
 
-genArgument :: Gen (Value a) -> Gen (Name, Value a)
-genArgument genVal = (,) <$> genName <*> genVal
+genArgument :: Generator a => Gen (Name, Value a)
+genArgument = (,) <$> genName <*> genValue
 
 
 
--- | *Definitions*
+-- | *Helpers*
 
 mkList :: Gen a -> Gen [a]
 mkList = Gen.list $ Range.linear 1 11
