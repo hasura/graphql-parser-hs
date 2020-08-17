@@ -40,9 +40,8 @@ library
     , bytestring
     , containers
     , filepath
-    -- , hedgehog
+    , hedgehog
     , prettyprinter
-    -- , protolude
     , regex-tdfa >=1.2
     , scientific
     , template-haskell
@@ -56,6 +55,7 @@ library
     Language.GraphQL.Draft.Parser
     Language.GraphQL.Draft.Printer
     Language.GraphQL.Draft.Syntax
+    Language.GraphQL.Draft.Generator
 
 test-suite graphql-parser-test
   import: common-all, common-exe
@@ -65,24 +65,15 @@ test-suite graphql-parser-test
   other-modules:
     Keywords
   build-depends:
-    -- , aeson
-    -- , attoparsec
+    , attoparsec
     , base >=4.7 && <5
-    -- , bytestring
-    -- , containers
-    -- , filepath
+    , bytestring
     , graphql-parser
-    -- , hedgehog
-    -- , prettyprinter
-    -- , protolude
-    -- , regex-tdfa >=1.2
-    -- , scientific
-    -- , template-haskell
-    -- , text
-    -- , text-builder
-    -- , th-lift-instances
-    -- , unordered-containers
-    -- , vector
+    , hedgehog
+    , prettyprinter
+    , scientific
+    , text
+    , text-builder
   default-language: Haskell2010
 
 benchmark graphql-parser-bench
