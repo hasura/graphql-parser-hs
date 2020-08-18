@@ -42,7 +42,6 @@ library
     , filepath
     , hedgehog
     , prettyprinter
-    , regex-tdfa >=1.2
     , scientific
     , template-haskell
     , text

@@ -78,28 +78,27 @@ module Language.GraphQL.Draft.Syntax (
   , fmapInlineFragment
   ) where
 
-import qualified Data.Aeson                          as J
-import qualified Data.ByteString.Lazy                as BL
-import qualified Data.HashMap.Strict                 as M
-import qualified Data.Text                           as T
-import qualified Language.Haskell.TH.Syntax          as TH
-import qualified Text.Regex.TDFA                     as TDFA
+import qualified Data.Aeson                     as J
+import qualified Data.Char                      as C
+import qualified Data.HashMap.Strict            as M
+import qualified Data.Text                      as T
+import qualified Language.Haskell.TH.Syntax     as TH
 
 import           Control.Monad
-import           Data.Bool                           (bool)
+import           Data.Bool                      (bool)
 import           Data.Hashable
-import           Data.HashMap.Strict                 (HashMap)
+import           Data.HashMap.Strict            (HashMap)
 import           Data.Scientific
-import           Data.String                         (IsString (..))
-import           Data.Text                           (Text)
+import           Data.String                    (IsString (..))
+import           Data.Text                      (Text)
+import           Data.Text.Prettyprint.Doc      (Pretty (..))
 import           Data.Void
-import           GHC.Generics                        (Generic)
-import           Instances.TH.Lift                   ()
-import           Language.Haskell.TH.Syntax          (Lift, Q)
-import           Data.Text.Prettyprint.Doc           (Pretty(..))
+import           GHC.Generics                   (Generic)
+import           Instances.TH.Lift              ()
+import           Language.Haskell.TH.Syntax     (Lift, Q)
 
-import {-# SOURCE #-} Language.GraphQL.Draft.Parser       (parseExecutableDoc)
-import {-# SOURCE #-} Language.GraphQL.Draft.Printer      (renderExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Parser  (parseExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 
 newtype Name = Name { unName :: Text }
   deriving (Eq, Ord, Show, Hashable, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
@@ -107,14 +106,14 @@ newtype Name = Name { unName :: Text }
 instance Pretty Name where
   pretty = pretty. unName
 
--- | Ref: http://facebook.github.io/graphql/June2018/#sec-Names
-compiledGraphQLNameRegex :: TDFA.Regex
-compiledGraphQLNameRegex = TDFA.makeRegex ("^[_a-zA-Z][_a-zA-Z0-9]*$" :: BL.ByteString) :: TDFA.Regex
-
 mkName :: Text -> Maybe Name
-mkName text
-  | TDFA.match compiledGraphQLNameRegex $ T.unpack text = Just (Name text)
-  | otherwise                                           = Nothing
+mkName text = T.uncons text >>= \(first, body) ->
+  if matchFirst first && T.all matchBody body
+  then Just (Name text)
+  else Nothing
+  where
+    matchFirst c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c
+    matchBody  c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c || C.isDigit c
 
 unsafeMkName :: Text -> Name
 unsafeMkName = Name
