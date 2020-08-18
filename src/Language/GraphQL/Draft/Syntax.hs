@@ -307,7 +307,7 @@ instance Lift var => Lift (Value var) where
   liftTyped (VVariable a) = [|| VVariable a ||]
   liftTyped VNull         = [|| VNull ||]
   liftTyped (VInt a)      = [|| VInt a ||]
-  liftTyped (VFloat a)    = [|| VFloat $ fromRational $ $$(TH.liftTyped $ toRational a) ||]
+  liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(TH.liftTyped $ toRational a) ||]
   liftTyped (VString a)   = [|| VString a ||]
   liftTyped (VBoolean a)  = [|| VBoolean a ||]
   liftTyped (VEnum a)     = [|| VEnum a ||]
@@ -389,7 +389,7 @@ newtype Description
   deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable, J.ToJSON, J.FromJSON)
 
 data ObjectTypeDefinition = ObjectTypeDefinition
-  { _otdDescription          :: (Maybe Description)
+  { _otdDescription          :: Maybe Description
   , _otdName                 :: Name
   , _otdImplementsInterfaces :: [Name]
   , _otdDirectives           :: [Directive Void]
@@ -449,7 +449,7 @@ data EnumTypeDefinition = EnumTypeDefinition
 instance Hashable EnumTypeDefinition
 
 data EnumValueDefinition = EnumValueDefinition
-  { _evdDescription :: (Maybe Description)
+  { _evdDescription :: Maybe Description
   , _evdName        :: EnumValue
   , _evdDirectives  :: [Directive Void]
   } deriving (Ord, Show, Eq, Lift, Generic)
@@ -468,7 +468,7 @@ data InputObjectTypeDefinition = InputObjectTypeDefinition
 instance Hashable InputObjectTypeDefinition
 
 data DirectiveDefinition = DirectiveDefinition
-  { _ddDescription :: (Maybe Description)
+  { _ddDescription :: Maybe Description
   , _ddName        :: Name
   , _ddArguments   :: ArgumentsDefinition
   , _ddLocations   :: [DirectiveLocation]
@@ -526,6 +526,6 @@ fmapSelectionFragment f (SelectionFragmentSpread frag) = SelectionFragmentSpread
 fmapSelectionFragment f (SelectionInlineFragment inlineFrag) =
   SelectionInlineFragment $ fmapInlineFragment f inlineFrag
 
-fmapInlineFragment :: (frag var -> frag' var) -> (InlineFragment frag var) -> (InlineFragment frag' var)
+fmapInlineFragment :: (frag var -> frag' var) -> InlineFragment frag var -> InlineFragment frag' var
 fmapInlineFragment f inlineFragment =
   inlineFragment {_ifSelectionSet = fmapSelectionSetFragment f (_ifSelectionSet inlineFragment)}

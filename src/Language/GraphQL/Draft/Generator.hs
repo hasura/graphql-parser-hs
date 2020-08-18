@@ -78,14 +78,14 @@ genDescription = Description <$> genText
 genValueWith :: [Gen a] -> Gen (Value a)
 genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
   where
-    recursive = [ VList <$> (genListValue $ genValueWith varGens)
-                , VObject <$> (genObjectValue $ genValueWith varGens)
+    recursive = [ VList   <$> genListValue   (genValueWith varGens)
+                , VObject <$> genObjectValue (genValueWith varGens)
                 ]
     -- TODO: use maxbound of int32/double or something?
     nonRecursive = [ pure VNull
-                   , VInt <$> fromIntegral <$> Gen.int32 (Range.linear 1 99999)
+                   , VInt . fromIntegral <$> Gen.int32 (Range.linear 1 99999)
                    , VEnum <$> genEnumValue
-                   , VFloat <$> fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
+                   , VFloat . fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
                    , VString <$> genText
                    , VBoolean <$> Gen.bool
                    ] <> [VVariable <$> var | var <- varGens]
