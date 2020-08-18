@@ -1,7 +1,6 @@
 module Language.GraphQL.Draft.Generator where
 
 import           Control.Monad.IO.Class
-import           Data.Maybe                    (fromJust)
 import           Data.Scientific               (fromFloatDigits)
 import           Data.Text                     (Text)
 import           Data.Void
@@ -57,7 +56,7 @@ genGraphqlName = Gen.text (Range.singleton 1) Gen.alpha <>
                  Gen.text (Range.linear 1 11) Gen.alphaNum
 
 genName :: Gen Name
-genName = fromJust . mkName <$> genGraphqlName
+genName = unsafeMkName <$> genGraphqlName
 
 genNullability :: Gen Nullability
 genNullability = Nullability <$> Gen.bool
