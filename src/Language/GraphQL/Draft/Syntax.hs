@@ -1,68 +1,44 @@
-{-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DeriveLift                 #-}
-{-# LANGUAGE DeriveTraversable          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- | Description: The GraphQL AST
-module Language.GraphQL.Draft.Syntax
-  ( Name(..)
-  , isValidName
-  , Document(..)
-  , ExecutableDocument(..)
-  , SchemaDocument(..)
-  , Definition(..)
-  , ExecutableDefinition(..)
-  , partitionExDefs
-  , OperationDefinition(..)
-  , OperationType(..)
-  , TypedOperationDefinition(..)
-  , TypeSystemDefinition(..)
-  , SchemaDefinition(..)
-  , RootOperationTypeDefinition(..)
-  , VariableDefinition(..)
-  , Variable(..)
-  , SelectionSet
-  , Selection(..)
-  , Field(..)
-  , Alias(..)
-  , Argument(..)
-  , FragmentSpread(..)
-  , InlineFragment(..)
-  , FragmentDefinition(..)
-  , TypeCondition
-  , ValueConst(..)
+module Language.GraphQL.Draft.Syntax (
+  -- * Basics
+    Name
+  , unName
+  , mkName
+  , unsafeMkName
+  , litName
+  , Description(..)
   , Value(..)
-  , StringValue(..)
-  , ListValueG(..)
-  , ListValue
-  , ListValueC
-  , ObjectValueG(..)
-  , ObjectValue
-  , ObjectValueC
-  , ObjectFieldG(..)
-  , ObjectField
-  , ObjectFieldC
-  , DefaultValue
+  , literal
+  , EnumValue(..)
   , Directive(..)
+
+  -- * Types
   , GType(..)
   , getBaseType
   , Nullability(..)
   , showGT
-  , ToGType(..)
-  , toLT
-  , toNT
   , showLT
   , isNullable
   , isNotNull
   , isListType
-  , showNT
-  , NamedType(..)
-  , ListType(..)
-  , Description(..)
+
+  -- * Documents
+  , Document(..)
+  , ExecutableDocument(..)
+  , SchemaDocument(..)
+  , SchemaIntrospection(..)
+
+  -- * Definitions
+  , Definition(..)
+  , DirectiveDefinition(..)
+  , DirectiveLocation(..)
+
+  -- ** Type system definitions
+  , TypeSystemDefinition(..)
+  , SchemaDefinition(..)
+  , RootOperationTypeDefinition(..)
   , TypeDefinition(..)
   , ObjectTypeDefinition(..)
   , FieldDefinition(..)
@@ -73,86 +49,125 @@ module Language.GraphQL.Draft.Syntax
   , ScalarTypeDefinition(..)
   , EnumTypeDefinition(..)
   , EnumValueDefinition(..)
-  , EnumValue(..)
   , InputObjectTypeDefinition(..)
-  , DirectiveDefinition(..)
-  , DirectiveLocation(..)
-  , ExecutableDirectiveLocation(..)
   , TypeSystemDirectiveLocation(..)
+
+  -- ** Executable definitions
+  , ExecutableDefinition(..)
+  , partitionExDefs
+  , OperationDefinition(..)
+  , OperationType(..)
+  , TypedOperationDefinition(..)
+  , VariableDefinition(..)
+  , ExecutableDirectiveLocation(..)
+  , FragmentDefinition(..)
+
+  -- * Queries
+  , SelectionSet
+  , Selection(..)
+  , Field(..)
+  , FragmentSpread(..)
+  , NoFragments
+  , InlineFragment(..)
+
+  -- ** Fragment conversion functions
+  , inline
+  , fmapFieldFragment
+  , fmapSelectionSetFragment
+  , fmapSelectionFragment
+  , fmapInlineFragment
   ) where
 
-import           Control.Monad.Fail         (fail)
-import           Data.Bool                  (not)
-import           Instances.TH.Lift          ()
-import           Language.Haskell.TH.Syntax (Lift(..), Lit(RationalL))
-import           Language.Haskell.TH.Lib    (litE)
-import           Protolude                  hiding (lift)
+import qualified Data.Aeson                     as J
+import qualified Data.Char                      as C
+import qualified Data.HashMap.Strict            as M
+import qualified Data.Text                      as T
+import qualified Language.Haskell.TH.Syntax     as TH
 
-import qualified Data.Aeson                 as J
-import qualified Data.Aeson.Types           as J
-import qualified Data.ByteString.Lazy       as BL
-import qualified Data.Text                  as T
-import qualified Text.Regex.TDFA            as TDFA
-import qualified Data.Scientific            as S
+import           Control.Monad
+import           Data.Bool                      (bool)
+import           Data.Hashable
+import           Data.HashMap.Strict            (HashMap)
+import           Data.Scientific
+import           Data.String                    (IsString (..))
+import           Data.Text                      (Text)
+import           Data.Text.Prettyprint.Doc      (Pretty (..))
+import           Data.Void
+import           GHC.Generics                   (Generic)
+import           Instances.TH.Lift              ()
+import           Language.Haskell.TH.Syntax     (Lift, Q)
 
--- * Documents
+import {-# SOURCE #-} Language.GraphQL.Draft.Parser  (parseExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 
--- | A 'QueryDocument' is something a user might send us.
---
--- https://facebook.github.io/graphql/#sec-Language.Query-Document
+newtype Name = Name { unName :: Text }
+  deriving (Eq, Ord, Show, Hashable, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
 
-newtype Name
-  = Name { unName :: Text }
-  deriving ( Eq, Ord, Show, Hashable, IsString, Lift, Semigroup
-           , Monoid, J.ToJSONKey, J.ToJSON)
+instance Pretty Name where
+  pretty = pretty. unName
 
--- Ref: http://facebook.github.io/graphql/June2018/#sec-Names
-isValidName :: Name -> Bool
-isValidName (Name text) =
-  TDFA.match compiledRegex $ T.unpack text
+mkName :: Text -> Maybe Name
+mkName text = T.uncons text >>= \(first, body) ->
+  if matchFirst first && T.all matchBody body
+  then Just (Name text)
+  else Nothing
   where
-    compiledRegex = TDFA.makeRegex ("^[_a-zA-Z][_a-zA-Z0-9]*$" :: BL.ByteString) :: TDFA.Regex
+    matchFirst c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c
+    matchBody  c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c || C.isDigit c
 
-parseName :: Text -> J.Parser Name
-parseName text =
-  bool (fail $ T.unpack errorMessage) (pure name) $ isValidName name
-  where
-    name = Name text
-    errorMessage = text <> " is not valid GraphQL name"
+unsafeMkName :: Text -> Name
+unsafeMkName = Name
+
+parseName :: MonadFail m => Text -> m Name
+parseName text = maybe (fail errorMessage) pure $ mkName text
+  where errorMessage = T.unpack text <> " is not valid GraphQL name"
+
+litName :: Text -> Q (TH.TExp Name)
+litName = parseName >=> \name -> [|| name ||]
 
 instance J.FromJSON Name where
-  parseJSON = J.withText "Text" parseName
+  parseJSON = J.withText "Name" parseName
 
 instance J.FromJSONKey Name where
   fromJSONKey = J.FromJSONKeyTextParser parseName
+
+-- * Documents
 
 newtype Document
   = Document { getDefinitions :: [Definition] }
   deriving (Ord, Show, Eq, Lift)
 
 data Definition
-  = DefinitionExecutable !ExecutableDefinition
-  | DefinitionTypeSystem !TypeSystemDefinition
+  = DefinitionExecutable (ExecutableDefinition Name)
+  | DefinitionTypeSystem TypeSystemDefinition
   deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable Definition
 
-newtype ExecutableDocument
-  = ExecutableDocument { getExecutableDefinitions :: [ExecutableDefinition] }
-  deriving (Ord, Show, Eq, Lift, Hashable)
+newtype ExecutableDocument var
+  = ExecutableDocument { getExecutableDefinitions :: [ExecutableDefinition var] }
+  deriving (Ord, Show, Eq, Lift, Hashable, Functor, Foldable, Traversable)
 
-data ExecutableDefinition
-  = ExecutableDefinitionOperation OperationDefinition
+instance J.FromJSON (ExecutableDocument Name) where
+  parseJSON = J.withText "ExecutableDocument" $ \t ->
+    case parseExecutableDoc t of
+      Right a -> return a
+      Left _  -> fail "parsing the graphql query failed"
+
+instance J.ToJSON (ExecutableDocument Name) where
+  toJSON = J.String . renderExecutableDoc
+
+data ExecutableDefinition var
+  = ExecutableDefinitionOperation (OperationDefinition FragmentSpread var)
   | ExecutableDefinitionFragment FragmentDefinition
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable ExecutableDefinition
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+instance Hashable var => Hashable (ExecutableDefinition var)
 
 partitionExDefs
-  :: [ExecutableDefinition]
-  -> ([SelectionSet], [TypedOperationDefinition], [FragmentDefinition])
-partitionExDefs =
-  foldr f ([], [], [])
+  :: [ExecutableDefinition var]
+  -> ( [SelectionSet FragmentSpread var]
+     , [TypedOperationDefinition FragmentSpread var]
+     , [FragmentDefinition] )
+partitionExDefs = foldr f ([], [], [])
   where
     f d (selSets, ops, frags) = case d of
       ExecutableDefinitionOperation (OperationDefinitionUnTyped t) ->
@@ -163,27 +178,22 @@ partitionExDefs =
         (selSets, ops, frag:frags)
 
 data TypeSystemDefinition
-  = TypeSystemDefinitionSchema !SchemaDefinition
-  | TypeSystemDefinitionType !TypeDefinition
-  -- TypeSystemDefinitionDir !DirectiveDefinition
+  = TypeSystemDefinitionSchema SchemaDefinition
+  | TypeSystemDefinitionType (TypeDefinition ())
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
 
-data SchemaDefinition
-  = SchemaDefinition
-  { _sdDirectives                   :: !(Maybe [Directive])
-  , _sdRootOperationTypeDefinitions :: ![RootOperationTypeDefinition]
+data SchemaDefinition = SchemaDefinition
+  { _sdDirectives                   :: Maybe [Directive Void]
+  , _sdRootOperationTypeDefinitions :: [RootOperationTypeDefinition]
   } deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable SchemaDefinition
 
-data RootOperationTypeDefinition
-  = RootOperationTypeDefinition
-  { _rotdOperationType     :: !OperationType
-  , _rotdOperationTypeType :: !NamedType
+data RootOperationTypeDefinition = RootOperationTypeDefinition
+  { _rotdOperationType     :: OperationType
+  , _rotdOperationTypeType :: Name
   } deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable RootOperationTypeDefinition
 
 data OperationType
@@ -191,223 +201,131 @@ data OperationType
   | OperationTypeMutation
   | OperationTypeSubscription
   deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable OperationType
 
 newtype SchemaDocument
-  = SchemaDocument [TypeDefinition]
-  deriving (Ord, Show, Eq, Lift, Hashable)
+  = SchemaDocument [TypeDefinition ()] -- No 'possibleTypes' specified for interfaces
+  deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
-data OperationDefinition
-  = OperationDefinitionTyped !TypedOperationDefinition
-  | OperationDefinitionUnTyped !SelectionSet
-  deriving (Ord, Show, Eq, Lift, Generic)
+-- | A variant of 'SchemaDocument' that additionally stores, for each interface,
+-- the list of object types that implement that interface
+newtype SchemaIntrospection
+  = SchemaIntrospection [TypeDefinition [Name]]
+  deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
-instance Hashable OperationDefinition
+data OperationDefinition frag var
+  = OperationDefinitionTyped (TypedOperationDefinition frag var)
+  | OperationDefinitionUnTyped (SelectionSet frag var)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+instance (Hashable (frag var), Hashable var) => Hashable (OperationDefinition frag var)
 
-data TypedOperationDefinition
-  = TypedOperationDefinition
-  { _todType                :: !OperationType
-  , _todName                :: !(Maybe Name)
-  , _todVariableDefinitions :: ![VariableDefinition]
-  , _todDirectives          :: ![Directive]
-  , _todSelectionSet        :: !SelectionSet
+data TypedOperationDefinition frag var = TypedOperationDefinition
+  { _todType                :: OperationType
+  , _todName                :: Maybe Name
+  , _todVariableDefinitions :: [VariableDefinition]
+  , _todDirectives          :: [Directive var]
+  , _todSelectionSet        :: SelectionSet frag var
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+instance (Hashable (frag var), Hashable var) => Hashable (TypedOperationDefinition frag var)
+
+data VariableDefinition = VariableDefinition
+  { _vdName         :: Name
+  , _vdType         :: GType
+  , _vdDefaultValue :: Maybe (Value Void)
   } deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable TypedOperationDefinition
-
-data VariableDefinition
-  = VariableDefinition
-  { _vdVariable     :: !Variable
-  , _vdType         :: !GType
-  , _vdDefaultValue :: !(Maybe DefaultValue)
-  } deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable VariableDefinition
 
-newtype Variable
-  = Variable { unVariable :: Name }
-  deriving ( Eq, Ord, Show, Hashable, Lift, J.ToJSONKey, J.FromJSONKey
-           , J.ToJSON, J.FromJSON)
+type SelectionSet frag var = [Selection frag var]
 
-type SelectionSet = [Selection]
+data Selection frag var
+  = SelectionField (Field frag var)
+  | SelectionFragmentSpread (frag var)
+  | SelectionInlineFragment (InlineFragment frag var)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+instance (Hashable (frag var), Hashable var) => Hashable (Selection frag var)
 
-data Selection
-  = SelectionField !Field
-  | SelectionFragmentSpread !FragmentSpread
-  | SelectionInlineFragment !InlineFragment
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable Selection
-
-data Field
-  = Field
-  { _fAlias        :: !(Maybe Alias)
-  , _fName         :: !Name
-  , _fArguments    :: ![Argument]
-  , _fDirectives   :: ![Directive]
-  , _fSelectionSet :: !SelectionSet
-  } deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable Field
-
-newtype Alias
-  = Alias { unAlias :: Name }
-  deriving (Ord, Show, Eq, Hashable, Lift, J.ToJSON, J.FromJSON)
-
-data Argument
-  = Argument
-  { _aName  :: !Name
-  , _aValue :: !Value
-  } deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable Argument
+data Field frag var = Field
+  { _fAlias        :: Maybe Name
+  , _fName         :: Name
+  , _fArguments    :: HashMap Name (Value var)
+  , _fDirectives   :: [Directive var]
+  , _fSelectionSet :: SelectionSet frag var
+  } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
+instance (Hashable (frag var), Hashable var) => Hashable (Field frag var)
+instance (Lift (frag var), Lift var) => Lift (Field frag var) where
+  liftTyped Field{..} =
+    [|| Field { _fAlias, _fName, _fDirectives, _fSelectionSet
+             , _fArguments = $$(liftTypedHashMap _fArguments) } ||]
 
 -- * Fragments
 
-data FragmentSpread
-  = FragmentSpread
-  { _fsName       :: !Name
-  , _fsDirectives :: ![Directive]
+data FragmentSpread var = FragmentSpread
+  { _fsName       :: Name
+  , _fsDirectives :: [Directive var]
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+instance Hashable var => Hashable (FragmentSpread var)
+
+-- | Can be used in place of the @frag@ parameter to various AST types to
+-- guarante that the AST does not include any fragment spreads.
+--
+-- Note: This is equivalent to @'Const' 'Void'@, but annoyingly, 'Const' does
+-- not provide a 'Lift' instance as of GHC 8.6.
+data NoFragments var
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Lift, Generic)
+instance Hashable (NoFragments var)
+
+data InlineFragment frag var = InlineFragment
+  { _ifTypeCondition :: Maybe Name
+  , _ifDirectives    :: [Directive var]
+  , _ifSelectionSet  :: SelectionSet frag var
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+instance (Hashable (frag var), Hashable var) => Hashable (InlineFragment frag var)
+
+data FragmentDefinition = FragmentDefinition
+  { _fdName          :: Name
+  , _fdTypeCondition :: Name
+  , _fdDirectives    :: [Directive Void]
+  , _fdSelectionSet  :: SelectionSet FragmentSpread Void
   } deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable FragmentSpread
-
-data InlineFragment
-  = InlineFragment
-  { _ifTypeCondition :: !(Maybe TypeCondition)
-  , _ifDirectives    :: ![Directive]
-  , _ifSelectionSet  :: !SelectionSet
-  } deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable InlineFragment
-
-data FragmentDefinition
-  = FragmentDefinition
-  { _fdName          :: !Name
-  , _fdTypeCondition :: !TypeCondition
-  , _fdDirectives    :: ![Directive]
-  , _fdSelectionSet  :: !SelectionSet
-  } deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable FragmentDefinition
-
-type TypeCondition = NamedType
 
 -- * Values
 
--- data ValueLeaf
---   = VLInt !Int32
---   | VLFloat !Double
---   | VLBoolean !Bool
---   | VLString !StringValue
---   | VLEnum !EnumValue
---   | VLNull
---   deriving (Ord, Show, Eq, Lift)
-
--- data ValueConst
---   = VCLeaf !ValueLeaf
---   | VCList !ListValueC
---   | VCObject !ObjectValueC
---   deriving (Ord, Show, Eq, Lift)
-
--- data Value
---   = VVariable !Variable
---   | VLeaf !ValueLeaf
---   | VList !ListValue
---   | VObject !ObjectValue
---   deriving (Ord, Show, Eq, Lift)
-
-data ValueConst
-  = VCInt !Integer
-  | VCFloat !S.Scientific
-  | VCString !StringValue
-  | VCBoolean !Bool
-  | VCNull
-  | VCEnum !EnumValue
-  | VCList !ListValueC
-  | VCObject !ObjectValueC
-  deriving (Ord, Show, Eq, Generic)
-
-instance Lift ValueConst where
-  lift (VCInt i) = [e|VCInt $(lift i)|]
-  lift (VCFloat sc) = [e|VCFloat $(litE (RationalL (toRational sc)))|]
-  lift (VCString s) = [e|VCString $(lift s)|]
-  lift (VCBoolean b) = [e|VCBoolean $(lift b)|]
-  lift (VCNull) = [e|VCNull|]
-  lift (VCEnum ev) = [e|VCEnum $(lift ev)|]
-  lift (VCList xs) = [e|VCList $(lift xs)|]
-  lift (VCObject o) = [e|VCObject $(lift o)|]
-
-instance Hashable ValueConst
-
-data Value
-  = VVariable !Variable
-  | VInt !Integer
-  | VFloat !S.Scientific
-  | VString !StringValue
-  | VBoolean !Bool
+data Value var
+  = VVariable var
   | VNull
-  | VEnum !EnumValue
-  | VList !ListValue
-  | VObject !ObjectValue
-  deriving (Ord, Show, Eq, Generic)
+  | VInt Integer
+  | VFloat Scientific
+  | VString Text
+  | VBoolean Bool
+  | VEnum EnumValue
+  | VList [Value var]
+  | VObject (HashMap Name (Value var))
+  deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
+instance Hashable var => Hashable (Value var)
+instance Lift var => Lift (Value var) where
+  liftTyped (VVariable a) = [|| VVariable a ||]
+  liftTyped VNull         = [|| VNull ||]
+  liftTyped (VInt a)      = [|| VInt a ||]
+  liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(TH.liftTyped $ toRational a) ||]
+  liftTyped (VString a)   = [|| VString a ||]
+  liftTyped (VBoolean a)  = [|| VBoolean a ||]
+  liftTyped (VEnum a)     = [|| VEnum a ||]
+  liftTyped (VList a)     = [|| VList a ||]
+  liftTyped (VObject a)   = [|| VObject $$(liftTypedHashMap a) ||]
 
-instance Lift Value where
-  lift (VVariable v) = [e|VVariable $(lift v)|]
-  lift (VInt i) = [e|VInt $(lift i)|]
-  lift (VFloat sc) = [e|VFloat $(litE (RationalL (toRational sc)))|]
-  lift (VString s) = [e|VString $(lift s)|]
-  lift (VBoolean b) = [e|VBoolean $(lift b)|]
-  lift (VNull) = [e|VNull|]
-  lift (VEnum ev) = [e|VEnum $(lift ev)|]
-  lift (VList xs) = [e|VList $(lift xs)|]
-  lift (VObject o) = [e|VObject $(lift o)|]
-
-instance Hashable Value
-
-newtype StringValue
-  = StringValue { unStringValue :: Text }
-  deriving (Ord, Show, Eq, Lift, Hashable)
-
-newtype ListValueG a
-  = ListValueG {unListValue :: [a]}
-  deriving (Ord, Show, Eq, Lift, Hashable)
-
-type ListValue = ListValueG Value
-
-type ListValueC = ListValueG ValueConst
-
-newtype ObjectValueG a
-  = ObjectValueG {unObjectValue :: [ObjectFieldG a]}
-  deriving (Ord, Show, Eq, Lift, Hashable)
-
-type ObjectValue = ObjectValueG Value
-
-type ObjectValueC = ObjectValueG ValueConst
-
-data ObjectFieldG a
-  = ObjectFieldG
-  { _ofName  :: Name
-  , _ofValue :: a
-  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
-
-instance (Hashable a) => Hashable (ObjectFieldG a)
-
-type ObjectField = ObjectFieldG Value
-type ObjectFieldC = ObjectFieldG ValueConst
-
-type DefaultValue = ValueConst
+literal :: Value Void -> Value var
+literal = fmap absurd
 
 -- * Directives
 
-data Directive
-  = Directive
-  { _dName      :: !Name
-  , _dArguments :: ![Argument]
-  } deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable Directive
+data Directive var = Directive
+  { _dName      :: Name
+  , _dArguments :: HashMap Name (Value var)
+  } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
+instance Hashable var => Hashable (Directive var)
+instance Lift var => Lift (Directive var) where
+  liftTyped Directive{..} = [|| Directive{ _dName, _dArguments = $$(liftTypedHashMap _dArguments) } ||]
 
 -- * Type Reference
 
@@ -416,25 +334,14 @@ newtype Nullability
   deriving (Show, Ord, Eq, Lift, Generic, Hashable)
 
 data GType
-  = TypeNamed !Nullability !NamedType
-  | TypeList !Nullability !ListType
+  = TypeNamed Nullability Name
+  | TypeList Nullability GType
   deriving (Eq, Ord, Show, Lift, Generic)
 
-getBaseType :: GType -> NamedType
+getBaseType :: GType -> Name
 getBaseType = \case
   TypeNamed _ namedType -> namedType
-  TypeList _ listType -> getBaseType $ unListType listType
-
-class ToGType a where
-  toGT :: a -> GType
-
-toNT :: (ToGType a) => a -> GType
-toNT ty = case toGT ty of
-  TypeNamed _ nt -> TypeNamed (Nullability False) nt
-  TypeList _ lt  -> TypeList (Nullability False) lt
-
-instance ToGType GType where
-  toGT t = t
+  TypeList _ listType -> getBaseType listType
 
 instance J.ToJSON GType where
   toJSON = J.toJSON . showGT
@@ -443,188 +350,135 @@ instance Hashable GType
 
 showGT :: GType -> Text
 showGT = \case
-  TypeNamed nullability nt -> showNT nt <> showNullable nullability
+  TypeNamed nullability nt -> unName nt <> showNullable nullability
   TypeList nullability lt  -> showLT lt <> showNullable nullability
 
 showNullable :: Nullability -> Text
 showNullable = bool "!" "" . unNullability
 
-showNT :: NamedType -> Text
-showNT = unName . unNamedType
-
-showLT :: ListType -> Text
-showLT lt = "[" <> showGT (unListType lt) <> "]"
-
-toLT :: (ToGType a) => a -> ListType
-toLT = ListType . toGT
+showLT :: GType -> Text
+showLT lt = "[" <> showGT lt <> "]"
 
 isNullable :: GType -> Bool
 isNullable = \case
-  (TypeNamed nullability _) -> unNullability nullability
-  (TypeList nullability _)  -> unNullability nullability
+  TypeNamed nullability _ -> unNullability nullability
+  TypeList nullability _  -> unNullability nullability
 
 isListType :: GType -> Bool
 isListType = \case
-  (TypeList _ _)  -> True
-  (TypeNamed _ _) -> False
-
+  TypeList _ _  -> True
+  TypeNamed _ _ -> False
 
 isNotNull :: GType -> Bool
 isNotNull = not . isNullable
 
-newtype NamedType
-  = NamedType { unNamedType :: Name }
-  deriving (Eq, Ord, Show, Hashable, Lift, J.ToJSON,
-            J.ToJSONKey, J.FromJSON, J.FromJSONKey)
-
-instance ToGType NamedType where
-  toGT = TypeNamed (Nullability True)
-
-newtype ListType
-  = ListType {unListType :: GType }
-  deriving (Eq, Ord, Show, Lift, Hashable)
-
-instance ToGType ListType where
-  toGT = TypeList (Nullability True)
-
 -- * Type definition
 
-data TypeDefinition
+data TypeDefinition possibleTypes
   = TypeDefinitionScalar ScalarTypeDefinition
   | TypeDefinitionObject ObjectTypeDefinition
-  | TypeDefinitionInterface InterfaceTypeDefinition
+  | TypeDefinitionInterface (InterfaceTypeDefinition possibleTypes)
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
   | TypeDefinitionInputObject InputObjectTypeDefinition
   deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable TypeDefinition
+instance Hashable possibleTypes => Hashable (TypeDefinition possibleTypes)
 
 newtype Description
   = Description { unDescription :: Text }
-  deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable,
-            J.ToJSON, J.FromJSON)
+  deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable, J.ToJSON, J.FromJSON)
 
-data ObjectTypeDefinition
-  = ObjectTypeDefinition
-  { _otdDescription          :: !(Maybe Description)
-  , _otdName                 :: !Name
-  , _otdImplementsInterfaces :: ![NamedType]
-  , _otdDirectives           :: ![Directive]
-  , _otdFieldsDefinition     :: ![FieldDefinition]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data ObjectTypeDefinition = ObjectTypeDefinition
+  { _otdDescription          :: Maybe Description
+  , _otdName                 :: Name
+  , _otdImplementsInterfaces :: [Name]
+  , _otdDirectives           :: [Directive Void]
+  , _otdFieldsDefinition     :: [FieldDefinition]
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable ObjectTypeDefinition
 
-data FieldDefinition
-  = FieldDefinition
-  { _fldDescription         :: !(Maybe Description)
-  , _fldName                :: !Name
-  , _fldArgumentsDefinition :: !ArgumentsDefinition
-  , _fldType                :: !GType
-  , _fldDirectives          :: ![Directive]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data FieldDefinition = FieldDefinition
+  { _fldDescription         :: Maybe Description
+  , _fldName                :: Name
+  , _fldArgumentsDefinition :: ArgumentsDefinition
+  , _fldType                :: GType
+  , _fldDirectives          :: [Directive Void]
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable FieldDefinition
 
 type ArgumentsDefinition = [InputValueDefinition]
 
-data InputValueDefinition
-  = InputValueDefinition
-  { _ivdDescription  :: !(Maybe Description)
-  , _ivdName         :: !Name
-  , _ivdType         :: !GType
-  , _ivdDefaultValue :: !(Maybe DefaultValue)
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data InputValueDefinition = InputValueDefinition
+  { _ivdDescription  :: Maybe Description
+  , _ivdName         :: Name
+  , _ivdType         :: GType
+  , _ivdDefaultValue :: Maybe (Value Void)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable InputValueDefinition
 
-data InterfaceTypeDefinition
-  = InterfaceTypeDefinition
-  { _itdDescription      :: !(Maybe Description)
-  , _itdName             :: !Name
-  , _itdDirectives       :: ![Directive]
-  , _itdFieldsDefinition :: ![FieldDefinition]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
+data InterfaceTypeDefinition possibleTypes = InterfaceTypeDefinition
+  { _itdDescription      :: Maybe Description
+  , _itdName             :: Name
+  , _itdDirectives       :: [Directive Void]
+  , _itdFieldsDefinition :: [FieldDefinition]
+  , _itdPossibleTypes    :: possibleTypes
+  } deriving (Ord, Show, Eq, Lift, Generic)
+instance Hashable possibleTypes => Hashable (InterfaceTypeDefinition possibleTypes)
 
-instance Hashable InterfaceTypeDefinition
-
-data UnionTypeDefinition
-  = UnionTypeDefinition
-  { _utdDescription :: !(Maybe Description)
-  , _utdName        :: !Name
-  , _utdDirectives  :: ![Directive]
-  , _utdMemberTypes :: ![NamedType]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data UnionTypeDefinition = UnionTypeDefinition
+  { _utdDescription :: Maybe Description
+  , _utdName        :: Name
+  , _utdDirectives  :: [Directive Void]
+  , _utdMemberTypes :: [Name]
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable UnionTypeDefinition
 
-data ScalarTypeDefinition
-  = ScalarTypeDefinition
-  { _stdDescription :: !(Maybe Description)
-  , _stdName        :: !Name
-  , _stdDirectives  :: ![Directive]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data ScalarTypeDefinition = ScalarTypeDefinition
+  { _stdDescription :: Maybe Description
+  , _stdName        :: Name
+  , _stdDirectives  :: [Directive Void]
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable ScalarTypeDefinition
 
-data EnumTypeDefinition
-  = EnumTypeDefinition
-  { _etdDescription      :: !(Maybe Description)
-  , _etdName             :: !Name
-  , _etdDirectives       :: ![Directive]
-  , _etdValueDefinitions :: ![EnumValueDefinition]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data EnumTypeDefinition = EnumTypeDefinition
+  { _etdDescription      :: Maybe Description
+  , _etdName             :: Name
+  , _etdDirectives       :: [Directive Void]
+  , _etdValueDefinitions :: [EnumValueDefinition]
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable EnumTypeDefinition
 
-data EnumValueDefinition
-  = EnumValueDefinition
-  { _evdDescription :: !(Maybe Description)
-  , _evdName        :: !EnumValue
-  , _evdDirectives  :: ![Directive]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data EnumValueDefinition = EnumValueDefinition
+  { _evdDescription :: Maybe Description
+  , _evdName        :: EnumValue
+  , _evdDirectives  :: [Directive Void]
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable EnumValueDefinition
 
 newtype EnumValue
   = EnumValue { unEnumValue :: Name }
   deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
 
-data InputObjectTypeDefinition
-  = InputObjectTypeDefinition
-  { _iotdDescription      :: !(Maybe Description)
-  , _iotdName             :: !Name
-  , _iotdDirectives       :: ![Directive]
-  , _iotdValueDefinitions :: ![InputValueDefinition]
-  }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
+data InputObjectTypeDefinition = InputObjectTypeDefinition
+  { _iotdDescription      :: Maybe Description
+  , _iotdName             :: Name
+  , _iotdDirectives       :: [Directive Void]
+  , _iotdValueDefinitions :: [InputValueDefinition]
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable InputObjectTypeDefinition
 
-data DirectiveDefinition
-  = DirectiveDefinition
-  { _ddDescription :: !(Maybe Description)
-  , _ddName        :: !Name
-  , _ddArguments   :: !ArgumentsDefinition
-  , _ddLocations   :: ![DirectiveLocation]
+data DirectiveDefinition = DirectiveDefinition
+  { _ddDescription :: Maybe Description
+  , _ddName        :: Name
+  , _ddArguments   :: ArgumentsDefinition
+  , _ddLocations   :: [DirectiveLocation]
   } deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable DirectiveDefinition
 
 data DirectiveLocation
-  = DLExecutable !ExecutableDirectiveLocation
-  | DLTypeSystem !TypeSystemDirectiveLocation
+  = DLExecutable ExecutableDirectiveLocation
+  | DLTypeSystem TypeSystemDirectiveLocation
   deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable DirectiveLocation
 
 data ExecutableDirectiveLocation
@@ -636,7 +490,6 @@ data ExecutableDirectiveLocation
   | EDLFRAGMENT_SPREAD
   | EDLINLINE_FRAGMENT
   deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable ExecutableDirectiveLocation
 
 data TypeSystemDirectiveLocation
@@ -652,5 +505,27 @@ data TypeSystemDirectiveLocation
   | TSDLINPUT_OBJECT
   | TSDLINPUT_FIELD_DEFINITION
   deriving (Ord, Show, Eq, Lift, Generic)
-
 instance Hashable TypeSystemDirectiveLocation
+
+liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
+liftTypedHashMap a = [|| M.fromList $$(TH.liftTyped $ M.toList a) ||]
+
+inline :: NoFragments var -> FragmentSpread var
+inline x = case x of {}
+
+fmapFieldFragment :: (frag var -> frag' var) -> Field frag var -> Field frag' var
+fmapFieldFragment f field =
+  field {_fSelectionSet = fmapSelectionSetFragment f (_fSelectionSet field)}
+
+fmapSelectionSetFragment :: (frag var -> frag' var) -> SelectionSet frag var -> SelectionSet frag' var
+fmapSelectionSetFragment f = fmap (fmapSelectionFragment f)
+
+fmapSelectionFragment :: (frag var -> frag' var) -> Selection frag var -> Selection frag' var
+fmapSelectionFragment f (SelectionField field) = SelectionField $ fmapFieldFragment f field
+fmapSelectionFragment f (SelectionFragmentSpread frag) = SelectionFragmentSpread $ f frag
+fmapSelectionFragment f (SelectionInlineFragment inlineFrag) =
+  SelectionInlineFragment $ fmapInlineFragment f inlineFrag
+
+fmapInlineFragment :: (frag var -> frag' var) -> InlineFragment frag var -> InlineFragment frag' var
+fmapInlineFragment f inlineFragment =
+  inlineFragment {_ifSelectionSet = fmapSelectionSetFragment f (_ifSelectionSet inlineFragment)}

@@ -1,46 +1,47 @@
-cabal-version: 1.12
-
--- This file has been generated from package.yaml by hpack version 0.31.2.
---
--- see: https://github.com/sol/hpack
---
--- hash: 7308d13493928552f44b710a082dd9565e8c7fe65cfd138ad60fcfe10d46d637
+cabal-version: 2.2
 
 name:           graphql-parser
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/hasura/graphql-parser-hs#readme>
-homepage:       https://github.com/hasura/graphql-parser-hs#readme
+version:        0.2.0.0
+synopsis:       A native Haskell GraphQL parser.
+homepage:       https://github.com/hasura/graphql-parser-hs
 bug-reports:    https://github.com/hasura/graphql-parser-hs/issues
 author:         Vamshi Surabhi
 maintainer:     vamshi@hasura.io
-copyright:      2018 Hasura Technologies Pvt. Ltd.
-license:        BSD3
+copyright:      2018–2020 Hasura Inc., 2015 J. Daniel Navarro
+license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
-extra-source-files:
-    README.md
-    ChangeLog.md
 
 source-repository head
   type: git
   location: https://github.com/hasura/graphql-parser-hs
 
+common common-all
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+  default-language: Haskell2010
+  default-extensions:
+    BlockArguments ConstraintKinds DeriveFunctor DeriveGeneric DeriveLift
+    DeriveTraversable EmptyCase EmptyDataDeriving FlexibleContexts
+    FlexibleInstances FunctionalDependencies GeneralizedNewtypeDeriving
+    LambdaCase NamedFieldPuns OverloadedStrings RankNTypes RecordWildCards
+    RoleAnnotations StrictData TupleSections
+
+common common-exe
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+
 library
-  hs-source-dirs:
-      src
-  default-extensions: NoImplicitPrelude
-  ghc-options: -O2 -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
+  import: common-all
+  hs-source-dirs: src
   build-depends:
-      aeson
-    , attoparsec
     , base >=4.7 && <5
+    , aeson
+    , attoparsec
     , bytestring
     , containers
     , filepath
     , hedgehog
     , prettyprinter
-    , protolude
-    , regex-tdfa >=1.2
     , scientific
     , template-haskell
     , text
@@ -48,79 +49,42 @@ library
     , th-lift-instances
     , unordered-containers
     , vector
+    , hashable
   exposed-modules:
-      Language.GraphQL.Draft.Generator.Document
-      Language.GraphQL.Draft.Generator.Primitives
-      Language.GraphQL.Draft.Generator.Selection
-      Language.GraphQL.Draft.Generator.TypeDefinition
-      Language.GraphQL.Draft.Instances
-      Language.GraphQL.Draft.Parser
-      Language.GraphQL.Draft.Printer
-      Language.GraphQL.Draft.Printer.ByteString
-      Language.GraphQL.Draft.Printer.LazyText
-      Language.GraphQL.Draft.Printer.Pretty
-      Language.GraphQL.Draft.Printer.Text
-      Language.GraphQL.Draft.Syntax
-      Language.GraphQL.Draft.TH
-  other-modules:
-  default-language: Haskell2010
+    Language.GraphQL.Draft.Parser
+    Language.GraphQL.Draft.Printer
+    Language.GraphQL.Draft.Syntax
+    Language.GraphQL.Draft.Generator
 
 test-suite graphql-parser-test
+  import: common-all, common-exe
   type: exitcode-stdio-1.0
+  hs-source-dirs: test
   main-is: Spec.hs
   other-modules:
-      Keywords
-  hs-source-dirs:
-      test
-  default-extensions: NoImplicitPrelude
-  ghc-options: -O2 -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -threaded -rtsopts -with-rtsopts=-N
+    Keywords
   build-depends:
-      aeson
-    , attoparsec
     , base >=4.7 && <5
-    , bytestring
-    , containers
-    , filepath
     , graphql-parser
+    , attoparsec
+    , bytestring
     , hedgehog
     , prettyprinter
-    , protolude
-    , regex-tdfa >=1.2
     , scientific
-    , template-haskell
     , text
     , text-builder
-    , th-lift-instances
-    , unordered-containers
-    , vector
   default-language: Haskell2010
 
 benchmark graphql-parser-bench
+  import: common-all, common-exe
   type: exitcode-stdio-1.0
+  hs-source-dirs: bench
   main-is: Benchmark.hs
-  other-modules:
-  hs-source-dirs:
-      bench
-  default-extensions: NoImplicitPrelude
-  ghc-options: -O2 -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wall -O2
   build-depends:
-      aeson
-    , attoparsec
     , base >=4.7 && <5
-    , bytestring
-    , containers
-    , criterion
-    , filepath
     , graphql-parser
-    , hedgehog
+    , bytestring
+    , criterion
     , prettyprinter
-    , protolude
-    , regex-tdfa >=1.2
-    , scientific
-    , template-haskell
     , text
     , text-builder
-    , th-lift-instances
-    , unordered-containers
-    , vector
-  default-language: Haskell2010

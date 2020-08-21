@@ -1,4 +1,3 @@
-.stack-work/
 *~
-ws
-TAGS
+dist-newstyle/
+cabal.project.local
