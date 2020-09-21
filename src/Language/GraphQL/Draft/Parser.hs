@@ -8,6 +8,7 @@ module Language.GraphQL.Draft.Parser
 
   , schemaDocument
   , parseSchemaDoc
+  , parseTypeSystemDefinitions
 
   , Variable(..)
   , value
@@ -266,6 +267,24 @@ nullability =
   <|> pure (AST.Nullability True)
 
 -- * Type Definition
+
+rootOperationTypeDefinition :: Parser AST.RootOperationTypeDefinition
+rootOperationTypeDefinition =
+  AST.RootOperationTypeDefinition <$> operationTypeParser <*> nameParser
+
+schemaDefinition :: Parser AST.SchemaDefinition
+schemaDefinition = AST.SchemaDefinition
+  <$ tok "schema"
+  <*> optional directives
+  <*> many1 rootOperationTypeDefinition
+
+typeSystemDefinition :: Parser AST.TypeSystemDefinition
+typeSystemDefinition =
+  AST.TypeSystemDefinitionSchema <$> schemaDefinition
+  <|> AST.TypeSystemDefinitionType <$> typeDefinition
+
+parseTypeSystemDefinitions :: Text -> Either Text [AST.TypeSystemDefinition]
+parseTypeSystemDefinitions = runParser $ many1 typeSystemDefinition
 
 typeDefinition :: Parser (AST.TypeDefinition ())
 typeDefinition =
