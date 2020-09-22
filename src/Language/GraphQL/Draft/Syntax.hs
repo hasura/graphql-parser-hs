@@ -387,7 +387,7 @@ data TypeDefinition possibleTypes
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
   | TypeDefinitionInputObject InputObjectTypeDefinition
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance Hashable possibleTypes => Hashable (TypeDefinition possibleTypes)
 
 newtype Description
@@ -428,7 +428,7 @@ data InterfaceTypeDefinition possibleTypes = InterfaceTypeDefinition
   , _itdDirectives       :: [Directive Void]
   , _itdFieldsDefinition :: [FieldDefinition]
   , _itdPossibleTypes    :: possibleTypes
-  } deriving (Ord, Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance Hashable possibleTypes => Hashable (InterfaceTypeDefinition possibleTypes)
 
 data UnionTypeDefinition = UnionTypeDefinition
