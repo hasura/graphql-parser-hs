@@ -269,13 +269,16 @@ nullability =
 
 rootOperationTypeDefinition :: Parser AST.RootOperationTypeDefinition
 rootOperationTypeDefinition =
-  AST.RootOperationTypeDefinition <$> operationTypeParser <*> nameParser
+  AST.RootOperationTypeDefinition <$> operationTypeParser <* tok ":" <*> nameParser
 
 schemaDefinition :: Parser AST.SchemaDefinition
 schemaDefinition = AST.SchemaDefinition
   <$ tok "schema"
   <*> optional directives
-  <*> many1 rootOperationTypeDefinition
+  <*> rootOperationTypeDefinitions
+
+rootOperationTypeDefinitions :: Parser [AST.RootOperationTypeDefinition]
+rootOperationTypeDefinitions = braces $ many1 rootOperationTypeDefinition
 
 typeSystemDefinition :: Parser AST.TypeSystemDefinition
 typeSystemDefinition =
