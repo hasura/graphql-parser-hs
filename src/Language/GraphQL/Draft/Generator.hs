@@ -42,7 +42,7 @@ genExecutableDocument =
 
 genSchemaDocument :: Gen SchemaDocument
 genSchemaDocument =
-  SchemaDocument <$> Gen.list (Range.linear 1 5) genTypeDefinition
+  SchemaDocument <$> Gen.list (Range.linear 1 5) genTypeSystemDefinition
 
 
 

@@ -5,10 +5,9 @@
 module Language.GraphQL.Draft.Parser
   ( executableDocument
   , parseExecutableDoc
-
   , schemaDocument
-  , parseSchemaDoc
   , parseTypeSystemDefinitions
+  , parseSchemaDocument
 
   , Variable(..)
   , value
@@ -58,10 +57,10 @@ parseExecutableDoc = runParser executableDocument
 
 -- | Parser for a schema document.
 schemaDocument :: Parser AST.SchemaDocument
-schemaDocument = whiteSpace *> (AST.SchemaDocument <$> many1 typeDefinition)
+schemaDocument = whiteSpace *> (AST.SchemaDocument <$> many1 typeSystemDefinition)
 
-parseSchemaDoc :: Text -> Either Text AST.SchemaDocument
-parseSchemaDoc = runParser schemaDocument
+parseSchemaDocument :: Text -> Either Text AST.SchemaDocument
+parseSchemaDocument = runParser schemaDocument
 
 definitionExecutable :: Parser (AST.ExecutableDefinition AST.Name)
 definitionExecutable =

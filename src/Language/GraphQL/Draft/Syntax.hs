@@ -97,7 +97,7 @@ import           GHC.Generics                   (Generic)
 import           Instances.TH.Lift              ()
 import           Language.Haskell.TH.Syntax     (Lift, Q)
 
-import {-# SOURCE #-} Language.GraphQL.Draft.Parser  (parseExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Parser  (parseExecutableDoc, parseSchemaDocument)
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 
 newtype Name = Name { unName :: Text }
@@ -179,7 +179,7 @@ partitionExDefs = foldr f ([], [], [])
 
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema SchemaDefinition
-  | TypeSystemDefinitionType (TypeDefinition ())
+  | TypeSystemDefinitionType (TypeDefinition ())  -- No 'possibleTypes' specified for interfaces
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
@@ -204,8 +204,14 @@ data OperationType
 instance Hashable OperationType
 
 newtype SchemaDocument
-  = SchemaDocument [TypeDefinition ()] -- No 'possibleTypes' specified for interfaces
+  = SchemaDocument [TypeSystemDefinition]
   deriving (Ord, Show, Eq, Lift, Hashable, Generic)
+
+instance J.FromJSON SchemaDocument where
+  parseJSON = J.withText "SchemaDocument" $ \t ->
+    case parseSchemaDocument t of
+      Right schemaDoc -> return schemaDoc
+      Left err -> fail $ "parsing the schema document: " <> show err
 
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
 -- the list of object types that implement that interface
