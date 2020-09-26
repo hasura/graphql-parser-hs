@@ -43,7 +43,7 @@ library
     , hedgehog
     , prettyprinter
     , scientific
-    , template-haskell
+    , template-haskell >= 2.16.0.0
     , text
     , text-builder
     , th-lift-instances
