@@ -176,7 +176,7 @@ optAlias = maybe mempty (\a -> nameP a <> textP ": ")
 inlineFragment :: (Print (frag var), Print var, Printer a) => InlineFragment frag var -> a
 inlineFragment (InlineFragment tc ds sels) =
   "... "
-  <> maybe mempty ((textP "on" <>) . nameP) tc
+  <> maybe mempty ((textP "on " <>) . nameP) tc
   <> optempty directives ds
   <> selectionSetP sels
 
