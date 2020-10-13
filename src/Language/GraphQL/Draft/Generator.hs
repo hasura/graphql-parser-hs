@@ -226,6 +226,7 @@ genInputValueDefinition = InputValueDefinition
                           <$> Gen.maybe genDescription
                           <*> genName
                           <*> genType
+                          <*> genDirectives
                           <*> Gen.maybe genValue
 
 genEnumValueDefinition :: Gen EnumValueDefinition

@@ -394,6 +394,7 @@ inputValueDefinition = AST.InputValueDefinition
   <*> nameParser
   <*  tok ":"
   <*> graphQLType
+  <*> optempty directives
   <*> optional defaultValue
 
 -- * Internal
