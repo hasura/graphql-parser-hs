@@ -418,8 +418,8 @@ data InputValueDefinition = InputValueDefinition
   { _ivdDescription  :: Maybe Description
   , _ivdName         :: Name
   , _ivdType         :: GType
-  , _ivdDirectives   :: [Directive Void]
   , _ivdDefaultValue :: Maybe (Value Void)
+  , _ivdDirectives   :: [Directive Void]
   } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable InputValueDefinition
 
