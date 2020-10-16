@@ -386,7 +386,7 @@ data TypeDefinition a possibleTypes
   | TypeDefinitionInterface (InterfaceTypeDefinition a possibleTypes)
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
-  | TypeDefinitionInputObject InputObjectTypeDefinition
+  | TypeDefinitionInputObject (InputObjectTypeDefinition a)
   deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable a, Hashable possibleTypes) => Hashable (TypeDefinition a possibleTypes)
 
@@ -466,13 +466,13 @@ newtype EnumValue
   = EnumValue { unEnumValue :: Name }
   deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
 
-data InputObjectTypeDefinition = InputObjectTypeDefinition
+data InputObjectTypeDefinition a = InputObjectTypeDefinition
   { _iotdDescription      :: Maybe Description
   , _iotdName             :: Name
   , _iotdDirectives       :: [Directive Void]
-  , _iotdValueDefinitions :: [InputValueDefinition]
+  , _iotdValueDefinitions :: [a]
   } deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable InputObjectTypeDefinition
+instance (Hashable a) => Hashable (InputObjectTypeDefinition a)
 
 data DirectiveDefinition a = DirectiveDefinition
   { _ddDescription :: Maybe Description

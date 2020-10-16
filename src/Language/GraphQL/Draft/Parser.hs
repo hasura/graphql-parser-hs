@@ -377,7 +377,7 @@ enumValueDefinition = AST.EnumValueDefinition
 enumValue :: Parser AST.EnumValue
 enumValue = AST.EnumValue <$> nameParser
 
-inputObjectTypeDefinition :: Parser AST.InputObjectTypeDefinition
+inputObjectTypeDefinition :: Parser (AST.InputObjectTypeDefinition AST.InputValueDefinition)
 inputObjectTypeDefinition = AST.InputObjectTypeDefinition
   <$> optDesc
   <*  tok "input"

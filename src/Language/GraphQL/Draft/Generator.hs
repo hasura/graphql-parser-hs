@@ -214,7 +214,7 @@ genEnumTypeDefinition = EnumTypeDefinition
                         <*> genDirectives
                         <*> mkList genEnumValueDefinition
 
-genInputObjectTypeDefinition :: Gen InputObjectTypeDefinition
+genInputObjectTypeDefinition :: Gen (InputObjectTypeDefinition InputValueDefinition)
 genInputObjectTypeDefinition = InputObjectTypeDefinition
                                <$> Gen.maybe genDescription
                                <*> genName
