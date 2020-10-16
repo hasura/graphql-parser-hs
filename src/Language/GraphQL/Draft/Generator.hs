@@ -168,7 +168,7 @@ genOperationType =
               , OperationTypeSubscription
               ]
 
-genTypeDefinition :: Gen (TypeDefinition ())
+genTypeDefinition :: Gen (TypeDefinition InputValueDefinition ())
 genTypeDefinition =
   Gen.choice [ TypeDefinitionScalar      <$> genScalarTypeDefinition
              , TypeDefinitionObject      <$> genObjectTypeDefinition
@@ -184,7 +184,7 @@ genScalarTypeDefinition = ScalarTypeDefinition
                           <*> genName
                           <*> genDirectives
 
-genObjectTypeDefinition :: Gen ObjectTypeDefinition
+genObjectTypeDefinition :: Gen (ObjectTypeDefinition InputValueDefinition)
 genObjectTypeDefinition = ObjectTypeDefinition
                           <$> Gen.maybe genDescription
                           <*> genName
@@ -192,7 +192,7 @@ genObjectTypeDefinition = ObjectTypeDefinition
                           <*> genDirectives
                           <*> genFieldDefinitions
 
-genInterfaceTypeDefinition :: Gen (InterfaceTypeDefinition ())
+genInterfaceTypeDefinition :: Gen (InterfaceTypeDefinition InputValueDefinition ())
 genInterfaceTypeDefinition = InterfaceTypeDefinition
                              <$> Gen.maybe genDescription
                              <*> genName
@@ -235,7 +235,7 @@ genEnumValueDefinition = EnumValueDefinition
                          <*> genEnumValue
                          <*> genDirectives
 
-genFieldDefinition :: Gen FieldDefinition
+genFieldDefinition :: Gen (FieldDefinition InputValueDefinition)
 genFieldDefinition = FieldDefinition
                      <$> Gen.maybe genDescription
                      <*> genName
@@ -243,17 +243,17 @@ genFieldDefinition = FieldDefinition
                      <*> genType
                      <*> genDirectives
 
-genFieldDefinitions :: Gen [FieldDefinition]
+genFieldDefinitions :: Gen [FieldDefinition InputValueDefinition]
 genFieldDefinitions = mkList genFieldDefinition
 
-genDirectiveDefinition :: Gen DirectiveDefinition
+genDirectiveDefinition :: Gen (DirectiveDefinition InputValueDefinition)
 genDirectiveDefinition = DirectiveDefinition
                          <$> Gen.maybe genDescription
                          <*> genName
                          <*> genArgumentsDefinition
                          <*> Gen.list (Range.linear 1 10) genDirectiveLocation
 
-genArgumentsDefinition :: Gen ArgumentsDefinition
+genArgumentsDefinition :: Gen (ArgumentsDefinition InputValueDefinition)
 genArgumentsDefinition = Gen.list (Range.linear 1 10) genInputValueDefinition
 
 genDirectiveLocation :: Gen DirectiveLocation

@@ -288,7 +288,7 @@ typeSystemDefinition =
 parseTypeSystemDefinitions :: Text -> Either Text [AST.TypeSystemDefinition]
 parseTypeSystemDefinitions = runParser $ many1 typeSystemDefinition
 
-typeDefinition :: Parser (AST.TypeDefinition ())
+typeDefinition :: Parser (AST.TypeDefinition AST.InputValueDefinition ())
 typeDefinition =
       AST.TypeDefinitionObject        <$> objectTypeDefinition
   <|> AST.TypeDefinitionInterface     <$> interfaceTypeDefinition
@@ -301,7 +301,7 @@ typeDefinition =
 optDesc :: Parser (Maybe AST.Description)
 optDesc = optional (AST.Description <$> stringLiteral)
 
-objectTypeDefinition :: Parser AST.ObjectTypeDefinition
+objectTypeDefinition :: Parser (AST.ObjectTypeDefinition AST.InputValueDefinition)
 objectTypeDefinition = AST.ObjectTypeDefinition
   <$> optDesc
   <*  tok "type"
@@ -313,10 +313,10 @@ objectTypeDefinition = AST.ObjectTypeDefinition
 interfaces :: Parser [AST.Name]
 interfaces = tok "implements" *> many1 nameParser
 
-fieldDefinitions :: Parser [AST.FieldDefinition]
+fieldDefinitions :: Parser [(AST.FieldDefinition AST.InputValueDefinition)]
 fieldDefinitions = braces $ many1 fieldDefinition
 
-fieldDefinition :: Parser AST.FieldDefinition
+fieldDefinition :: Parser (AST.FieldDefinition AST.InputValueDefinition)
 fieldDefinition = AST.FieldDefinition
   <$> optDesc
   <*> nameParser
@@ -325,10 +325,10 @@ fieldDefinition = AST.FieldDefinition
   <*> graphQLType
   <*> optempty directives
 
-argumentsDefinition :: Parser AST.ArgumentsDefinition
+argumentsDefinition :: Parser (AST.ArgumentsDefinition AST.InputValueDefinition)
 argumentsDefinition = parens $ many1 inputValueDefinition
 
-interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition pos)
+interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition AST.InputValueDefinition pos)
 interfaceTypeDefinition = AST.InterfaceTypeDefinition
   <$> optDesc
   <*  tok "interface"
