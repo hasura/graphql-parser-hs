@@ -216,7 +216,7 @@ instance J.FromJSON SchemaDocument where
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
 -- the list of object types that implement that interface
 newtype SchemaIntrospection
-  = SchemaIntrospection [TypeDefinition InputValueDefinition [Name]]
+  = SchemaIntrospection [TypeDefinition [Name] InputValueDefinition]
   deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
 data OperationDefinition frag var
