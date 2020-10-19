@@ -288,7 +288,7 @@ typeSystemDefinition =
 parseTypeSystemDefinitions :: Text -> Either Text [AST.TypeSystemDefinition]
 parseTypeSystemDefinitions = runParser $ many1 typeSystemDefinition
 
-typeDefinition :: Parser (AST.TypeDefinition AST.InputValueDefinition ())
+typeDefinition :: Parser (AST.TypeDefinition () AST.InputValueDefinition)
 typeDefinition =
       AST.TypeDefinitionObject        <$> objectTypeDefinition
   <|> AST.TypeDefinitionInterface     <$> interfaceTypeDefinition
@@ -328,7 +328,7 @@ fieldDefinition = AST.FieldDefinition
 argumentsDefinition :: Parser (AST.ArgumentsDefinition AST.InputValueDefinition)
 argumentsDefinition = parens $ many1 inputValueDefinition
 
-interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition AST.InputValueDefinition pos)
+interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition pos AST.InputValueDefinition)
 interfaceTypeDefinition = AST.InterfaceTypeDefinition
   <$> optDesc
   <*  tok "interface"

@@ -168,7 +168,7 @@ genOperationType =
               , OperationTypeSubscription
               ]
 
-genTypeDefinition :: Gen (TypeDefinition InputValueDefinition ())
+genTypeDefinition :: Gen (TypeDefinition () InputValueDefinition)
 genTypeDefinition =
   Gen.choice [ TypeDefinitionScalar      <$> genScalarTypeDefinition
              , TypeDefinitionObject      <$> genObjectTypeDefinition
@@ -192,7 +192,7 @@ genObjectTypeDefinition = ObjectTypeDefinition
                           <*> genDirectives
                           <*> genFieldDefinitions
 
-genInterfaceTypeDefinition :: Gen (InterfaceTypeDefinition InputValueDefinition ())
+genInterfaceTypeDefinition :: Gen (InterfaceTypeDefinition () InputValueDefinition)
 genInterfaceTypeDefinition = InterfaceTypeDefinition
                              <$> Gen.maybe genDescription
                              <*> genName

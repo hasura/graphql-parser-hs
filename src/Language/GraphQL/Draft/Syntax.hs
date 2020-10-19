@@ -179,7 +179,7 @@ partitionExDefs = foldr f ([], [], [])
 
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema SchemaDefinition
-  | TypeSystemDefinitionType (TypeDefinition InputValueDefinition ())  -- No 'possibleTypes' specified for interfaces
+  | TypeSystemDefinitionType (TypeDefinition () InputValueDefinition)  -- No 'possibleTypes' specified for interfaces
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
@@ -380,10 +380,10 @@ isNotNull = not . isNullable
 
 -- * Type definition
 
-data TypeDefinition a possibleTypes
+data TypeDefinition possibleTypes a
   = TypeDefinitionScalar ScalarTypeDefinition
   | TypeDefinitionObject (ObjectTypeDefinition a)
-  | TypeDefinitionInterface (InterfaceTypeDefinition a possibleTypes)
+  | TypeDefinitionInterface (InterfaceTypeDefinition possibleTypes a)
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
   | TypeDefinitionInputObject (InputObjectTypeDefinition a)
@@ -400,7 +400,7 @@ data ObjectTypeDefinition a = ObjectTypeDefinition
   , _otdImplementsInterfaces :: [Name]
   , _otdDirectives           :: [Directive Void]
   , _otdFieldsDefinition     :: [FieldDefinition a]
-  } deriving (Ord, Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable a) => Hashable (ObjectTypeDefinition a)
 
 data FieldDefinition a = FieldDefinition
@@ -409,7 +409,7 @@ data FieldDefinition a = FieldDefinition
   , _fldArgumentsDefinition :: (ArgumentsDefinition a)
   , _fldType                :: GType
   , _fldDirectives          :: [Directive Void]
-  } deriving (Ord, Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable a) => Hashable (FieldDefinition a)
 
 type ArgumentsDefinition a = [a]
@@ -423,14 +423,14 @@ data InputValueDefinition = InputValueDefinition
   } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable InputValueDefinition
 
-data InterfaceTypeDefinition a possibleTypes = InterfaceTypeDefinition
+data InterfaceTypeDefinition possibleTypes a = InterfaceTypeDefinition
   { _itdDescription      :: Maybe Description
   , _itdName             :: Name
   , _itdDirectives       :: [Directive Void]
   , _itdFieldsDefinition :: [FieldDefinition a]
   , _itdPossibleTypes    :: possibleTypes
   } deriving (Ord, Show, Eq, Lift, Generic, Functor)
-instance (Hashable possibleTypes, Hashable a) => Hashable (InterfaceTypeDefinition a possibleTypes)
+instance (Hashable a, Hashable possibleTypes) => Hashable (InterfaceTypeDefinition possibleTypes a)
 
 data UnionTypeDefinition = UnionTypeDefinition
   { _utdDescription :: Maybe Description
