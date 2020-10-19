@@ -471,7 +471,7 @@ data InputObjectTypeDefinition a = InputObjectTypeDefinition
   , _iotdName             :: Name
   , _iotdDirectives       :: [Directive Void]
   , _iotdValueDefinitions :: [a]
-  } deriving (Ord, Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable a) => Hashable (InputObjectTypeDefinition a)
 
 data DirectiveDefinition a = DirectiveDefinition
