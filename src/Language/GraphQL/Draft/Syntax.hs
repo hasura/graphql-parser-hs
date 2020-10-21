@@ -108,7 +108,7 @@ instance Pretty Name where
   pretty = pretty. unName
 
 instance TextShow Name where
-  showb = showb . unName
+  showb = fromText . unName
 
 mkName :: Text -> Maybe Name
 mkName text = T.uncons text >>= \(first, body) ->
@@ -461,10 +461,7 @@ instance Hashable EnumValueDefinition
 
 newtype EnumValue
   = EnumValue { unEnumValue :: Name }
-  deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
-
-instance TextShow EnumValue where
-  showb = showb . unEnumValue
+  deriving (Show, TextShow, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
 
 data InputObjectTypeDefinition = InputObjectTypeDefinition
   { _iotdDescription      :: Maybe Description
