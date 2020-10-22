@@ -78,37 +78,33 @@ module Language.GraphQL.Draft.Syntax (
   , fmapInlineFragment
   ) where
 
-import                qualified Data.Aeson                     as J
-import                qualified Data.Char                      as C
-import                qualified Data.HashMap.Strict            as M
-import                qualified Data.Text                      as T
-import                qualified Language.Haskell.TH.Syntax     as TH
+import qualified Data.Aeson                     as J
+import qualified Data.Char                      as C
+import qualified Data.HashMap.Strict            as M
+import qualified Data.Text                      as T
+import qualified Language.Haskell.TH.Syntax     as TH
 
-import                          Control.Monad
-import                          Data.Bool                      (bool)
-import                          Data.HashMap.Strict            (HashMap)
-import                          Data.Hashable
-import                          Data.Scientific
-import                          Data.String                    (IsString (..))
-import                          Data.Text                      (Text)
-import                          Data.Text.Prettyprint.Doc      (Pretty (..))
-import                          Data.Void
-import                          GHC.Generics                   (Generic)
-import                          Instances.TH.Lift              ()
-import                          Language.Haskell.TH.Syntax     (Lift, Q)
-import                          TextShow
+import           Control.Monad
+import           Data.Bool                      (bool)
+import           Data.Hashable
+import           Data.HashMap.Strict            (HashMap)
+import           Data.Scientific
+import           Data.String                    (IsString (..))
+import           Data.Text                      (Text)
+import           Data.Text.Prettyprint.Doc      (Pretty (..))
+import           Data.Void
+import           GHC.Generics                   (Generic)
+import           Instances.TH.Lift              ()
+import           Language.Haskell.TH.Syntax     (Lift, Q)
 
-import {-# SOURCE #-}           Language.GraphQL.Draft.Parser  (parseExecutableDoc)
-import {-# SOURCE #-}           Language.GraphQL.Draft.Printer (renderExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Parser  (parseExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 
 newtype Name = Name { unName :: Text }
   deriving (Eq, Ord, Show, Hashable, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
 
 instance Pretty Name where
   pretty = pretty. unName
-
-instance TextShow Name where
-  showb = showb . unName
 
 mkName :: Text -> Maybe Name
 mkName text = T.uncons text >>= \(first, body) ->
@@ -345,7 +341,7 @@ data GType
 getBaseType :: GType -> Name
 getBaseType = \case
   TypeNamed _ namedType -> namedType
-  TypeList _ listType   -> getBaseType listType
+  TypeList _ listType -> getBaseType listType
 
 instance J.ToJSON GType where
   toJSON = J.toJSON . showGT
@@ -462,9 +458,6 @@ instance Hashable EnumValueDefinition
 newtype EnumValue
   = EnumValue { unEnumValue :: Name }
   deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
-
-instance TextShow EnumValue where
-  showb = showb . unEnumValue
 
 data InputObjectTypeDefinition = InputObjectTypeDefinition
   { _iotdDescription      :: Maybe Description

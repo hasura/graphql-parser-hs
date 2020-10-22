@@ -45,7 +45,6 @@ library
     , scientific
     , template-haskell
     , text
-    , text-show
     , text-builder
     , th-lift-instances
     , unordered-containers
