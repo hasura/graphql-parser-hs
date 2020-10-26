@@ -289,6 +289,14 @@ rootOperationTypeDefinition :: Printer a => RootOperationTypeDefinition -> a
 rootOperationTypeDefinition (RootOperationTypeDefinition opType rootName) =
   operationType opType <> ": " <> nameP rootName
 
+typeSystemDefinition :: Printer a => TypeSystemDefinition -> a
+typeSystemDefinition (TypeSystemDefinitionSchema schemaDefn) = schemaDefinition schemaDefn
+typeSystemDefinition (TypeSystemDefinitionType typeDefn) = typeDefinitionP typeDefn
+
+schemaDocument :: Printer a => SchemaDocument -> a
+schemaDocument (SchemaDocument typeDefns) =
+  mconcat $ intersperse (charP '\n') $ map typeSystemDefinition typeDefns
+
 typeDefinitionP :: Printer a => (TypeDefinition () InputValueDefinition) -> a
 typeDefinitionP (TypeDefinitionScalar scalarDefn) = scalarTypeDefinition scalarDefn
 typeDefinitionP (TypeDefinitionObject objDefn) = objectTypeDefinition objDefn
