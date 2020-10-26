@@ -272,3 +272,113 @@ optempty :: (Foldable f, Monoid b) => (f a -> b) -> f a -> b
 optempty f xs
   | null xs   = mempty
   | otherwise = f xs
+
+schemaDefinition
+  :: forall a
+  .  Printer a
+  => SchemaDefinition
+  -> a
+schemaDefinition (SchemaDefinition dirs rootOpDefs) =
+  "schema "
+  <> maybe mempty (optempty directives) dirs
+  <> " { "
+  <> mconcat (intersperse (charP ' ') (map rootOperationTypeDefinition rootOpDefs))
+  <> " }"
+
+rootOperationTypeDefinition :: Printer a => RootOperationTypeDefinition -> a
+rootOperationTypeDefinition (RootOperationTypeDefinition opType rootName) =
+  operationType opType <> ": " <> nameP rootName
+
+typeDefinitionP :: Printer a => (TypeDefinition () InputValueDefinition) -> a
+typeDefinitionP (TypeDefinitionScalar scalarDefn) = scalarTypeDefinition scalarDefn
+typeDefinitionP (TypeDefinitionObject objDefn) = objectTypeDefinition objDefn
+typeDefinitionP (TypeDefinitionInterface interfaceDefn) = interfaceTypeDefinition interfaceDefn
+typeDefinitionP (TypeDefinitionUnion unionDefn) = unionTypeDefinition unionDefn
+typeDefinitionP (TypeDefinitionEnum enumDefn) = enumTypeDefinition enumDefn
+typeDefinitionP (TypeDefinitionInputObject inpObjDefn) = inputObjectTypeDefinition inpObjDefn
+
+scalarTypeDefinition :: Printer a => ScalarTypeDefinition -> a
+scalarTypeDefinition (ScalarTypeDefinition desc name dirs) =
+  -- TODO: handle description
+  "scalar " <> nameP name <> " " <> optempty directives dirs
+
+inputValueDefinition :: Printer a => InputValueDefinition -> a
+inputValueDefinition (InputValueDefinition desc name gType defVal dirs) =
+  -- TODO: handle description
+  nameP name
+  <> textP ": "
+  <> graphQLType gType
+  <> (maybe mempty defaultValue defVal)
+  <> charP ' '
+  <> optempty directives dirs
+
+fieldDefinition :: Printer a => FieldDefinition InputValueDefinition -> a
+fieldDefinition (FieldDefinition desc name args gType dirs) =
+  nameP name
+  <>
+  case args of
+    [] -> mempty
+    _  ->
+      charP '('
+      <> (mconcat $ intersperse (textP ", ") $ map inputValueDefinition args)
+      <> charP ')'
+  <> textP ": "
+  <> graphQLType gType
+  <> optempty directives dirs
+
+objectTypeDefinition :: Printer a => ObjectTypeDefinition InputValueDefinition -> a
+objectTypeDefinition (ObjectTypeDefinition desc name ifaces dirs fieldDefinitions) =
+  "type "
+  <> nameP name
+  <> optempty directives dirs
+  <>
+  case ifaces of
+    [] -> mempty
+    _  -> " implements " <> (mconcat (intersperse (textP " & ") $ map nameP ifaces))
+  <> " { "
+  <> (mconcat $ intersperse (charP ' ') $ map fieldDefinition fieldDefinitions)
+  <> " }"
+
+interfaceTypeDefinition :: Printer a => InterfaceTypeDefinition () InputValueDefinition -> a
+interfaceTypeDefinition (InterfaceTypeDefinition desc name dirs fieldDefinitions _possibleTypes) =
+  -- `possibleTypes` are not included with an interface definition in a GraphQL IDL
+  "inteface "
+  <> nameP name
+  <> charP ' '
+  <> optempty directives dirs
+  <> " { "
+  <> (mconcat $ intersperse (charP ' ') $ map fieldDefinition fieldDefinitions)
+  <> " }"
+
+unionTypeDefinition :: Printer a => UnionTypeDefinition -> a
+unionTypeDefinition (UnionTypeDefinition desc name dirs members) =
+  "union "
+  <> nameP name
+  <> charP ' '
+  <> optempty directives dirs
+  <> textP " = "
+  <> (mconcat $ intersperse (textP " | ") $ map nameP members)
+
+enumValueDefinition :: Printer a => EnumValueDefinition -> a
+enumValueDefinition (EnumValueDefinition desc name dirs) =
+  (nameP $ unEnumValue name)
+  <> charP ' '
+  <> optempty directives dirs
+
+enumTypeDefinition :: Printer a => EnumTypeDefinition -> a
+enumTypeDefinition (EnumTypeDefinition desc name dirs enumValDefns) =
+  "enum "
+  <> nameP name
+  <> optempty directives dirs
+  <> " {"
+  <> (mconcat $ intersperse (charP ' ') $ map enumValueDefinition enumValDefns)
+  <> " }"
+
+inputObjectTypeDefinition :: Printer a => InputObjectTypeDefinition InputValueDefinition -> a
+inputObjectTypeDefinition (InputObjectTypeDefinition desc name dirs valDefns) =
+  "input "
+  <> nameP name
+  <> optempty directives dirs
+  <> " {"
+  <> (mconcat $ intersperse (charP ' ') $ map inputValueDefinition valDefns)
+  <> " }"
