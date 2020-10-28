@@ -350,7 +350,7 @@ objectTypeDefinition (ObjectTypeDefinition desc name ifaces dirs fieldDefinition
 interfaceTypeDefinition :: Printer a => InterfaceTypeDefinition () InputValueDefinition -> a
 interfaceTypeDefinition (InterfaceTypeDefinition desc name dirs fieldDefinitions _possibleTypes) =
   -- `possibleTypes` are not included with an interface definition in a GraphQL IDL
-  "inteface "
+  "interface "
   <> nameP name
   <> charP ' '
   <> optempty directives dirs
