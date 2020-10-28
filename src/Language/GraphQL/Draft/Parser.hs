@@ -304,6 +304,7 @@ optDesc = optional (AST.Description <$> stringLiteral)
 objectTypeDefinition :: Parser (AST.ObjectTypeDefinition AST.InputValueDefinition)
 objectTypeDefinition = AST.ObjectTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "type"
   <*> nameParser
   <*> optempty interfaces
@@ -319,6 +320,7 @@ fieldDefinitions = braces $ many1 fieldDefinition
 fieldDefinition :: Parser (AST.FieldDefinition AST.InputValueDefinition)
 fieldDefinition = AST.FieldDefinition
   <$> optDesc
+  <*  whiteSpace
   <*> nameParser
   <*> optempty argumentsDefinition
   <*  tok ":"
@@ -331,6 +333,7 @@ argumentsDefinition = parens $ many1 inputValueDefinition
 interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition pos AST.InputValueDefinition)
 interfaceTypeDefinition = AST.InterfaceTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "interface"
   <*> nameParser
   <*> optempty directives
@@ -340,6 +343,7 @@ interfaceTypeDefinition = AST.InterfaceTypeDefinition
 unionTypeDefinition :: Parser AST.UnionTypeDefinition
 unionTypeDefinition = AST.UnionTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "union"
   <*> nameParser
   <*> optempty directives
@@ -352,6 +356,7 @@ unionMembers = nameParser `sepBy1` tok "|"
 scalarTypeDefinition :: Parser AST.ScalarTypeDefinition
 scalarTypeDefinition = AST.ScalarTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "scalar"
   <*> nameParser
   <*> optempty directives
@@ -359,6 +364,7 @@ scalarTypeDefinition = AST.ScalarTypeDefinition
 enumTypeDefinition :: Parser AST.EnumTypeDefinition
 enumTypeDefinition = AST.EnumTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "enum"
   <*> nameParser
   <*> optempty directives
@@ -370,6 +376,7 @@ enumValueDefinitions = braces $ many1 enumValueDefinition
 enumValueDefinition :: Parser AST.EnumValueDefinition
 enumValueDefinition = AST.EnumValueDefinition
   <$> optDesc
+  <*  whiteSpace
   <*> enumValue
   <*> optempty directives
 
@@ -380,6 +387,7 @@ enumValue = AST.EnumValue <$> nameParser
 inputObjectTypeDefinition :: Parser (AST.InputObjectTypeDefinition AST.InputValueDefinition)
 inputObjectTypeDefinition = AST.InputObjectTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "input"
   <*> nameParser
   <*> optempty directives
@@ -391,6 +399,7 @@ inputValueDefinitions = braces $ many1 inputValueDefinition
 inputValueDefinition :: Parser AST.InputValueDefinition
 inputValueDefinition = AST.InputValueDefinition
   <$> optDesc
+  <*  whiteSpace
   <*> nameParser
   <*  tok ":"
   <*> graphQLType

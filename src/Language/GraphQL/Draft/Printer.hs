@@ -220,6 +220,9 @@ variableDefinition (VariableDefinition var ty defVal) =
 defaultValue :: Printer a => Value Void -> a
 defaultValue v = " = " <> value v
 
+description :: Printer a => Maybe Description -> a
+description Nothing = mempty
+description (Just desc) = textP $ unDescription desc <> " \n"
 -- | Type Reference
 
 graphQLType :: Printer a => GType -> a
@@ -307,13 +310,16 @@ typeDefinitionP (TypeDefinitionInputObject inpObjDefn) = inputObjectTypeDefiniti
 
 scalarTypeDefinition :: Printer a => ScalarTypeDefinition -> a
 scalarTypeDefinition (ScalarTypeDefinition desc name dirs) =
-  -- TODO: handle description
-  "scalar " <> nameP name <> " " <> optempty directives dirs
+  description desc
+  <> "scalar "
+  <> nameP name
+  <> charP ' '
+  <> optempty directives dirs
 
 inputValueDefinition :: Printer a => InputValueDefinition -> a
 inputValueDefinition (InputValueDefinition desc name gType defVal dirs) =
-  -- TODO: handle description
-  nameP name
+  description desc
+  <> nameP name
   <> textP ": "
   <> graphQLType gType
   <> (maybe mempty defaultValue defVal)
@@ -322,7 +328,8 @@ inputValueDefinition (InputValueDefinition desc name gType defVal dirs) =
 
 fieldDefinition :: Printer a => FieldDefinition InputValueDefinition -> a
 fieldDefinition (FieldDefinition desc name args gType dirs) =
-  nameP name
+  description desc
+  <> nameP name
   <>
   case args of
     [] -> mempty
@@ -336,7 +343,8 @@ fieldDefinition (FieldDefinition desc name args gType dirs) =
 
 objectTypeDefinition :: Printer a => ObjectTypeDefinition InputValueDefinition -> a
 objectTypeDefinition (ObjectTypeDefinition desc name ifaces dirs fieldDefinitions) =
-  "type "
+  description desc
+  <> "type "
   <> nameP name
   <> optempty directives dirs
   <>
@@ -350,7 +358,8 @@ objectTypeDefinition (ObjectTypeDefinition desc name ifaces dirs fieldDefinition
 interfaceTypeDefinition :: Printer a => InterfaceTypeDefinition () InputValueDefinition -> a
 interfaceTypeDefinition (InterfaceTypeDefinition desc name dirs fieldDefinitions _possibleTypes) =
   -- `possibleTypes` are not included with an interface definition in a GraphQL IDL
-  "interface "
+  description desc
+  <> "interface "
   <> nameP name
   <> charP ' '
   <> optempty directives dirs
@@ -360,7 +369,8 @@ interfaceTypeDefinition (InterfaceTypeDefinition desc name dirs fieldDefinitions
 
 unionTypeDefinition :: Printer a => UnionTypeDefinition -> a
 unionTypeDefinition (UnionTypeDefinition desc name dirs members) =
-  "union "
+  description desc
+  <> "union "
   <> nameP name
   <> charP ' '
   <> optempty directives dirs
@@ -369,13 +379,15 @@ unionTypeDefinition (UnionTypeDefinition desc name dirs members) =
 
 enumValueDefinition :: Printer a => EnumValueDefinition -> a
 enumValueDefinition (EnumValueDefinition desc name dirs) =
-  (nameP $ unEnumValue name)
+  description desc
+  <> (nameP $ unEnumValue name)
   <> charP ' '
   <> optempty directives dirs
 
 enumTypeDefinition :: Printer a => EnumTypeDefinition -> a
 enumTypeDefinition (EnumTypeDefinition desc name dirs enumValDefns) =
-  "enum "
+  description desc
+  <> "enum "
   <> nameP name
   <> optempty directives dirs
   <> " {"
@@ -384,7 +396,8 @@ enumTypeDefinition (EnumTypeDefinition desc name dirs enumValDefns) =
 
 inputObjectTypeDefinition :: Printer a => InputObjectTypeDefinition InputValueDefinition -> a
 inputObjectTypeDefinition (InputObjectTypeDefinition desc name dirs valDefns) =
-  "input "
+  description desc
+  <> "input "
   <> nameP name
   <> optempty directives dirs
   <> " {"
