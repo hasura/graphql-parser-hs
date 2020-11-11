@@ -97,7 +97,7 @@ import           GHC.Generics                   (Generic)
 import           Instances.TH.Lift              ()
 import           Language.Haskell.TH.Syntax     (Lift, Q)
 
-import {-# SOURCE #-} Language.GraphQL.Draft.Parser  (parseExecutableDoc)
+import {-# SOURCE #-} Language.GraphQL.Draft.Parser  (parseExecutableDoc, parseSchemaDocument)
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 
 newtype Name = Name { unName :: Text }
@@ -179,7 +179,7 @@ partitionExDefs = foldr f ([], [], [])
 
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema SchemaDefinition
-  | TypeSystemDefinitionType (TypeDefinition ())
+  | TypeSystemDefinitionType (TypeDefinition () InputValueDefinition)  -- No 'possibleTypes' specified for interfaces
   deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
@@ -204,13 +204,19 @@ data OperationType
 instance Hashable OperationType
 
 newtype SchemaDocument
-  = SchemaDocument [TypeDefinition ()] -- No 'possibleTypes' specified for interfaces
+  = SchemaDocument [TypeSystemDefinition]
   deriving (Ord, Show, Eq, Lift, Hashable, Generic)
+
+instance J.FromJSON SchemaDocument where
+  parseJSON = J.withText "SchemaDocument" $ \t ->
+    case parseSchemaDocument t of
+      Right schemaDoc -> return schemaDoc
+      Left err -> fail $ "parsing the schema document: " <> show err
 
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
 -- the list of object types that implement that interface
 newtype SchemaIntrospection
-  = SchemaIntrospection [TypeDefinition [Name]]
+  = SchemaIntrospection [TypeDefinition [Name] InputValueDefinition]
   deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
 data OperationDefinition frag var
@@ -374,56 +380,57 @@ isNotNull = not . isNullable
 
 -- * Type definition
 
-data TypeDefinition possibleTypes
+data TypeDefinition possibleTypes inputType
   = TypeDefinitionScalar ScalarTypeDefinition
-  | TypeDefinitionObject ObjectTypeDefinition
-  | TypeDefinitionInterface (InterfaceTypeDefinition possibleTypes)
+  | TypeDefinitionObject (ObjectTypeDefinition inputType)
+  | TypeDefinitionInterface (InterfaceTypeDefinition possibleTypes inputType)
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
-  | TypeDefinitionInputObject InputObjectTypeDefinition
-  deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable possibleTypes => Hashable (TypeDefinition possibleTypes)
+  | TypeDefinitionInputObject (InputObjectTypeDefinition inputType)
+  deriving (Ord, Show, Eq, Lift, Generic, Functor)
+instance (Hashable possibleTypes, Hashable inputType) => Hashable (TypeDefinition possibleTypes inputType)
 
 newtype Description
   = Description { unDescription :: Text }
   deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable, J.ToJSON, J.FromJSON)
 
-data ObjectTypeDefinition = ObjectTypeDefinition
+data ObjectTypeDefinition inputType = ObjectTypeDefinition
   { _otdDescription          :: Maybe Description
   , _otdName                 :: Name
   , _otdImplementsInterfaces :: [Name]
   , _otdDirectives           :: [Directive Void]
-  , _otdFieldsDefinition     :: [FieldDefinition]
-  } deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable ObjectTypeDefinition
+  , _otdFieldsDefinition     :: [FieldDefinition inputType]
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
+instance (Hashable inputType) => Hashable (ObjectTypeDefinition inputType)
 
-data FieldDefinition = FieldDefinition
+data FieldDefinition inputType = FieldDefinition
   { _fldDescription         :: Maybe Description
   , _fldName                :: Name
-  , _fldArgumentsDefinition :: ArgumentsDefinition
+  , _fldArgumentsDefinition :: (ArgumentsDefinition inputType)
   , _fldType                :: GType
   , _fldDirectives          :: [Directive Void]
-  } deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable FieldDefinition
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
+instance (Hashable inputType) => Hashable (FieldDefinition inputType)
 
-type ArgumentsDefinition = [InputValueDefinition]
+type ArgumentsDefinition inputType = [inputType]
 
 data InputValueDefinition = InputValueDefinition
   { _ivdDescription  :: Maybe Description
   , _ivdName         :: Name
   , _ivdType         :: GType
   , _ivdDefaultValue :: Maybe (Value Void)
+  , _ivdDirectives   :: [Directive Void]
   } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable InputValueDefinition
 
-data InterfaceTypeDefinition possibleTypes = InterfaceTypeDefinition
+data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
   { _itdDescription      :: Maybe Description
   , _itdName             :: Name
   , _itdDirectives       :: [Directive Void]
-  , _itdFieldsDefinition :: [FieldDefinition]
+  , _itdFieldsDefinition :: [FieldDefinition inputType]
   , _itdPossibleTypes    :: possibleTypes
-  } deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable possibleTypes => Hashable (InterfaceTypeDefinition possibleTypes)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
+instance (Hashable possibleTypes, Hashable inputType) => Hashable (InterfaceTypeDefinition possibleTypes inputType)
 
 data UnionTypeDefinition = UnionTypeDefinition
   { _utdDescription :: Maybe Description
@@ -459,21 +466,21 @@ newtype EnumValue
   = EnumValue { unEnumValue :: Name }
   deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
 
-data InputObjectTypeDefinition = InputObjectTypeDefinition
+data InputObjectTypeDefinition inputType = InputObjectTypeDefinition
   { _iotdDescription      :: Maybe Description
   , _iotdName             :: Name
   , _iotdDirectives       :: [Directive Void]
-  , _iotdValueDefinitions :: [InputValueDefinition]
-  } deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable InputObjectTypeDefinition
+  , _iotdValueDefinitions :: [inputType]
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
+instance (Hashable inputType) => Hashable (InputObjectTypeDefinition inputType)
 
-data DirectiveDefinition = DirectiveDefinition
+data DirectiveDefinition inputType = DirectiveDefinition
   { _ddDescription :: Maybe Description
   , _ddName        :: Name
-  , _ddArguments   :: ArgumentsDefinition
+  , _ddArguments   :: (ArgumentsDefinition inputType)
   , _ddLocations   :: [DirectiveLocation]
   } deriving (Ord, Show, Eq, Lift, Generic)
-instance Hashable DirectiveDefinition
+instance (Hashable inputType) => Hashable (DirectiveDefinition inputType)
 
 data DirectiveLocation
   = DLExecutable ExecutableDirectiveLocation

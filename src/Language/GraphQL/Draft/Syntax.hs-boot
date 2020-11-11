@@ -11,3 +11,4 @@ data TypedOperationDefinition (frag :: Type -> Type) var
 type role Selection representational nominal
 data Selection (frag :: Type -> Type) var
 type SelectionSet frag var = [Selection frag var]
+data SchemaDocument

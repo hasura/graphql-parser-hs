@@ -5,9 +5,9 @@
 module Language.GraphQL.Draft.Parser
   ( executableDocument
   , parseExecutableDoc
-
   , schemaDocument
-  , parseSchemaDoc
+  , parseTypeSystemDefinitions
+  , parseSchemaDocument
 
   , Variable(..)
   , value
@@ -57,10 +57,10 @@ parseExecutableDoc = runParser executableDocument
 
 -- | Parser for a schema document.
 schemaDocument :: Parser AST.SchemaDocument
-schemaDocument = whiteSpace *> (AST.SchemaDocument <$> many1 typeDefinition)
+schemaDocument = whiteSpace *> (AST.SchemaDocument <$> many1 typeSystemDefinition)
 
-parseSchemaDoc :: Text -> Either Text AST.SchemaDocument
-parseSchemaDoc = runParser schemaDocument
+parseSchemaDocument :: Text -> Either Text AST.SchemaDocument
+parseSchemaDocument = runParser schemaDocument
 
 definitionExecutable :: Parser (AST.ExecutableDefinition AST.Name)
 definitionExecutable =
@@ -267,7 +267,28 @@ nullability =
 
 -- * Type Definition
 
-typeDefinition :: Parser (AST.TypeDefinition ())
+rootOperationTypeDefinition :: Parser AST.RootOperationTypeDefinition
+rootOperationTypeDefinition =
+  AST.RootOperationTypeDefinition <$> operationTypeParser <* tok ":" <*> nameParser
+
+schemaDefinition :: Parser AST.SchemaDefinition
+schemaDefinition = AST.SchemaDefinition
+  <$ tok "schema"
+  <*> optional directives
+  <*> rootOperationTypeDefinitions
+
+rootOperationTypeDefinitions :: Parser [AST.RootOperationTypeDefinition]
+rootOperationTypeDefinitions = braces $ many1 rootOperationTypeDefinition
+
+typeSystemDefinition :: Parser AST.TypeSystemDefinition
+typeSystemDefinition =
+  AST.TypeSystemDefinitionSchema <$> schemaDefinition
+  <|> AST.TypeSystemDefinitionType <$> typeDefinition
+
+parseTypeSystemDefinitions :: Text -> Either Text [AST.TypeSystemDefinition]
+parseTypeSystemDefinitions = runParser $ many1 typeSystemDefinition
+
+typeDefinition :: Parser (AST.TypeDefinition () AST.InputValueDefinition)
 typeDefinition =
       AST.TypeDefinitionObject        <$> objectTypeDefinition
   <|> AST.TypeDefinitionInterface     <$> interfaceTypeDefinition
@@ -280,9 +301,10 @@ typeDefinition =
 optDesc :: Parser (Maybe AST.Description)
 optDesc = optional (AST.Description <$> stringLiteral)
 
-objectTypeDefinition :: Parser AST.ObjectTypeDefinition
+objectTypeDefinition :: Parser (AST.ObjectTypeDefinition AST.InputValueDefinition)
 objectTypeDefinition = AST.ObjectTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "type"
   <*> nameParser
   <*> optempty interfaces
@@ -292,24 +314,26 @@ objectTypeDefinition = AST.ObjectTypeDefinition
 interfaces :: Parser [AST.Name]
 interfaces = tok "implements" *> many1 nameParser
 
-fieldDefinitions :: Parser [AST.FieldDefinition]
+fieldDefinitions :: Parser [(AST.FieldDefinition AST.InputValueDefinition)]
 fieldDefinitions = braces $ many1 fieldDefinition
 
-fieldDefinition :: Parser AST.FieldDefinition
+fieldDefinition :: Parser (AST.FieldDefinition AST.InputValueDefinition)
 fieldDefinition = AST.FieldDefinition
   <$> optDesc
+  <*  whiteSpace
   <*> nameParser
   <*> optempty argumentsDefinition
   <*  tok ":"
   <*> graphQLType
   <*> optempty directives
 
-argumentsDefinition :: Parser AST.ArgumentsDefinition
+argumentsDefinition :: Parser (AST.ArgumentsDefinition AST.InputValueDefinition)
 argumentsDefinition = parens $ many1 inputValueDefinition
 
-interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition pos)
+interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition pos AST.InputValueDefinition)
 interfaceTypeDefinition = AST.InterfaceTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "interface"
   <*> nameParser
   <*> optempty directives
@@ -319,6 +343,7 @@ interfaceTypeDefinition = AST.InterfaceTypeDefinition
 unionTypeDefinition :: Parser AST.UnionTypeDefinition
 unionTypeDefinition = AST.UnionTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "union"
   <*> nameParser
   <*> optempty directives
@@ -331,6 +356,7 @@ unionMembers = nameParser `sepBy1` tok "|"
 scalarTypeDefinition :: Parser AST.ScalarTypeDefinition
 scalarTypeDefinition = AST.ScalarTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "scalar"
   <*> nameParser
   <*> optempty directives
@@ -338,6 +364,7 @@ scalarTypeDefinition = AST.ScalarTypeDefinition
 enumTypeDefinition :: Parser AST.EnumTypeDefinition
 enumTypeDefinition = AST.EnumTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "enum"
   <*> nameParser
   <*> optempty directives
@@ -349,6 +376,7 @@ enumValueDefinitions = braces $ many1 enumValueDefinition
 enumValueDefinition :: Parser AST.EnumValueDefinition
 enumValueDefinition = AST.EnumValueDefinition
   <$> optDesc
+  <*  whiteSpace
   <*> enumValue
   <*> optempty directives
 
@@ -356,9 +384,10 @@ enumValueDefinition = AST.EnumValueDefinition
 enumValue :: Parser AST.EnumValue
 enumValue = AST.EnumValue <$> nameParser
 
-inputObjectTypeDefinition :: Parser AST.InputObjectTypeDefinition
+inputObjectTypeDefinition :: Parser (AST.InputObjectTypeDefinition AST.InputValueDefinition)
 inputObjectTypeDefinition = AST.InputObjectTypeDefinition
   <$> optDesc
+  <*  whiteSpace
   <*  tok "input"
   <*> nameParser
   <*> optempty directives
@@ -370,10 +399,12 @@ inputValueDefinitions = braces $ many1 inputValueDefinition
 inputValueDefinition :: Parser AST.InputValueDefinition
 inputValueDefinition = AST.InputValueDefinition
   <$> optDesc
+  <*  whiteSpace
   <*> nameParser
   <*  tok ":"
   <*> graphQLType
   <*> optional defaultValue
+  <*> optempty directives
 
 -- * Internal
 
