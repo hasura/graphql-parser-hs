@@ -284,8 +284,8 @@ instance (Hashable (frag var), Hashable var) => Hashable (InlineFragment frag va
 data FragmentDefinition = FragmentDefinition
   { _fdName          :: Name
   , _fdTypeCondition :: Name
-  , _fdDirectives    :: [Directive Void]
-  , _fdSelectionSet  :: SelectionSet FragmentSpread Void
+  , _fdDirectives    :: [Directive Name]
+  , _fdSelectionSet  :: SelectionSet FragmentSpread Name
   } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable FragmentDefinition
 
