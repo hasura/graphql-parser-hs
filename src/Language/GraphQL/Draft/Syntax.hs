@@ -86,6 +86,7 @@ import                qualified Language.Haskell.TH.Syntax     as TH
 
 import                          Control.Monad
 import                          Data.Bool                      (bool)
+import                          Data.Function                  (on)
 import                          Data.HashMap.Strict.InsOrd     (InsOrdHashMap)
 import                          Data.Hashable
 import                          Data.Scientific
@@ -212,7 +213,7 @@ instance J.FromJSON SchemaDocument where
   parseJSON = J.withText "SchemaDocument" $ \t ->
     case parseSchemaDocument t of
       Right schemaDoc -> return schemaDoc
-      Left err -> fail $ "parsing the schema document: " <> show err
+      Left err        -> fail $ "parsing the schema document: " <> show err
 
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
 -- the list of object types that implement that interface
@@ -257,12 +258,18 @@ data Field frag var = Field
   , _fArguments    :: InsOrdHashMap Name (Value var)
   , _fDirectives   :: [Directive var]
   , _fSelectionSet :: SelectionSet frag var
-  } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
+  } deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (Field frag var)
 instance (Lift (frag var), Lift var) => Lift (Field frag var) where
   liftTyped Field{..} =
     [|| Field { _fAlias, _fName, _fDirectives, _fSelectionSet
              , _fArguments = $$(liftTypedInsOrdHashMap _fArguments) } ||]
+
+instance (Ord (frag var), Ord var) => Ord (Field frag var) where
+  compare (Field alias1 name1 args1 dirs1 selSet1) (Field alias2 name2 args2 dirs2 selSet2) =
+    compare
+      (alias1, name1, OMap.toHashMap args1, dirs1, selSet1)
+      (alias2, name2, OMap.toHashMap args2, dirs2, selSet2)
 
 -- * Fragments
 
@@ -321,6 +328,56 @@ instance Lift var => Lift (Value var) where
   liftTyped (VList a)     = [|| VList a ||]
   liftTyped (VObject a)   = [|| VObject $$(liftTypedInsOrdHashMap a) ||]
 
+instance Ord v => Ord (Value v) where
+  compare v1 v2 = case (v1, v2) of
+    -- This is the whole reason this block of text exists. Sorry.
+    (VObject o1, VObject o2)         -> (compare `on` OMap.toHashMap) o1 o2
+    (VVariable var1, VVariable var2) -> compare var1 var2
+    (VNull, VNull)                   -> EQ
+    (VInt i1, VInt i2)               -> compare i1 i2
+    (VFloat s1, VFloat s2)           -> compare s1 s2
+    (VString s1, VString s2)         -> compare s1 s2
+    (VBoolean b1, VBoolean b2)       -> compare b1 b2
+    (VEnum e1, VEnum e2)             -> compare e1 e2
+    (VList xs1, VList xs2)           -> compare xs1 xs2
+    (VVariable _, _)                 -> LT
+    (VNull, VVariable _)             -> GT
+    (VNull, _)                       -> LT
+    (VInt _, VVariable _)            -> GT
+    (VInt _, VNull)                  -> GT
+    (VInt _, _)                      -> LT
+    (VFloat _, VVariable _)          -> GT
+    (VFloat _, VNull)                -> GT
+    (VFloat _, VInt _)               -> GT
+    (VFloat _, _)                    -> LT
+    (VString _, VVariable _)         -> GT
+    (VString _, VNull)               -> GT
+    (VString _, VInt _)              -> GT
+    (VString _, VFloat _)            -> GT
+    (VString _, _)                   -> LT
+    (VBoolean _, VVariable _)        -> GT
+    (VBoolean _, VNull)              -> GT
+    (VBoolean _, VInt _)             -> GT
+    (VBoolean _, VFloat _)           -> GT
+    (VBoolean _, VString _)          -> GT
+    (VBoolean _, _)                  -> LT
+    (VEnum _, VVariable _)           -> GT
+    (VEnum _, VNull)                 -> GT
+    (VEnum _, VInt _)                -> GT
+    (VEnum _, VFloat _)              -> GT
+    (VEnum _, VString _)             -> GT
+    (VEnum _, VBoolean _)            -> GT
+    (VEnum _, _)                     -> LT
+    (VList _, VVariable _)           -> GT
+    (VList _, VNull)                 -> GT
+    (VList _, VInt _)                -> GT
+    (VList _, VFloat _)              -> GT
+    (VList _, VString _)             -> GT
+    (VList _, VBoolean _)            -> GT
+    (VList _, VEnum _)               -> GT
+    (VList _, _)                     -> LT
+    (VObject _, _)                   -> GT
+
 literal :: Value Void -> Value var
 literal = fmap absurd
 
@@ -333,6 +390,10 @@ data Directive var = Directive
 instance Hashable var => Hashable (Directive var)
 instance Lift var => Lift (Directive var) where
   liftTyped Directive{..} = [|| Directive{ _dName, _dArguments = $$(liftTypedInsOrdHashMap _dArguments) } ||]
+
+-- | See note [[TODO note]]
+instance Ord v => Ord (Directive v) where
+  compare (Directive n1 arg1) (Directive n2 arg2) = compare (n1, OMap.toHashMap arg1) (n2, OMap.toHashMap arg2)
 
 -- * Type Reference
 
