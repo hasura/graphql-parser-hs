@@ -1,19 +1,19 @@
 module Language.GraphQL.Draft.Printer where
 
-import qualified Data.HashMap.Strict           as M
+import qualified Data.ByteString.Builder       as BS
+import qualified Data.HashMap.Strict.InsOrd    as OMap
+import qualified Data.Text.Lazy                as LT hiding (singleton)
+import qualified Data.Text.Lazy.Builder        as LT
+import qualified Data.Text.Lazy.Encoding       as LT
+import qualified Data.Text.Prettyprint.Doc     as PP
+import qualified Text.Builder                  as Text
 
 import           Data.Bool                     (bool)
-import           Data.HashMap.Strict           (HashMap)
+import           Data.HashMap.Strict.InsOrd    (InsOrdHashMap)
 import           Data.List                     (intersperse)
 import           Data.Scientific
-import qualified Data.ByteString.Builder       as BS
-import qualified Data.Text.Lazy                as LT hiding (singleton)
-import qualified Data.Text.Lazy.Encoding       as LT
-import qualified Data.Text.Lazy.Builder        as LT
-import qualified Data.Text.Prettyprint.Doc     as PP
 import           Data.String                   (IsString)
 import           Data.Text                     (Text, pack)
-import qualified Text.Builder                  as Text
 import           Data.Void
 
 import           Language.GraphQL.Draft.Syntax
@@ -203,7 +203,7 @@ directive :: (Print var, Printer a) => Directive var -> a
 directive (Directive name args) =
   charP '@' <> nameP name <> optempty arguments args
 
-arguments :: (Print var, Printer a) => HashMap Name (Value var) -> a
+arguments :: (Print var, Printer a) => InsOrdHashMap Name (Value var) -> a
 arguments xs = charP '(' <> objectFields xs <> charP ')'
 
 variableDefinitions :: Printer a => [VariableDefinition] -> a
@@ -221,7 +221,7 @@ defaultValue :: Printer a => Value Void -> a
 defaultValue v = " = " <> value v
 
 description :: Printer a => Maybe Description -> a
-description Nothing = mempty
+description Nothing     = mempty
 description (Just desc) = (stringValue $ unDescription desc) <> " \n"
 -- | Type Reference
 
@@ -260,11 +260,11 @@ listValue xs = mconcat [ charP '[' , li , charP ']' ]
   where
     li = mconcat $ intersperse (charP ',') $ map value xs
 
-objectValue :: (Print var, Printer a) => HashMap Name (Value var) -> a
+objectValue :: (Print var, Printer a) => InsOrdHashMap Name (Value var) -> a
 objectValue o = charP '{' <> objectFields o <> charP '}'
 
-objectFields :: (Print var, Printer a) => HashMap Name (Value var) -> a
-objectFields o = mconcat $ intersperse (charP ',') $ map objectField $ M.toList o
+objectFields :: (Print var, Printer a) => InsOrdHashMap Name (Value var) -> a
+objectFields o = mconcat $ intersperse (charP ',') $ map objectField $ OMap.toList o
   where objectField (name, val) = nameP name <> ": " <> value val
 
 fromBool :: Printer a => Bool -> a
@@ -294,19 +294,19 @@ rootOperationTypeDefinition (RootOperationTypeDefinition opType rootName) =
 
 typeSystemDefinition :: Printer a => TypeSystemDefinition -> a
 typeSystemDefinition (TypeSystemDefinitionSchema schemaDefn) = schemaDefinition schemaDefn
-typeSystemDefinition (TypeSystemDefinitionType typeDefn) = typeDefinitionP typeDefn
+typeSystemDefinition (TypeSystemDefinitionType typeDefn)     = typeDefinitionP typeDefn
 
 schemaDocument :: Printer a => SchemaDocument -> a
 schemaDocument (SchemaDocument typeDefns) =
   mconcat $ intersperse (charP '\n') $ map typeSystemDefinition typeDefns
 
 typeDefinitionP :: Printer a => (TypeDefinition () InputValueDefinition) -> a
-typeDefinitionP (TypeDefinitionScalar scalarDefn) = scalarTypeDefinition scalarDefn
-typeDefinitionP (TypeDefinitionObject objDefn) = objectTypeDefinition objDefn
+typeDefinitionP (TypeDefinitionScalar scalarDefn)       = scalarTypeDefinition scalarDefn
+typeDefinitionP (TypeDefinitionObject objDefn)          = objectTypeDefinition objDefn
 typeDefinitionP (TypeDefinitionInterface interfaceDefn) = interfaceTypeDefinition interfaceDefn
-typeDefinitionP (TypeDefinitionUnion unionDefn) = unionTypeDefinition unionDefn
-typeDefinitionP (TypeDefinitionEnum enumDefn) = enumTypeDefinition enumDefn
-typeDefinitionP (TypeDefinitionInputObject inpObjDefn) = inputObjectTypeDefinition inpObjDefn
+typeDefinitionP (TypeDefinitionUnion unionDefn)         = unionTypeDefinition unionDefn
+typeDefinitionP (TypeDefinitionEnum enumDefn)           = enumTypeDefinition enumDefn
+typeDefinitionP (TypeDefinitionInputObject inpObjDefn)  = inputObjectTypeDefinition inpObjDefn
 
 scalarTypeDefinition :: Printer a => ScalarTypeDefinition -> a
 scalarTypeDefinition (ScalarTypeDefinition desc name dirs) =

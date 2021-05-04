@@ -23,20 +23,18 @@ module Language.GraphQL.Draft.Parser
 
 import qualified Data.Attoparsec.ByteString    as A
 import qualified Data.Attoparsec.Text          as AT
-import qualified Data.HashMap.Strict           as M
+import qualified Data.HashMap.Strict.InsOrd    as M
 import qualified Data.Text                     as T
 import qualified Data.Text.Encoding            as T
 
 import           Control.Applicative
 import           Control.Monad
 import           Data.Aeson.Parser             (jstring)
-import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
-                                                match, option, scan, scientific,
-                                                sepBy1, (<?>))
-import           Data.Char                     (isAsciiLower, isAsciiUpper,
-                                                isDigit)
+import           Data.Attoparsec.Text          (Parser, anyChar, char, many1, match, option, scan,
+                                                scientific, sepBy1, (<?>))
+import           Data.Char                     (isAsciiLower, isAsciiUpper, isDigit)
 import           Data.Functor
-import           Data.HashMap.Strict           (HashMap)
+import           Data.HashMap.Strict.InsOrd    (InsOrdHashMap)
 import           Data.Scientific               (Scientific)
 import           Data.Text                     (Text, find)
 import           Data.Void                     (Void)
@@ -221,16 +219,16 @@ stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
 listLiteral :: Variable var => Parser [AST.Value var]
 listLiteral = brackets (many value) <?> "list"
 
-objectLiteral :: Variable var => Parser (HashMap AST.Name (AST.Value var))
+objectLiteral :: Variable var => Parser (InsOrdHashMap AST.Name (AST.Value var))
 objectLiteral = braces (objectFields many) <?> "object"
 
-arguments :: Variable var => Parser (HashMap AST.Name (AST.Value var))
+arguments :: Variable var => Parser (InsOrdHashMap AST.Name (AST.Value var))
 arguments = parens (objectFields many1) <?> "arguments"
 
 objectFields
   :: Variable var
   => (forall b. Parser b -> Parser [b])
-  -> Parser (HashMap AST.Name (AST.Value var))
+  -> Parser (InsOrdHashMap AST.Name (AST.Value var))
 objectFields several = foldM insertField M.empty =<< several objectField
   where
     objectField = (,) <$> nameParser <* tok ":" <*> value

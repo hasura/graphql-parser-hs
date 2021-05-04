@@ -41,13 +41,13 @@ library
     , containers
     , filepath
     , hedgehog
+    , insert-ordered-containers
     , prettyprinter
     , scientific
     , template-haskell
     , text
     , text-builder
     , th-lift-instances
-    , unordered-containers
     , vector
     , hashable
   exposed-modules:

@@ -6,7 +6,7 @@ import           Data.Text                     (Text)
 import           Data.Void
 import           Hedgehog
 
-import qualified Data.HashMap.Strict           as M
+import qualified Data.HashMap.Strict.InsOrd    as M
 import qualified Hedgehog.Gen                  as Gen
 import qualified Hedgehog.Range                as Range
 
@@ -96,7 +96,7 @@ genEnumValue = EnumValue <$> genName
 genListValue :: Gen (Value a) -> Gen [Value a]
 genListValue = mkList
 
-genObjectValue :: Gen (Value a) -> Gen (M.HashMap Name (Value a))
+genObjectValue :: Gen (Value a) -> Gen (M.InsOrdHashMap Name (Value a))
 genObjectValue genVal = M.fromList <$> mkList genObjectField
   where
     genObjectField = (,) <$> genName <*> genVal
