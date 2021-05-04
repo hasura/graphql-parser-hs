@@ -136,17 +136,17 @@ instance J.FromJSONKey Name where
 
 newtype Document
   = Document { getDefinitions :: [Definition] }
-  deriving (Show, Eq, Lift)
+  deriving (Ord, Show, Eq, Lift)
 
 data Definition
   = DefinitionExecutable (ExecutableDefinition Name)
   | DefinitionTypeSystem TypeSystemDefinition
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable Definition
 
 newtype ExecutableDocument var
   = ExecutableDocument { getExecutableDefinitions :: [ExecutableDefinition var] }
-  deriving (Show, Eq, Lift, Hashable, Functor, Foldable, Traversable)
+  deriving (Ord, Show, Eq, Lift, Hashable, Functor, Foldable, Traversable)
 
 instance J.FromJSON (ExecutableDocument Name) where
   parseJSON = J.withText "ExecutableDocument" $ \t ->
@@ -160,7 +160,7 @@ instance J.ToJSON (ExecutableDocument Name) where
 data ExecutableDefinition var
   = ExecutableDefinitionOperation (OperationDefinition FragmentSpread var)
   | ExecutableDefinitionFragment FragmentDefinition
-  deriving (Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (ExecutableDefinition var)
 
 partitionExDefs
@@ -181,14 +181,14 @@ partitionExDefs = foldr f ([], [], [])
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema SchemaDefinition
   | TypeSystemDefinitionType (TypeDefinition () InputValueDefinition)  -- No 'possibleTypes' specified for interfaces
-  deriving (Show, Eq, Lift, Generic)
+  deriving (Ord, Show, Eq, Lift, Generic)
 
 instance Hashable TypeSystemDefinition
 
 data SchemaDefinition = SchemaDefinition
   { _sdDirectives                   :: Maybe [Directive Void]
   , _sdRootOperationTypeDefinitions :: [RootOperationTypeDefinition]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable SchemaDefinition
 
 data RootOperationTypeDefinition = RootOperationTypeDefinition
@@ -206,24 +206,24 @@ instance Hashable OperationType
 
 newtype SchemaDocument
   = SchemaDocument [TypeSystemDefinition]
-  deriving (Show, Eq, Lift, Hashable, Generic)
+  deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
 instance J.FromJSON SchemaDocument where
   parseJSON = J.withText "SchemaDocument" $ \t ->
     case parseSchemaDocument t of
       Right schemaDoc -> return schemaDoc
-      Left err        -> fail $ "parsing the schema document: " <> show err
+      Left err -> fail $ "parsing the schema document: " <> show err
 
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
 -- the list of object types that implement that interface
 newtype SchemaIntrospection
   = SchemaIntrospection [TypeDefinition [Name] InputValueDefinition]
-  deriving (Show, Eq, Lift, Hashable, Generic)
+  deriving (Ord, Show, Eq, Lift, Hashable, Generic)
 
 data OperationDefinition frag var
   = OperationDefinitionTyped (TypedOperationDefinition frag var)
   | OperationDefinitionUnTyped (SelectionSet frag var)
-  deriving (Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (OperationDefinition frag var)
 
 data TypedOperationDefinition frag var = TypedOperationDefinition
@@ -232,14 +232,14 @@ data TypedOperationDefinition frag var = TypedOperationDefinition
   , _todVariableDefinitions :: [VariableDefinition]
   , _todDirectives          :: [Directive var]
   , _todSelectionSet        :: SelectionSet frag var
-  } deriving (Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (TypedOperationDefinition frag var)
 
 data VariableDefinition = VariableDefinition
   { _vdName         :: Name
   , _vdType         :: GType
   , _vdDefaultValue :: Maybe (Value Void)
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable VariableDefinition
 
 type SelectionSet frag var = [Selection frag var]
@@ -248,7 +248,7 @@ data Selection frag var
   = SelectionField (Field frag var)
   | SelectionFragmentSpread (frag var)
   | SelectionInlineFragment (InlineFragment frag var)
-  deriving (Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (Selection frag var)
 
 data Field frag var = Field
@@ -257,7 +257,7 @@ data Field frag var = Field
   , _fArguments    :: InsOrdHashMap Name (Value var)
   , _fDirectives   :: [Directive var]
   , _fSelectionSet :: SelectionSet frag var
-  } deriving (Show, Eq, Functor, Foldable, Traversable, Generic)
+  } deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (Field frag var)
 instance (Lift (frag var), Lift var) => Lift (Field frag var) where
   liftTyped Field{..} =
@@ -269,7 +269,7 @@ instance (Lift (frag var), Lift var) => Lift (Field frag var) where
 data FragmentSpread var = FragmentSpread
   { _fsName       :: Name
   , _fsDirectives :: [Directive var]
-  } deriving (Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance Hashable var => Hashable (FragmentSpread var)
 
 -- | Can be used in place of the @frag@ parameter to various AST types to
@@ -285,7 +285,7 @@ data InlineFragment frag var = InlineFragment
   { _ifTypeCondition :: Maybe Name
   , _ifDirectives    :: [Directive var]
   , _ifSelectionSet  :: SelectionSet frag var
-  } deriving (Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  } deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
 instance (Hashable (frag var), Hashable var) => Hashable (InlineFragment frag var)
 
 data FragmentDefinition = FragmentDefinition
@@ -293,7 +293,7 @@ data FragmentDefinition = FragmentDefinition
   , _fdTypeCondition :: Name
   , _fdDirectives    :: [Directive Name]
   , _fdSelectionSet  :: SelectionSet FragmentSpread Name
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable FragmentDefinition
 
 -- * Values
@@ -388,7 +388,7 @@ data TypeDefinition possibleTypes inputType
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
   | TypeDefinitionInputObject (InputObjectTypeDefinition inputType)
-  deriving (Show, Eq, Lift, Generic, Functor)
+  deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable possibleTypes, Hashable inputType) => Hashable (TypeDefinition possibleTypes inputType)
 
 newtype Description
@@ -401,7 +401,7 @@ data ObjectTypeDefinition inputType = ObjectTypeDefinition
   , _otdImplementsInterfaces :: [Name]
   , _otdDirectives           :: [Directive Void]
   , _otdFieldsDefinition     :: [FieldDefinition inputType]
-  } deriving (Show, Eq, Lift, Generic, Functor)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable inputType) => Hashable (ObjectTypeDefinition inputType)
 
 data FieldDefinition inputType = FieldDefinition
@@ -410,7 +410,7 @@ data FieldDefinition inputType = FieldDefinition
   , _fldArgumentsDefinition :: (ArgumentsDefinition inputType)
   , _fldType                :: GType
   , _fldDirectives          :: [Directive Void]
-  } deriving (Show, Eq, Lift, Generic, Functor)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable inputType) => Hashable (FieldDefinition inputType)
 
 type ArgumentsDefinition inputType = [inputType]
@@ -421,7 +421,7 @@ data InputValueDefinition = InputValueDefinition
   , _ivdType         :: GType
   , _ivdDefaultValue :: Maybe (Value Void)
   , _ivdDirectives   :: [Directive Void]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable InputValueDefinition
 
 data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
@@ -430,7 +430,7 @@ data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
   , _itdDirectives       :: [Directive Void]
   , _itdFieldsDefinition :: [FieldDefinition inputType]
   , _itdPossibleTypes    :: possibleTypes
-  } deriving (Show, Eq, Lift, Generic, Functor)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable possibleTypes, Hashable inputType) => Hashable (InterfaceTypeDefinition possibleTypes inputType)
 
 data UnionTypeDefinition = UnionTypeDefinition
@@ -438,14 +438,14 @@ data UnionTypeDefinition = UnionTypeDefinition
   , _utdName        :: Name
   , _utdDirectives  :: [Directive Void]
   , _utdMemberTypes :: [Name]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable UnionTypeDefinition
 
 data ScalarTypeDefinition = ScalarTypeDefinition
   { _stdDescription :: Maybe Description
   , _stdName        :: Name
   , _stdDirectives  :: [Directive Void]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable ScalarTypeDefinition
 
 data EnumTypeDefinition = EnumTypeDefinition
@@ -453,26 +453,26 @@ data EnumTypeDefinition = EnumTypeDefinition
   , _etdName             :: Name
   , _etdDirectives       :: [Directive Void]
   , _etdValueDefinitions :: [EnumValueDefinition]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable EnumTypeDefinition
 
 data EnumValueDefinition = EnumValueDefinition
   { _evdDescription :: Maybe Description
   , _evdName        :: EnumValue
   , _evdDirectives  :: [Directive Void]
-  } deriving (Show, Eq, Lift, Generic)
+  } deriving (Ord, Show, Eq, Lift, Generic)
 instance Hashable EnumValueDefinition
 
 newtype EnumValue
   = EnumValue { unEnumValue :: Name }
-  deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON)
+  deriving (Show, Eq, Lift, Hashable, J.ToJSON, J.FromJSON, Ord)
 
 data InputObjectTypeDefinition inputType = InputObjectTypeDefinition
   { _iotdDescription      :: Maybe Description
   , _iotdName             :: Name
   , _iotdDirectives       :: [Directive Void]
   , _iotdValueDefinitions :: [inputType]
-  } deriving (Show, Eq, Lift, Generic, Functor)
+  } deriving (Ord, Show, Eq, Lift, Generic, Functor)
 instance (Hashable inputType) => Hashable (InputObjectTypeDefinition inputType)
 
 data DirectiveDefinition inputType = DirectiveDefinition
