@@ -39,6 +39,7 @@ library
     , attoparsec
     , bytestring
     , containers
+    , deepseq
     , filepath
     , hedgehog
     , prettyprinter
