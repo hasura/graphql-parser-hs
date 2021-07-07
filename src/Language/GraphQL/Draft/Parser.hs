@@ -312,7 +312,7 @@ objectTypeDefinition = AST.ObjectTypeDefinition
   <*> fieldDefinitions
 
 interfaces :: Parser [AST.Name]
-interfaces = tok "implements" *> many1 nameParser
+interfaces = tok "implements" *> nameParser `sepBy1` tok "&"
 
 fieldDefinitions :: Parser [(AST.FieldDefinition AST.InputValueDefinition)]
 fieldDefinitions = braces $ many1 fieldDefinition
