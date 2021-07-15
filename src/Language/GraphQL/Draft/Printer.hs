@@ -4,7 +4,7 @@ import qualified Data.HashMap.Strict           as M
 
 import           Data.Bool                     (bool)
 import           Data.HashMap.Strict           (HashMap)
-import           Data.List                     (intersperse)
+import           Data.List                     (intersperse, sort)
 import           Data.Scientific
 import qualified Data.ByteString.Builder       as BS
 import qualified Data.Text.Lazy                as LT hiding (singleton)
@@ -298,7 +298,7 @@ typeSystemDefinition (TypeSystemDefinitionType typeDefn) = typeDefinitionP typeD
 
 schemaDocument :: Printer a => SchemaDocument -> a
 schemaDocument (SchemaDocument typeDefns) =
-  mconcat $ intersperse (charP '\n') $ map typeSystemDefinition typeDefns
+  mconcat $ intersperse (textP "\n\n") $ map typeSystemDefinition $ sort typeDefns
 
 typeDefinitionP :: Printer a => (TypeDefinition () InputValueDefinition) -> a
 typeDefinitionP (TypeDefinitionScalar scalarDefn) = scalarTypeDefinition scalarDefn
@@ -313,8 +313,7 @@ scalarTypeDefinition (ScalarTypeDefinition desc name dirs) =
   description desc
   <> "scalar "
   <> nameP name
-  <> charP ' '
-  <> optempty directives dirs
+  <> (bool (charP ' ' <> optempty directives dirs) mempty $ null dirs)
 
 inputValueDefinition :: Printer a => InputValueDefinition -> a
 inputValueDefinition (InputValueDefinition desc name gType defVal dirs) =
@@ -323,8 +322,7 @@ inputValueDefinition (InputValueDefinition desc name gType defVal dirs) =
   <> textP ": "
   <> graphQLType gType
   <> (maybe mempty defaultValue defVal)
-  <> charP ' '
-  <> optempty directives dirs
+  <> (bool (charP ' ' <> optempty directives dirs) mempty $ null dirs)
 
 fieldDefinition :: Printer a => FieldDefinition InputValueDefinition -> a
 fieldDefinition (FieldDefinition desc name args gType dirs) =
@@ -352,8 +350,13 @@ objectTypeDefinition (ObjectTypeDefinition desc name ifaces dirs fieldDefinition
     [] -> mempty
     _  -> " implements " <> (mconcat (intersperse (textP " & ") $ map nameP ifaces))
   <> " { "
-  <> (mconcat $ intersperse (charP ' ') $ map fieldDefinition fieldDefinitions)
-  <> " }"
+  <> ( mconcat $
+       intersperse (textP "\n  ") $
+       map fieldDefinition $
+       sort fieldDefinitions
+     )
+  <> "\n"
+  <> "}"
 
 interfaceTypeDefinition :: Printer a => InterfaceTypeDefinition () InputValueDefinition -> a
 interfaceTypeDefinition (InterfaceTypeDefinition desc name dirs fieldDefinitions _possibleTypes) =
@@ -364,8 +367,13 @@ interfaceTypeDefinition (InterfaceTypeDefinition desc name dirs fieldDefinitions
   <> charP ' '
   <> optempty directives dirs
   <> " { "
-  <> (mconcat $ intersperse (charP ' ') $ map fieldDefinition fieldDefinitions)
-  <> " }"
+  <> ( mconcat $
+       intersperse (textP "\n  ") $
+       map fieldDefinition $
+       sort fieldDefinitions
+     )
+  <> "\n"
+  <> "}"
 
 unionTypeDefinition :: Printer a => UnionTypeDefinition -> a
 unionTypeDefinition (UnionTypeDefinition desc name dirs members) =
@@ -375,7 +383,7 @@ unionTypeDefinition (UnionTypeDefinition desc name dirs members) =
   <> charP ' '
   <> optempty directives dirs
   <> textP " = "
-  <> (mconcat $ intersperse (textP " | ") $ map nameP members)
+  <> (mconcat $ intersperse (textP " | ") $ map nameP $ sort members)
 
 enumValueDefinition :: Printer a => EnumValueDefinition -> a
 enumValueDefinition (EnumValueDefinition desc name dirs) =
@@ -391,8 +399,13 @@ enumTypeDefinition (EnumTypeDefinition desc name dirs enumValDefns) =
   <> nameP name
   <> optempty directives dirs
   <> " {"
-  <> (mconcat $ intersperse (charP ' ') $ map enumValueDefinition enumValDefns)
-  <> " }"
+  <> ( mconcat $
+       intersperse (textP "\n  ") $ -- horizontal nesting
+       map enumValueDefinition $
+       sort enumValDefns
+     )
+  <> "\n"
+  <> "}"
 
 inputObjectTypeDefinition :: Printer a => InputObjectTypeDefinition InputValueDefinition -> a
 inputObjectTypeDefinition (InputObjectTypeDefinition desc name dirs valDefns) =
@@ -401,5 +414,10 @@ inputObjectTypeDefinition (InputObjectTypeDefinition desc name dirs valDefns) =
   <> nameP name
   <> optempty directives dirs
   <> " {"
-  <> (mconcat $ intersperse (charP ' ') $ map inputValueDefinition valDefns)
-  <> " }"
+  <> ( mconcat $
+       intersperse (textP "\n  ") $
+       map inputValueDefinition $
+       sort valDefns
+     )
+  <> "\n"
+  <> "}"
