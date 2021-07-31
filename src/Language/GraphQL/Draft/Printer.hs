@@ -2,6 +2,7 @@ module Language.GraphQL.Draft.Printer where
 
 import qualified Data.HashMap.Strict           as M
 
+import qualified Data.Aeson                    as J
 import           Data.Bool                     (bool)
 import           Data.HashMap.Strict           (HashMap)
 import           Data.List                     (intersperse, sort)
@@ -252,8 +253,9 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
+-- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
-stringValue s = mconcat [ charP '"', textP s, charP '"' ]
+stringValue s = textP $ LT.toStrict $ LT.decodeUtf8 $ J.encode s
 
 listValue :: (Print var, Printer a) => [Value var] -> a
 listValue xs = mconcat [ charP '[' , li , charP ']' ]
