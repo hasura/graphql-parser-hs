@@ -1,7 +1,8 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns     #-}
 
 import           Control.Monad                         (unless)
-import           Control.Monad.IO.Class                (liftIO)
+import           Data.Void                             (Void)
 import           Hedgehog
 import           System.Environment                    (getArgs)
 import           System.Exit                           (exitFailure)
@@ -18,12 +19,11 @@ import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
 import qualified Text.Builder                          as TB
 
 import           Language.GraphQL.Draft.Generator
-import           Language.GraphQL.Draft.Parser         (parseExecutableDoc)
-import           Language.GraphQL.Draft.Printer        (executableDocument)
+import qualified Language.GraphQL.Draft.Parser         as Input
+import qualified Language.GraphQL.Draft.Printer        as Output
 import           Language.GraphQL.Draft.Syntax
 
 import           Keywords
-
 
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
@@ -54,33 +54,38 @@ tests nTests =
     , ("property [ parse (textBuilderPrint ast) == ast ]", propParserTextPrinter nTests)
     , ("property [ parse (lazyTextBuilderPrint ast) == ast ]", propParserLazyTextPrinter nTests)
     , ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBSPrinter nTests)
+    , ("property [ trip value ]", propTripValue nTests)
     ]
     ++ Keywords.primitiveTests
 
 propParserPrettyPrinter :: TestLimit -> Property
-propParserPrettyPrinter = mkPropParserPrinter $ prettyPrinter . executableDocument
+propParserPrettyPrinter = mkPropParserPrinter $ prettyPrinter . Output.executableDocument
   where
     prettyPrinter :: PP.Doc T.Text -> T.Text
     prettyPrinter = PP.renderStrict . PP.layoutPretty PP.defaultLayoutOptions
 
 propParserTextPrinter :: TestLimit -> Property
-propParserTextPrinter = mkPropParserPrinter $ TB.run . executableDocument
+propParserTextPrinter = mkPropParserPrinter $ TB.run . Output.executableDocument
 
 propParserLazyTextPrinter :: TestLimit -> Property
-propParserLazyTextPrinter = mkPropParserPrinter $ TL.toStrict . TL.toLazyText . executableDocument
+propParserLazyTextPrinter = mkPropParserPrinter $ TL.toStrict . TL.toLazyText . Output.executableDocument
 
 propParserBSPrinter :: TestLimit -> Property
-propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . executableDocument
+propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . Output.executableDocument
+
+propTripValue :: TestLimit -> Property
+propTripValue limit = withTests limit $ property $ do
+  someValue <- forAll $ genValueWith []
+  tripping someValue (TB.run . Output.value) (Input.runParser (Input.value @Void))
 
 mkPropParserPrinter :: (ExecutableDocument Name -> T.Text) -> (TestLimit -> Property)
 mkPropParserPrinter printer = \space ->
   withTests space $ property $ do
     xs <- forAll genExecutableDocument
     let rendered = printer xs
-    either onError (xs ===) $ parseExecutableDoc rendered
+    either onError (xs ===) $ Input.parseExecutableDoc rendered
   where
     onError (T.unpack -> errorMsg) = do
-      liftIO $ putStrLn errorMsg
       footnote errorMsg
       failure
 
