@@ -1,9 +1,10 @@
 {-# LANGUAGE ViewPatterns #-}
 
-import           Control.Monad                         (void)
+import           Control.Monad                         (unless)
 import           Control.Monad.IO.Class                (liftIO)
 import           Hedgehog
 import           System.Environment                    (getArgs)
+import           System.Exit                           (exitFailure)
 
 import qualified Data.ByteString.Builder               as BS
 import qualified Data.ByteString.Lazy                  as BL
@@ -42,7 +43,9 @@ main = do
       _         -> TMDev
 
 runTest :: TestLimit -> IO ()
-runTest = void . tests
+runTest limit = do
+  allGood <- tests limit
+  unless allGood exitFailure
 
 tests :: TestLimit -> IO Bool
 tests nTests =
