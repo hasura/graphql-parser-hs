@@ -32,9 +32,9 @@ main :: IO ()
 main = do
   args <- getArgs
   case parseArgs args of
-    TMQuick   -> runTest 20
-    TMDev     -> runTest 100
-    TMRelease -> runTest 1000
+    TMQuick   -> runTest 200
+    TMDev     -> runTest 1000
+    TMRelease -> runTest 10000
   where
     parseArgs = foldr parseArg TMDev
     parseArg str _ = case str of
@@ -56,7 +56,7 @@ tests nTests =
     , ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBSPrinter nTests)
     , ("property [ trip value ]", propTripValue nTests)
     ]
-    ++ Keywords.primitiveTests
+    ++ Keywords.primitiveTests nTests
 
 propParserPrettyPrinter :: TestLimit -> Property
 propParserPrettyPrinter = mkPropParserPrinter $ prettyPrinter . Output.executableDocument
