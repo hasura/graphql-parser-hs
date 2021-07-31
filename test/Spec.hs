@@ -2,7 +2,6 @@
 {-# LANGUAGE ViewPatterns     #-}
 
 import           Control.Monad                         (unless)
-import           Data.Void                             (Void)
 import           Hedgehog
 import           System.Environment                    (getArgs)
 import           System.Exit                           (exitFailure)
@@ -54,7 +53,6 @@ tests nTests =
     , ("property [ parse (textBuilderPrint ast) == ast ]", propParserTextPrinter nTests)
     , ("property [ parse (lazyTextBuilderPrint ast) == ast ]", propParserLazyTextPrinter nTests)
     , ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBSPrinter nTests)
-    , ("property [ trip value ]", propTripValue nTests)
     ]
     ++ Keywords.primitiveTests nTests
 
@@ -72,11 +70,6 @@ propParserLazyTextPrinter = mkPropParserPrinter $ TL.toStrict . TL.toLazyText . 
 
 propParserBSPrinter :: TestLimit -> Property
 propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . Output.executableDocument
-
-propTripValue :: TestLimit -> Property
-propTripValue limit = withTests limit $ property $ do
-  someValue <- forAll $ genValueWith []
-  tripping someValue (TB.run . Output.value) (Input.runParser (Input.value @Void))
 
 mkPropParserPrinter :: (ExecutableDocument Name -> T.Text) -> (TestLimit -> Property)
 mkPropParserPrinter printer = \space ->
