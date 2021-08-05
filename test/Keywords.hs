@@ -4,11 +4,11 @@
 
 module Keywords (primitiveTests) where
 
+import           Data.Foldable                  (for_)
 import           Data.String
 import           Data.Text                      (singleton, unpack)
 import           Data.Void
 import           Hedgehog
-import           Hedgehog.Gen                   (unicode)
 import           Text.Builder                   (Builder, run)
 
 import           Language.GraphQL.Draft.Parser
@@ -17,15 +17,15 @@ import           Language.GraphQL.Draft.Syntax
 import qualified Language.GraphQL.Draft.Printer as P
 
 
-primitiveTests :: IsString s => TestLimit -> [(s, Property)]
-primitiveTests n =
+primitiveTests :: IsString s => [(s, Property)]
+primitiveTests =
   [ ("a \"null\" prefix doesn't prevent parsing a name", withTests 1 propNullNameName)
   , ("a \"null\" prefix doesn't prevent parsing an enum name", withTests 1 propNullNameValue)
   , ("a \"true\" prefix doesn't prevent parsing an enum name", withTests 1 propBoolNameValue)
   , ("a string containing \\NUL is handled correctly", withTests 1 propHandleNulString)
   , ("a string containing \\n is handled correctly", withTests 1 propHandleNewlineString)
   , ("a string containing \\x0011 is handled correctly", withTests 1 propHandleControlString)
-  , ("all unicode characters are supported", withTests n propHandleUnicodeCharacters)
+  , ("all unicode characters are supported", withTests 1 propHandleUnicodeCharacters)
   ]
 
 
@@ -48,8 +48,7 @@ propHandleControlString :: Property
 propHandleControlString = property $ testRoundTripValue $ VString "\x0011"
 
 propHandleUnicodeCharacters :: Property
-propHandleUnicodeCharacters = property $ do
-  c <- forAll unicode
+propHandleUnicodeCharacters = property $ for_ [minBound..maxBound] \c ->
   testRoundTripValue $ VString $ singleton c
 
 
