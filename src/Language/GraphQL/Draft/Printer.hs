@@ -2,30 +2,30 @@ module Language.GraphQL.Draft.Printer where
 
 import qualified Data.HashMap.Strict           as M
 
+import qualified Data.Aeson                    as J
 import           Data.Bool                     (bool)
+import qualified Data.ByteString.Builder       as BS
 import           Data.HashMap.Strict           (HashMap)
 import           Data.List                     (intersperse, sort)
 import           Data.Scientific
-import qualified Data.ByteString.Builder       as BS
-import qualified Data.Text.Lazy                as LT hiding (singleton)
-import qualified Data.Text.Lazy.Encoding       as LT
-import qualified Data.Text.Lazy.Builder        as LT
-import qualified Data.Text.Prettyprint.Doc     as PP
 import           Data.String                   (IsString)
 import           Data.Text                     (Text, pack)
-import qualified Text.Builder                  as Text
+import qualified Data.Text.Lazy                as LT hiding (singleton)
+import qualified Data.Text.Lazy.Builder        as LT
+import qualified Data.Text.Lazy.Encoding       as LT
+import qualified Data.Text.Prettyprint.Doc     as PP
 import           Data.Void
+import qualified Text.Builder                  as Text
 
 import           Language.GraphQL.Draft.Syntax
 
 class (Monoid a, IsString a) => Printer a where
-  stringP  :: String -> a
   textP    :: Text -> a
   charP    :: Char -> a
   intP     :: Integer -> a
   doubleP  :: Scientific -> a
 
-  {-# MINIMAL stringP, textP, charP, intP, doubleP #-}
+  {-# MINIMAL textP, charP, intP, doubleP #-}
 
   nameP    :: Name -> a
   nameP    = textP . unName
@@ -37,9 +37,6 @@ class (Monoid a, IsString a) => Printer a where
   selectionSetP = selectionSet
 
 instance Printer BS.Builder where
-  stringP = BS.stringUtf8
-  {-# INLINE stringP #-}
-
   textP = LT.encodeUtf8Builder . LT.fromStrict
   {-# INLINE textP #-}
 
@@ -53,9 +50,6 @@ instance Printer BS.Builder where
   {-# INLINE doubleP #-}
 
 instance Printer LT.Builder where
-  stringP = LT.fromString
-  {-# INLINE stringP #-}
-
   textP   = LT.fromText
   {-# INLINE textP #-}
 
@@ -69,9 +63,6 @@ instance Printer LT.Builder where
   {-# INLINE doubleP #-}
 
 instance Printer (PP.Doc Text) where
-  stringP       = PP.pretty
-  {-# INLINE stringP #-}
-
   textP         = PP.pretty
   {-# INLINE textP #-}
 
@@ -88,9 +79,6 @@ instance Printer (PP.Doc Text) where
   {-# INLINE nameP #-}
 
 instance Printer Text.Builder where
-  stringP = Text.string
-  {-# INLINE stringP #-}
-
   textP   = Text.text
   {-# INLINE textP #-}
 
@@ -221,7 +209,7 @@ defaultValue :: Printer a => Value Void -> a
 defaultValue v = " = " <> value v
 
 description :: Printer a => Maybe Description -> a
-description Nothing = mempty
+description Nothing     = mempty
 description (Just desc) = (stringValue $ unDescription desc) <> " \n"
 -- | Type Reference
 
@@ -252,8 +240,9 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
+-- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
-stringValue s = mconcat [ charP '"', textP s, charP '"' ]
+stringValue s = textP $ LT.toStrict $ LT.decodeUtf8 $ J.encode s
 
 listValue :: (Print var, Printer a) => [Value var] -> a
 listValue xs = mconcat [ charP '[' , li , charP ']' ]

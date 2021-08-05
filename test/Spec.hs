@@ -1,9 +1,10 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns     #-}
 
-import           Control.Monad                         (void)
-import           Control.Monad.IO.Class                (liftIO)
+import           Control.Monad                         (unless)
 import           Hedgehog
 import           System.Environment                    (getArgs)
+import           System.Exit                           (exitFailure)
 
 import qualified Data.ByteString.Builder               as BS
 import qualified Data.ByteString.Lazy                  as BL
@@ -17,12 +18,11 @@ import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
 import qualified Text.Builder                          as TB
 
 import           Language.GraphQL.Draft.Generator
-import           Language.GraphQL.Draft.Parser         (parseExecutableDoc)
-import           Language.GraphQL.Draft.Printer        (executableDocument)
+import qualified Language.GraphQL.Draft.Parser         as Input
+import qualified Language.GraphQL.Draft.Printer        as Output
 import           Language.GraphQL.Draft.Syntax
 
 import           Keywords
-
 
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
@@ -31,8 +31,8 @@ main :: IO ()
 main = do
   args <- getArgs
   case parseArgs args of
-    TMQuick   -> runTest 20
-    TMDev     -> runTest 100
+    TMQuick   -> runTest 100
+    TMDev     -> runTest 500
     TMRelease -> runTest 1000
   where
     parseArgs = foldr parseArg TMDev
@@ -42,7 +42,9 @@ main = do
       _         -> TMDev
 
 runTest :: TestLimit -> IO ()
-runTest = void . tests
+runTest limit = do
+  allGood <- tests limit
+  unless allGood exitFailure
 
 tests :: TestLimit -> IO Bool
 tests nTests =
@@ -55,29 +57,28 @@ tests nTests =
     ++ Keywords.primitiveTests
 
 propParserPrettyPrinter :: TestLimit -> Property
-propParserPrettyPrinter = mkPropParserPrinter $ prettyPrinter . executableDocument
+propParserPrettyPrinter = mkPropParserPrinter $ prettyPrinter . Output.executableDocument
   where
     prettyPrinter :: PP.Doc T.Text -> T.Text
     prettyPrinter = PP.renderStrict . PP.layoutPretty PP.defaultLayoutOptions
 
 propParserTextPrinter :: TestLimit -> Property
-propParserTextPrinter = mkPropParserPrinter $ TB.run . executableDocument
+propParserTextPrinter = mkPropParserPrinter $ TB.run . Output.executableDocument
 
 propParserLazyTextPrinter :: TestLimit -> Property
-propParserLazyTextPrinter = mkPropParserPrinter $ TL.toStrict . TL.toLazyText . executableDocument
+propParserLazyTextPrinter = mkPropParserPrinter $ TL.toStrict . TL.toLazyText . Output.executableDocument
 
 propParserBSPrinter :: TestLimit -> Property
-propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . executableDocument
+propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . Output.executableDocument
 
 mkPropParserPrinter :: (ExecutableDocument Name -> T.Text) -> (TestLimit -> Property)
 mkPropParserPrinter printer = \space ->
   withTests space $ property $ do
     xs <- forAll genExecutableDocument
     let rendered = printer xs
-    either onError (xs ===) $ parseExecutableDoc rendered
+    either onError (xs ===) $ Input.parseExecutableDoc rendered
   where
     onError (T.unpack -> errorMsg) = do
-      liftIO $ putStrLn errorMsg
       footnote errorMsg
       failure
 

@@ -10,13 +10,12 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Syntax
 class Print a
 instance Print Name
 class (Monoid a, IsString a) => Printer a where
-  stringP  :: String -> a
   textP    :: Text -> a
   charP    :: Char -> a
   intP     :: Integer -> a
   doubleP  :: Scientific -> a
 
-  {-# MINIMAL stringP, textP, charP, intP, doubleP #-}
+  {-# MINIMAL textP, charP, intP, doubleP #-}
 
   nameP    :: Name -> a
   nameP    = textP . unName

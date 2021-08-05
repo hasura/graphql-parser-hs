@@ -4,42 +4,67 @@
 
 module Keywords (primitiveTests) where
 
+import           Data.Foldable                  (for_)
 import           Data.String
-import           Data.Text                      (unpack)
+import           Data.Text                      (singleton, unpack)
 import           Data.Void
 import           Hedgehog
-import           Text.Builder                   (run)
+import           Text.Builder                   (Builder, run)
 
 import           Language.GraphQL.Draft.Parser
 import           Language.GraphQL.Draft.Syntax
 
 import qualified Language.GraphQL.Draft.Printer as P
 
+
 primitiveTests :: IsString s => [(s, Property)]
 primitiveTests =
-  [ ("property [ parse (print nameValue) == nameValue ]", propNullNameValue)
-  , ("property [ parse (print nameBool) == nameBool ]",   propBoolNameValue)
-  , ("property [ parse (print nameName) == nameName ]",   propNullNameName)
+  [ ("a \"null\" prefix doesn't prevent parsing a name", withTests 1 propNullNameName)
+  , ("a \"null\" prefix doesn't prevent parsing an enum name", withTests 1 propNullNameValue)
+  , ("a \"true\" prefix doesn't prevent parsing an enum name", withTests 1 propBoolNameValue)
+  , ("a string containing \\NUL is handled correctly", withTests 1 propHandleNulString)
+  , ("a string containing \\n is handled correctly", withTests 1 propHandleNewlineString)
+  , ("a string containing \\x0011 is handled correctly", withTests 1 propHandleControlString)
+  , ("all unicode characters are supported", withTests 1 propHandleUnicodeCharacters)
   ]
 
 
 propNullNameValue :: Property
-propNullNameValue = property $ either (fail . unpack) (ast ===) astRoundTrip
-  where
-    astRoundTrip = runParser value printed
-    printed      = run $ P.value ast
-    ast          = VList [VEnum $ EnumValue $$(litName "nullColumn")] :: Value Void
+propNullNameValue = property $ testRoundTripValue $ VList [VEnum $ EnumValue $$(litName "nullColumn")]
 
 propBoolNameValue :: Property
-propBoolNameValue = property $ either (fail . unpack) (ast ===) astRoundTrip
-  where
-    astRoundTrip = runParser value printed
-    printed      = run $ P.value ast
-    ast          = VList [VEnum $ EnumValue $$(litName "trueColumn")] :: Value Void
+propBoolNameValue = property $ testRoundTripValue $ VList [VEnum $ EnumValue $$(litName "trueColumn")]
 
 propNullNameName :: Property
-propNullNameName = property $ either (fail . unpack) (ast ===) astRoundTrip
+propNullNameName = property $ testRoundTrip nameParser P.nameP $$(litName "nullColumntwo")
+
+propHandleNulString :: Property
+propHandleNulString = property $ testRoundTripValue $ VString "\NUL"
+
+propHandleNewlineString :: Property
+propHandleNewlineString = property $ testRoundTripValue $ VString "\n"
+
+propHandleControlString :: Property
+propHandleControlString = property $ testRoundTripValue $ VString "\x0011"
+
+propHandleUnicodeCharacters :: Property
+propHandleUnicodeCharacters = property $ for_ [minBound..maxBound] \c ->
+  testRoundTripValue $ VString $ singleton c
+
+
+testRoundTripValue :: Value Void -> PropertyT IO ()
+testRoundTripValue = testRoundTrip value P.value
+
+testRoundTrip
+  :: (Show a, Eq a)
+  => Parser a
+  -> (a -> Builder)
+  -> a
+  -> PropertyT IO ()
+testRoundTrip parser printer ast = either onError (ast ===) astRoundTrip
   where
-    astRoundTrip = runParser nameParser printed
-    printed      = run $ P.nameP ast
-    ast          = $$(litName "nullColumntwo")
+    astRoundTrip = runParser parser printed
+    printed      = run $ printer ast
+    onError e = do
+      footnote $ show printed
+      fail $ unpack e

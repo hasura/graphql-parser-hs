@@ -204,11 +204,13 @@ stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
     jstring_ :: Parser Text
     jstring_ = scan False go <* anyChar
 
-    go a c
-      | a = Just False
-      | c == '"' = Nothing
-      | otherwise = let a' = c == backslash
-                    in Just a'
+    go previousWasEscapingCharacter current
+      -- if the previous character was an escaping character, we skip this one
+      | previousWasEscapingCharacter = Just False
+      -- otherwise, if we find an unescaped quote, we've reached the end
+      | current == '"' = Nothing
+      -- otherwise, we continue, and track whether the current character is an escaping backslash
+      | otherwise = Just $ current == backslash
       where backslash = '\\'
 
     -- | Unescape a string.
