@@ -21,7 +21,8 @@ jobs:
           command: cabal new-build
       - run:
           name: Run tests
-          command: cabal new-test --test-options release
+          command: cabal run graphql-parser-test -- release
+          no_output_timeout: 20m
       - save_cache:
           name: Cache Dependencies
           key: cabal-store-v2-{{ checksum "cabal.project" }}-{{ checksum "graphql-parser.cabal" }}
