@@ -1,21 +1,24 @@
 module Language.GraphQL.Draft.Printer where
 
-import qualified Data.HashMap.Strict           as M
 
-import qualified Data.Aeson                    as J
-import           Data.Bool                     (bool)
-import qualified Data.ByteString.Builder       as BS
-import           Data.HashMap.Strict           (HashMap)
-import           Data.List                     (intersperse, sort)
-import           Data.Scientific
-import           Data.String                   (IsString)
-import           Data.Text                     (Text, pack)
-import qualified Data.Text.Lazy                as LT hiding (singleton)
-import qualified Data.Text.Lazy.Builder        as LT
-import qualified Data.Text.Lazy.Encoding       as LT
-import qualified Data.Text.Prettyprint.Doc     as PP
-import           Data.Void
-import qualified Text.Builder                  as Text
+import qualified Data.Aeson                         as J
+import           Data.Bool                          (bool)
+import qualified Data.ByteString.Builder            as BS
+import qualified Data.ByteString.Builder.Scientific as BSBS
+import           Data.HashMap.Strict                (HashMap)
+import qualified Data.HashMap.Strict                as M
+import           Data.List                          (intersperse, sort)
+import           Data.Scientific                    (Scientific)
+import           Data.String                        (IsString)
+import           Data.Text                          (Text)
+import qualified Data.Text.Lazy                     as LT hiding (singleton)
+import qualified Data.Text.Lazy.Builder             as LT
+import qualified Data.Text.Lazy.Builder.Int         as LTBI
+import qualified Data.Text.Lazy.Builder.Scientific  as LTBS
+import qualified Data.Text.Lazy.Encoding            as LTE
+import qualified Data.Text.Prettyprint.Doc          as PP
+import           Data.Void                          (Void, absurd)
+import qualified Text.Builder                       as Text
 
 import           Language.GraphQL.Draft.Syntax
 
@@ -37,7 +40,7 @@ class (Monoid a, IsString a) => Printer a where
   selectionSetP = selectionSet
 
 instance Printer BS.Builder where
-  textP = LT.encodeUtf8Builder . LT.fromStrict
+  textP = LTE.encodeUtf8Builder . LT.fromStrict
   {-# INLINE textP #-}
 
   charP = BS.charUtf8
@@ -46,7 +49,7 @@ instance Printer BS.Builder where
   intP = BS.integerDec
   {-# INLINE intP #-}
 
-  doubleP = BS.stringUtf8 . show
+  doubleP = BSBS.scientificBuilder
   {-# INLINE doubleP #-}
 
 instance Printer LT.Builder where
@@ -56,10 +59,10 @@ instance Printer LT.Builder where
   charP   = LT.singleton
   {-# INLINE charP #-}
 
-  intP    = LT.fromString . show
+  intP    = LTBI.decimal
   {-# INLINE intP #-}
 
-  doubleP = LT.fromString . show
+  doubleP = LTBS.scientificBuilder
   {-# INLINE doubleP #-}
 
 instance Printer (PP.Doc Text) where
@@ -72,7 +75,7 @@ instance Printer (PP.Doc Text) where
   intP          = PP.pretty
   {-# INLINE intP #-}
 
-  doubleP sc    = PP.pretty $ pack $ show sc
+  doubleP       = PP.pretty . LT.toStrict . LT.toLazyText . LTBS.scientificBuilder
   {-# INLINE doubleP #-}
 
   nameP         = PP.pretty
@@ -242,7 +245,7 @@ value = \case
 
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
-stringValue s = textP $ LT.toStrict $ LT.decodeUtf8 $ J.encode s
+stringValue s = textP $ LT.toStrict $ LTE.decodeUtf8 $ J.encode s
 
 listValue :: (Print var, Printer a) => [Value var] -> a
 listValue xs = mconcat [ charP '[' , li , charP ']' ]
