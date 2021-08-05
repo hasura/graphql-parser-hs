@@ -75,7 +75,10 @@ instance Printer (PP.Doc Text) where
   intP          = PP.pretty
   {-# INLINE intP #-}
 
-  doubleP       = PP.pretty . LT.toStrict . LT.toLazyText . LTBS.scientificBuilder
+  -- NOTE: @prettyprinter@ constructs its 'Int', 'Float', etc. instances with
+  -- 'unsafeViaShow', so it fine for us to use it here since 'Scientific'
+  -- satisfies the requirement that the 'Show' instance must not have newlines.
+  doubleP       = PP.unsafeViaShow
   {-# INLINE doubleP #-}
 
   nameP         = PP.pretty
