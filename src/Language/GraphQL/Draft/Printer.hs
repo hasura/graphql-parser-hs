@@ -236,19 +236,23 @@ variableP v = charP '$' <> printP v
 
 value :: (Print var, Printer a) => Value var -> a
 value = \case
-  VVariable v -> variableP v
-  VInt i      -> intP i
-  VFloat d    -> doubleP d
-  VString s   -> stringValue s
-  VBoolean b  -> fromBool b
-  VNull       -> "null"
-  VList xs    -> listValue xs
-  VObject o   -> objectValue o
-  VEnum ev    -> nameP $ unEnumValue ev
+  VVariable v    -> variableP v
+  VInt i         -> intP i
+  VFloat d       -> doubleP d
+  VString s      -> stringValue s
+  VBlockString s -> blockStringValue s
+  VBoolean b     -> fromBool b
+  VNull          -> "null"
+  VList xs       -> listValue xs
+  VObject o      -> objectValue o
+  VEnum ev       -> nameP $ unEnumValue ev
 
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
 stringValue s = textP $ LT.toStrict $ LTE.decodeUtf8 $ J.encode s
+
+blockStringValue :: Printer a => Text -> a
+blockStringValue t = textP "\"\"\"\n" <> textP t <> textP "\n\"\"\""
 
 listValue :: (Print var, Printer a) => [Value var] -> a
 listValue xs = mconcat [ charP '[' , li , charP ']' ]

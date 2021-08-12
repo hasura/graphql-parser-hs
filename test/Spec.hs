@@ -23,6 +23,7 @@ import qualified Language.GraphQL.Draft.Printer        as Output
 import           Language.GraphQL.Draft.Syntax
 
 import           Keywords
+import           BlockStrings
 
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
@@ -43,8 +44,10 @@ main = do
 
 runTest :: TestLimit -> IO ()
 runTest limit = do
-  allGood <- tests limit
-  unless allGood exitFailure
+
+  allGood1 <- tests limit
+  allGood2 <- blockTest
+  unless (allGood1 && allGood2) exitFailure
 
 tests :: TestLimit -> IO Bool
 tests nTests =
@@ -74,13 +77,20 @@ propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . Outp
 mkPropParserPrinter :: (ExecutableDocument Name -> T.Text) -> (TestLimit -> Property)
 mkPropParserPrinter printer = \space ->
   withTests space $ property $ do
-    xs <- forAll genExecutableDocument
-    let rendered = printer xs
-    either onError (xs ===) $ Input.parseExecutableDoc rendered
+    someRandomDoc <- forAll genExecutableDocument
+    let rendered = printer <$> Input.parseExecutableDoc (printer someRandomDoc)
+    -- the reason why we render twice is to make sure that
+    -- when comparing we already "normalized" the block
+    -- string, so each reparsing of the blockstring will no
+    -- longer be different because the indentations are
+    -- already at the minimun possible.
+    let reRendered = printer <$> (Input.parseExecutableDoc =<< rendered)
+    case (rendered, reRendered) of
+        (Left  e, _      ) -> onError e
+        (_      , Left  e) -> onError e
+        (Right a, Right b) -> a === b
   where
-    onError (T.unpack -> errorMsg) = do
-      footnote errorMsg
-      failure
+    onError (T.unpack -> errorMsg) = footnote errorMsg >> failure
 
 bsToTxt :: BL.ByteString -> T.Text
 bsToTxt = TL.toStrict . TL.decodeUtf8With TE.lenientDecode

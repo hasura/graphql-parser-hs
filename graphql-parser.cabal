@@ -64,6 +64,7 @@ test-suite graphql-parser-test
   main-is: Spec.hs
   other-modules:
     Keywords
+    BlockStrings
   build-depends:
     , base >=4.7 && <5
     , graphql-parser

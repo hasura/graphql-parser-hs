@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns #-}
 
 -- | Description: Parse text into GraphQL ASTs
 module Language.GraphQL.Draft.Parser
@@ -18,7 +19,9 @@ module Language.GraphQL.Draft.Parser
   , parseGraphQLType
 
   , Parser
+
   , runParser
+  , blockString
   ) where
 
 import qualified Data.Attoparsec.ByteString    as A
@@ -26,6 +29,7 @@ import qualified Data.Attoparsec.Text          as AT
 import qualified Data.HashMap.Strict           as M
 import qualified Data.Text                     as T
 import qualified Data.Text.Encoding            as T
+import qualified Data.Text.Lazy.Builder        as TB
 
 import           Control.Applicative
 import           Control.Monad
@@ -39,7 +43,10 @@ import           Data.Functor
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Scientific               (Scientific)
 import           Data.Text                     (Text, find)
+
+import           Data.Text.Lazy                (toStrict)
 import           Data.Void                     (Void)
+import           Data.Maybe                    (fromMaybe)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
 
@@ -180,15 +187,15 @@ number = do
 -- explicit types use the `typedValue` parser.
 value :: Variable var => Parser (AST.Value var)
 value = tok (
-      AST.VVariable <$> variable
+      AST.VVariable    <$> variable
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull     <$  literal "null"
-  <|> AST.VBoolean  <$> booleanLiteral
-  <|> AST.VString   <$> stringLiteral
-  -- `true` and `false` have been tried before
-  <|> AST.VEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VList     <$> listLiteral
-  <|> AST.VObject   <$> objectLiteral
+  <|> AST.VNull        <$  literal "null"
+  <|> AST.VBoolean     <$> booleanLiteral
+  <|> AST.VBlockString <$> blockString
+  <|> AST.VString      <$> stringLiteral
+  <|> AST.VEnum        <$> (fmap AST.EnumValue nameParser <?> "name") -- `true` and `false` have been tried before
+  <|> AST.VList        <$> listLiteral
+  <|> AST.VObject      <$> objectLiteral
   <?> "value")
 
 booleanLiteral :: Parser Bool
@@ -198,27 +205,30 @@ booleanLiteral
   <?> "boolean"
 
 stringLiteral :: Parser Text
-stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
-  where
-    -- | Parse a string without a leading quote, ignoring any escaped characters.
-    jstring_ :: Parser Text
-    jstring_ = scan False go <* anyChar
+stringLiteral = 
+  unescapeText =<< (char '"' *> jstring_ <?> "string")
+ where
+  -- | Parse a string without a leading quote, ignoring any escaped characters.
+  jstring_ :: Parser Text
+  jstring_ = scan False go <* anyChar
 
-    go previousWasEscapingCharacter current
-      -- if the previous character was an escaping character, we skip this one
-      | previousWasEscapingCharacter = Just False
-      -- otherwise, if we find an unescaped quote, we've reached the end
-      | current == '"' = Nothing
-      -- otherwise, we continue, and track whether the current character is an escaping backslash
-      | otherwise = Just $ current == backslash
-      where backslash = '\\'
+  go :: Bool -> Char -> Maybe Bool
+  go previousWasEscapingCharacter current
+    -- if the previous character was an escaping character, we skip this one
+    | previousWasEscapingCharacter = Just False
+    -- otherwise, if we find an unescaped quote, we've reached the end
+    | current == '"' = Nothing
+    -- otherwise, we continue, and track whether the current character is an escaping backslash
+    | otherwise = Just $ current == backslash
+    where backslash = '\\'
 
-    -- | Unescape a string.
-    --
-    -- Turns out this is really tricky, so we're going to cheat by
-    -- reconstructing a literal string (by putting quotes around it) and
-    -- delegating all the hard work to Aeson.
-    unescapeText str = either fail pure $ A.parseOnly jstring ("\"" <> T.encodeUtf8 str <> "\"")
+  -- | Unescape a string.
+  --
+  -- Turns out this is really tricky, so we're going to cheat by
+  -- reconstructing a literal string (by putting quotes around it) and
+  -- delegating all the hard work to Aeson.
+  unescapeText :: Text -> Parser Text
+  unescapeText str = either fail pure $ A.parseOnly jstring ("\"" <> T.encodeUtf8 str <> "\"")
 
 listLiteral :: Variable var => Parser [AST.Value var]
 listLiteral = brackets (many value) <?> "list"
@@ -316,7 +326,7 @@ objectTypeDefinition = AST.ObjectTypeDefinition
 interfaces :: Parser [AST.Name]
 interfaces = tok "implements" *> nameParser `sepBy1` tok "&"
 
-fieldDefinitions :: Parser [(AST.FieldDefinition AST.InputValueDefinition)]
+fieldDefinitions :: Parser [AST.FieldDefinition AST.InputValueDefinition]
 fieldDefinitions = braces $ many1 fieldDefinition
 
 fieldDefinition :: Parser (AST.FieldDefinition AST.InputValueDefinition)
@@ -479,3 +489,40 @@ between open close p = tok open *> p <* tok close
 -- `empty` /= `pure mempty` for `Parser`.
 optempty :: Monoid a => Parser a -> Parser a
 optempty = option mempty
+
+-- | Parses strings delimited by triple quotes.
+blockString :: Parser Text
+blockString = do
+  _ <- triplequotes <?> "opening triple quotes"
+  str <- T.lines . T.pack <$> AT.manyTill AT.anyChar triplequotes <?> "the body of a triple quoted string"
+  let !cleanLines = dropEmptyLines str
+  let smallest = foldr selectSmallest maxBound cleanLines -- counts indentation and selects the smallest one from all lines
+  let fixedLines = foldr (fixIdentation smallest) "" cleanLines -- removes the common indentation from all lines.
+  return (T.strip . toStrict . TB.toLazyText $ fixedLines)
+ where
+  -- used to remove the common indentation from each line.
+  fixIdentation :: Int -> Text -> TB.Builder -> TB.Builder 
+  fixIdentation smallest a acc =
+    let new = TB.fromText $ T.dropWhileEnd (== ' ') (T.drop smallest a)
+    in new <> "\n" <> acc
+  -- used to accumulate the smallest indentation
+  selectSmallest :: Text -> Int -> Int
+  selectSmallest t acc =
+    let new = countIndentation t
+     in if (not $ onlySpaces t) && new < acc
+       then new
+       else acc
+  -- used to count indentation in a single a line
+  countIndentation :: Text -> Int
+  countIndentation = fromMaybe 0 . T.findIndex (/= ' ')
+  triplequotes = AT.string "\"\"\""
+
+onlySpaces :: Text -> Bool
+onlySpaces = T.all (== ' ')
+
+dropEmptyLines :: [Text] -> [Text]
+dropEmptyLines =  
+  dropWhileEnd cond . dropWhile cond
+ where
+  cond l = T.null l || onlySpaces l
+  dropWhileEnd p = foldr (\x xs -> if p x && null xs then [] else x : xs) []

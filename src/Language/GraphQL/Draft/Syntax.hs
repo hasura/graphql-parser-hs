@@ -320,6 +320,7 @@ data Value var
   | VInt Integer
   | VFloat Scientific
   | VString Text
+  | VBlockString Text
   | VBoolean Bool
   | VEnum EnumValue
   | VList [Value var]
@@ -328,15 +329,16 @@ data Value var
 instance Hashable var => Hashable (Value var)
 instance NFData   var => NFData   (Value var)
 instance Lift var => Lift (Value var) where
-  liftTyped (VVariable a) = [|| VVariable a ||]
-  liftTyped VNull         = [|| VNull ||]
-  liftTyped (VInt a)      = [|| VInt a ||]
-  liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(TH.liftTyped $ toRational a) ||]
-  liftTyped (VString a)   = [|| VString a ||]
-  liftTyped (VBoolean a)  = [|| VBoolean a ||]
-  liftTyped (VEnum a)     = [|| VEnum a ||]
-  liftTyped (VList a)     = [|| VList a ||]
-  liftTyped (VObject a)   = [|| VObject $$(liftTypedHashMap a) ||]
+  liftTyped (VVariable a)    = [|| VVariable a ||]
+  liftTyped VNull            = [|| VNull ||]
+  liftTyped (VInt a)         = [|| VInt a ||]
+  liftTyped (VFloat a)       = [|| VFloat $ fromRational $$(TH.liftTyped $ toRational a) ||]
+  liftTyped (VString a)      = [|| VString a ||]
+  liftTyped (VBlockString a) = [|| VBlockString a ||]
+  liftTyped (VBoolean a)     = [|| VBoolean a ||]
+  liftTyped (VEnum a)        = [|| VEnum a ||]
+  liftTyped (VList a)        = [|| VList a ||]
+  liftTyped (VObject a)      = [|| VObject $$(liftTypedHashMap a) ||]
 
 literal :: Value Void -> Value var
 literal = fmap absurd

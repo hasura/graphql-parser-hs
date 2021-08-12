@@ -9,6 +9,7 @@ import           Hedgehog
 import qualified Data.HashMap.Strict           as M
 import qualified Hedgehog.Gen                  as Gen
 import qualified Hedgehog.Range                as Range
+import qualified Data.Text                     as T
 
 import           Language.GraphQL.Draft.Syntax
 
@@ -87,6 +88,7 @@ genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
                    , VEnum <$> genEnumValue
                    , VFloat . fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
                    , VString <$> genText
+                   , VBlockString <$> genBlockText
                    , VBoolean <$> Gen.bool
                    ] <> [VVariable <$> var | var <- varGens]
 
@@ -101,6 +103,47 @@ genObjectValue genVal = M.fromList <$> mkList genObjectField
   where
     genObjectField = (,) <$> genName <*> genVal
 
+genBlockText :: Gen Text
+genBlockText =
+  Gen.choice [ simple, genLines ]
+ where
+  simple = do
+    Gen.frequency
+      [ (10, Gen.text (Range.linear 1 100) Gen.unicode)
+      , (4, genIndentation)
+      , (10, return "\n")
+      , (4, return "")
+      , (5, genMinIndentedText 10)
+      ]
+  genLines :: Gen Text
+  genLines = do
+    n <- Gen.int (Range.linear 1 100)
+    x <- Gen.list (Range.linear 1 n)
+          (Gen.frequency
+            [ (10, Gen.text (Range.linear 1 10) Gen.unicode)
+            , (4, genIndentation)
+            , (5, return "\n")
+            , (4, return "")
+            , (5, genMinIndentedText 10)
+            ])
+    return (T.unlines x)
+
+-- | Like `genText` but with random indentation in the start of the string according
+-- to a minimun value.
+genMinIndentedText :: Int -> Gen Text
+genMinIndentedText min_ = do
+  let minIndent = T.replicate min_ " "
+  i <- genIndentation
+  t <- genText
+  return (minIndent <> i <> t)
+
+genIndentation :: Gen Text
+genIndentation = do
+  n <- Gen.int (Range.linear 1 30)
+  T.concat <$> Gen.choice
+    [ Gen.list (Range.linear 1 n) (return " ")
+    , Gen.list (Range.linear 1 (n * 100)) (return " ")
+    ]
 
 
 -- | *Definitions*
