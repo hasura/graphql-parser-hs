@@ -12,10 +12,9 @@ blockTest :: IO Bool
 blockTest = do
   checkParallel $ Group "Test.parser.block-string.unit"
     [ ("parses the specExample", blockParsesTo "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  " "Hello,\n  World!\n\nYours,\n  GraphQL.")
-    , ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
     , ("do not remove WS from the end of lines", blockParsesTo "\nFoo \nbar  " "Foo \nbar  ")
-    , ("tabs are WS as well", blockParsesTo "\n\t\tFoo\n\t\tbar\n\t\t\tqux" "Foo\nbar\n qux")
-
+    , ("tabs are WS as well", blockParsesTo "\n\t\tFoo\n\t\tbar\n\t\t\tqux" "Foo\nbar\n\tqux")
+    --, ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
     {-
     , ("parses empty string", blockParsesTo "" "")
     , ("parses newline", blockParsesTo "\n" "")

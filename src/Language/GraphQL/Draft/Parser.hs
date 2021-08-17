@@ -494,36 +494,50 @@ optempty = option mempty
 -- http://spec.graphql.org/June2018/#sec-String-Value
 blockString :: Parser Text
 blockString = do
-  _ <- triplequotes <?> "opening triple quotes"
-  str <- T.lines . T.pack <$> AT.manyTill AT.anyChar triplequotes <?> "the body of a triple quoted string"
-  let !cleanLines = dropEmptyLines str
-  let smallest = foldr selectSmallest maxBound cleanLines -- counts indentation and selects the smallest one from all lines
-  let fixedLines = foldr (fixIndentation smallest) "" cleanLines -- removes the common indentation from all lines.
-  return (T.strip . toStrict . TB.toLazyText $ fixedLines)
+  _ <- tripleQuotes <?> "opening triple quotes"
+  lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotes <?> "the body of a triple quoted string"
+  let smallest = foldr selectSmallest maxBound (drop 1 lines_)
+  let firstLine = lines_ !! 0
+  let fixedLines_ = foldr (fixIndentation smallest) Nothing (drop 1 lines_)
+  case fixedLines_ of
+    Nothing -> undefined
+    Just fixedLines -> do
+      let x = toStrict . TB.toLazyText $ TB.fromText firstLine <> fixedLines
+      return $ sanitizeStart . sanitizeEnd $ x
+
  where
+  sanitizeEnd t = if T.last t == '\n' then T.take (T.length t - 1) t else t
+  sanitizeStart t = if T.head t == '\n' then T.tail t else t
+
   -- used to remove the common indentation from each line.
-  fixIndentation :: Int -> Text -> TB.Builder -> TB.Builder 
-  fixIndentation smallest a acc =
-    let new = TB.fromText $ T.dropWhileEnd (== ' ') (T.drop smallest a)
-    in new <> "\n" <> acc
+  fixIndentation :: Int -> Text -> Maybe TB.Builder -> Maybe TB.Builder 
+  fixIndentation smallest a Nothing =
+    let new = TB.fromText (T.drop smallest a)
+    in Just new
+  fixIndentation smallest a (Just acc) =
+    let new = TB.fromText (T.drop smallest a)
+    in Just $ new <> "\n" <> acc
   -- used to accumulate the smallest indentation
   selectSmallest :: Text -> Int -> Int
   selectSmallest t acc =
     let new = countIndentation t
-     in if (not $ onlySpaces t) && new < acc
+     in if (not $ T.all ws t) && new < acc
        then new
        else acc
   -- used to count indentation in a single a line
   countIndentation :: Text -> Int
-  countIndentation = fromMaybe 0 . T.findIndex (/= ' ')
-  triplequotes = AT.string "\"\"\""
+  countIndentation = fromMaybe 0 . T.findIndex (not . ws)
+  tripleQuotes = AT.string "\"\"\""
 
-onlySpaces :: Text -> Bool
-onlySpaces = T.all (== ' ')
-
-dropEmptyLines :: [Text] -> [Text]
-dropEmptyLines =  
+  {-
+  -- drop first line if it is empty
+  -- drop last line if it is empty
   dropWhileEnd cond . dropWhile cond
  where
-  cond l = T.null l || onlySpaces l
+  cond l = T.null l || T.all ws l
   dropWhileEnd p = foldr (\x xs -> if p x && null xs then [] else x : xs) []
+  -}
+
+-- whitespace
+ws :: Char -> Bool
+ws c = c == ' ' || c == '\t'
