@@ -14,12 +14,12 @@ blockTest = do
     [ ("parses the specExample", blockParsesTo "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  " "Hello,\n  World!\n\nYours,\n  GraphQL.")
     , ("do not remove WS from the end of lines", blockParsesTo "\nFoo \nbar  " "Foo \nbar  ")
     , ("tabs are WS as well", blockParsesTo "\n\t\tFoo\n\t\tbar\n\t\t\tqux" "Foo\nbar\n\tqux")
-    --, ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
-    {-
     , ("parses empty string", blockParsesTo "" "")
     , ("parses newline", blockParsesTo "\n" "")
-    , ("parses newlines in empty block", blockParsesTo " \n   \n  \n            \n\n " "")
     , ("parses very simples not-empty block", blockParsesTo "x" "x")
+    --, ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
+    --, ("parses newlines in empty block", blockParsesTo " \n   \n  \n            \n\n " "")
+    {-
     , ("parses block string containing a valid normal string inside", blockParsesTo "  \"i'm like a JSON string\"   " "\"i'm like a JSON string\"")
     , ("parses not-empty block with newlines", blockParsesTo " \n   \n  \n x   \n y   \n\n " "x\ny")
     , ("ignores escaping", blockParsesTo "  \\  " "\\") -- this is a single \

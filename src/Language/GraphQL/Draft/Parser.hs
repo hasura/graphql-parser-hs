@@ -496,27 +496,31 @@ blockString :: Parser Text
 blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotes <?> "the body of a triple quoted string"
-  let smallest = foldr selectSmallest maxBound (drop 1 lines_)
-  let firstLine = lines_ !! 0
-  let fixedLines_ = foldr (fixIndentation smallest) Nothing (drop 1 lines_)
+  let tail_ = drop 1 lines_
+  let smallest = foldr selectSmallest maxBound tail_
+  let fixedLines_ = foldr (fixIndentation smallest) Nothing tail_
   case fixedLines_ of
-    Nothing -> undefined
+    Nothing -> 
+      if lines_ == []
+      then return ""
+      else return $ head lines_
     Just fixedLines -> do
-      let x = toStrict . TB.toLazyText $ TB.fromText firstLine <> fixedLines
+      let x = toStrict . TB.toLazyText $ TB.fromText (head lines_) <> fixedLines
       return $ sanitizeStart . sanitizeEnd $ x
 
  where
+
   sanitizeEnd t = if T.last t == '\n' then T.take (T.length t - 1) t else t
   sanitizeStart t = if T.head t == '\n' then T.tail t else t
 
   -- used to remove the common indentation from each line.
   fixIndentation :: Int -> Text -> Maybe TB.Builder -> Maybe TB.Builder 
-  fixIndentation smallest a Nothing =
+  fixIndentation smallest a x = 
     let new = TB.fromText (T.drop smallest a)
-    in Just new
-  fixIndentation smallest a (Just acc) =
-    let new = TB.fromText (T.drop smallest a)
-    in Just $ new <> "\n" <> acc
+     in case x of
+      Nothing -> Just new
+      Just acc -> Just $ new <> "\n" <> acc
+
   -- used to accumulate the smallest indentation
   selectSmallest :: Text -> Int -> Int
   selectSmallest t acc =
@@ -524,19 +528,12 @@ blockString = do
      in if (not $ T.all ws t) && new < acc
        then new
        else acc
+
   -- used to count indentation in a single a line
   countIndentation :: Text -> Int
   countIndentation = fromMaybe 0 . T.findIndex (not . ws)
-  tripleQuotes = AT.string "\"\"\""
 
-  {-
-  -- drop first line if it is empty
-  -- drop last line if it is empty
-  dropWhileEnd cond . dropWhile cond
- where
-  cond l = T.null l || T.all ws l
-  dropWhileEnd p = foldr (\x xs -> if p x && null xs then [] else x : xs) []
-  -}
+  tripleQuotes = AT.string "\"\"\""
 
 -- whitespace
 ws :: Char -> Bool
