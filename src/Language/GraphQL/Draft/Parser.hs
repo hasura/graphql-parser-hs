@@ -495,6 +495,10 @@ blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotes <?> "the body of a triple quoted string"
   let tail_ = drop 1 lines_
+  -- TODO the following line, as suggested didn't seem to
+  -- work on a first attemp
+  --let smallest = foldr min maxBound (countIndentation <$> tail_)
+  --let smallest = foldr min maxBound (countIndentation <$> tail_)
   let smallest = foldr selectSmallest maxBound tail_
   let fixedLines_ = foldr (fixIndentation smallest) Nothing tail_
   case fixedLines_ of
@@ -538,7 +542,6 @@ blockString = do
        then new
        else acc
 
-  -- used to count indentation in a single a line
   countIndentation :: Text -> Int
   countIndentation = fromMaybe 0 . T.findIndex (not . ws)
 
