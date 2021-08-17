@@ -44,7 +44,6 @@ main = do
 
 runTest :: TestLimit -> IO ()
 runTest limit = do
-
   allGood1 <- tests limit
   allGood2 <- blockTest
   unless (allGood1 && allGood2) exitFailure

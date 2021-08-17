@@ -190,12 +190,12 @@ value = tok (
       AST.VVariable    <$> variable
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
   <|> AST.VNull        <$  literal "null"
-  <|> AST.VBoolean     <$> booleanLiteral
-  <|> AST.VBlockString <$> blockString
-  <|> AST.VString      <$> stringLiteral
-  <|> AST.VEnum        <$> (fmap AST.EnumValue nameParser <?> "name") -- `true` and `false` have been tried before
-  <|> AST.VList        <$> listLiteral
-  <|> AST.VObject      <$> objectLiteral
+  <|> AST.VBoolean                         <$> booleanLiteral
+  <|> AST.VString AST.BlockStringCharacter <$> blockString
+  <|> AST.VString AST.StringCharacter      <$> stringLiteral
+  <|> AST.VEnum                            <$> (fmap AST.EnumValue nameParser <?> "name") -- `true` and `false` have been tried before
+  <|> AST.VList                            <$> listLiteral
+  <|> AST.VObject                          <$> objectLiteral
   <?> "value")
 
 booleanLiteral :: Parser Bool
@@ -490,19 +490,20 @@ between open close p = tok open *> p <* tok close
 optempty :: Monoid a => Parser a -> Parser a
 optempty = option mempty
 
--- | Parses strings delimited by triple quotes.
+-- | Parses strings delimited by triple quotes. 
+-- http://spec.graphql.org/June2018/#sec-String-Value
 blockString :: Parser Text
 blockString = do
   _ <- triplequotes <?> "opening triple quotes"
   str <- T.lines . T.pack <$> AT.manyTill AT.anyChar triplequotes <?> "the body of a triple quoted string"
   let !cleanLines = dropEmptyLines str
   let smallest = foldr selectSmallest maxBound cleanLines -- counts indentation and selects the smallest one from all lines
-  let fixedLines = foldr (fixIdentation smallest) "" cleanLines -- removes the common indentation from all lines.
+  let fixedLines = foldr (fixIndentation smallest) "" cleanLines -- removes the common indentation from all lines.
   return (T.strip . toStrict . TB.toLazyText $ fixedLines)
  where
   -- used to remove the common indentation from each line.
-  fixIdentation :: Int -> Text -> TB.Builder -> TB.Builder 
-  fixIdentation smallest a acc =
+  fixIndentation :: Int -> Text -> TB.Builder -> TB.Builder 
+  fixIndentation smallest a acc =
     let new = TB.fromText $ T.dropWhileEnd (== ' ') (T.drop smallest a)
     in new <> "\n" <> acc
   -- used to accumulate the smallest indentation

@@ -87,8 +87,8 @@ genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
                    , VInt . fromIntegral <$> Gen.int32 (Range.linear 1 99999)
                    , VEnum <$> genEnumValue
                    , VFloat . fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
-                   , VString <$> genText
-                   , VBlockString <$> genBlockText
+                   , VString StringCharacter <$> genText
+                   , VString BlockStringCharacter <$> genBlockText
                    , VBoolean <$> Gen.bool
                    ] <> [VVariable <$> var | var <- varGens]
 
@@ -110,26 +110,22 @@ genBlockText =
   simple = do
     Gen.frequency
       [ (10, Gen.text (Range.linear 1 100) Gen.unicode)
-      , (4, genIndentation)
       , (10, return "\n")
-      , (4, return "")
+      , (6, genIndentation)
       , (5, genMinIndentedText 10)
+      , (4, return "")
+      , (3, return " ")
+      , (3, return "\"") -- "
+      , (3, return "\\") -- \
       ]
   genLines :: Gen Text
   genLines = do
     n <- Gen.int (Range.linear 1 100)
-    x <- Gen.list (Range.linear 1 n)
-          (Gen.frequency
-            [ (10, Gen.text (Range.linear 1 10) Gen.unicode)
-            , (4, genIndentation)
-            , (5, return "\n")
-            , (4, return "")
-            , (5, genMinIndentedText 10)
-            ])
+    x <- Gen.list (Range.linear 1 n) simple
     return (T.unlines x)
 
 -- | Like `genText` but with random indentation in the start of the string according
--- to a minimun value.
+-- to a minimum value.
 genMinIndentedText :: Int -> Gen Text
 genMinIndentedText min_ = do
   let minIndent = T.replicate min_ " "
