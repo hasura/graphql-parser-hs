@@ -12,6 +12,11 @@ blockTest :: IO Bool
 blockTest = do
   checkParallel $ Group "Test.parser.block-string.unit"
     [ ("parses the specExample", blockParsesTo "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  " "Hello,\n  World!\n\nYours,\n  GraphQL.")
+    , ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
+    , ("do not remove WS from the end of lines", blockParsesTo "\nFoo \nbar  " "Foo \nbar  ")
+    , ("tabs are WS as well", blockParsesTo "\n\t\tFoo\n\t\tbar\n\t\t\tqux" "Foo\nbar\n qux")
+
+    {-
     , ("parses empty string", blockParsesTo "" "")
     , ("parses newline", blockParsesTo "\n" "")
     , ("parses newlines in empty block", blockParsesTo " \n   \n  \n            \n\n " "")
@@ -22,6 +27,7 @@ blockTest = do
     , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey")
     , ("zero common indentation is possible", blockParsesTo " \naa \n  bbbb \ncccc " "aa\n  bbbb\ncccc")
     , ("common indentation is removed", blockParsesTo " \n   i have 3 \n    i have 4 \n   i also have 3 " "i have 3\n i have 4\ni also have 3")
+    -}
     ]
 
 -- note that this function is only for block strings
