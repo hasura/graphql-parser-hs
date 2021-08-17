@@ -205,30 +205,28 @@ booleanLiteral
   <?> "boolean"
 
 stringLiteral :: Parser Text
-stringLiteral = 
-  unescapeText =<< (char '"' *> jstring_ <?> "string")
- where
-  -- | Parse a string without a leading quote, ignoring any escaped characters.
-  jstring_ :: Parser Text
-  jstring_ = scan False go <* anyChar
+stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
+  where
+    -- | Parse a string without a leading quote, ignoring any escaped characters.
+    jstring_ :: Parser Text
+    jstring_ = scan False go <* anyChar
+    go :: Bool -> Char -> Maybe Bool
+    go previousWasEscapingCharacter current
+      -- if the previous character was an escaping character, we skip this one
+      | previousWasEscapingCharacter = Just False
+      -- otherwise, if we find an unescaped quote, we've reached the end
+      | current == '"' = Nothing
+      -- otherwise, we continue, and track whether the current character is an escaping backslash
+      | otherwise = Just $ current == backslash
+      where backslash = '\\'
 
-  go :: Bool -> Char -> Maybe Bool
-  go previousWasEscapingCharacter current
-    -- if the previous character was an escaping character, we skip this one
-    | previousWasEscapingCharacter = Just False
-    -- otherwise, if we find an unescaped quote, we've reached the end
-    | current == '"' = Nothing
-    -- otherwise, we continue, and track whether the current character is an escaping backslash
-    | otherwise = Just $ current == backslash
-    where backslash = '\\'
-
-  -- | Unescape a string.
-  --
-  -- Turns out this is really tricky, so we're going to cheat by
-  -- reconstructing a literal string (by putting quotes around it) and
-  -- delegating all the hard work to Aeson.
-  unescapeText :: Text -> Parser Text
-  unescapeText str = either fail pure $ A.parseOnly jstring ("\"" <> T.encodeUtf8 str <> "\"")
+    -- | Unescape a string.
+    --
+    -- Turns out this is really tricky, so we're going to cheat by
+    -- reconstructing a literal string (by putting quotes around it) and
+    -- delegating all the hard work to Aeson.
+    unescapeText :: Text -> Parser Text
+    unescapeText str = either fail pure $ A.parseOnly jstring ("\"" <> T.encodeUtf8 str <> "\"")
 
 listLiteral :: Variable var => Parser [AST.Value var]
 listLiteral = brackets (many value) <?> "list"
@@ -504,14 +502,25 @@ blockString = do
       if lines_ == []
       then return ""
       else return $ head lines_
-    Just fixedLines -> do
-      let x = toStrict . TB.toLazyText $ TB.fromText (head lines_) <> fixedLines
-      return $ sanitizeStart . sanitizeEnd $ x
+    Just fixedLines -> 
+      if lines_ == []
+      then do
+        let x = toStrict . TB.toLazyText $ fixedLines
+        return $ sanitizeStart . sanitizeEnd $ x
+      else do
+        let x = toStrict . TB.toLazyText $ TB.fromText (head lines_) <> fixedLines
+        return $ sanitizeStart . sanitizeEnd $ x
 
  where
 
-  sanitizeEnd t = if T.last t == '\n' then T.take (T.length t - 1) t else t
-  sanitizeStart t = if T.head t == '\n' then T.tail t else t
+  sanitizeEnd t = 
+    if T.null t
+       then t
+       else if T.last t == '\n' then T.take (T.length t - 1) t else t
+  sanitizeStart t = 
+    if T.null t
+       then t
+       else if T.head t == '\n' then T.tail t else t
 
   -- used to remove the common indentation from each line.
   fixIndentation :: Int -> Text -> Maybe TB.Builder -> Maybe TB.Builder 

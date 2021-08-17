@@ -14,18 +14,21 @@ blockTest = do
     [ ("parses the specExample", blockParsesTo "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  " "Hello,\n  World!\n\nYours,\n  GraphQL.")
     , ("do not remove WS from the end of lines", blockParsesTo "\nFoo \nbar  " "Foo \nbar  ")
     , ("tabs are WS as well", blockParsesTo "\n\t\tFoo\n\t\tbar\n\t\t\tqux" "Foo\nbar\n\tqux")
+    , ("tabs work with spaces", blockParsesTo "\n\t Foo\n \tbar\n\t\t qux" "Foo\nbar\n qux")
     , ("parses empty string", blockParsesTo "" "")
     , ("parses newline", blockParsesTo "\n" "")
     , ("parses very simples not-empty block", blockParsesTo "x" "x")
+    , ("common indentation is removed", blockParsesTo "\n  a \n   b \n  c " "a \n b \nc ")
+    , ("zero common indentation is possible", blockParsesTo "\na \n b \nc " "a \n b \nc ")
+    , ("single lines works like a string", blockParsesTo "  abc " "  abc ")
+    , ("ignores escaping", blockParsesTo "  \\  " "  \\  ") -- this is a single \
+    , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey  ")
+    , ("", blockParsesTo "\nx\n" "x")
+    , ("", blockParsesTo "\n\n" "")
+    --, ("", blockParsesTo "\n\n\n\n" "\n\n") -- TODO this should not be failing
     --, ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
     --, ("parses newlines in empty block", blockParsesTo " \n   \n  \n            \n\n " "")
     {-
-    , ("parses block string containing a valid normal string inside", blockParsesTo "  \"i'm like a JSON string\"   " "\"i'm like a JSON string\"")
-    , ("parses not-empty block with newlines", blockParsesTo " \n   \n  \n x   \n y   \n\n " "x\ny")
-    , ("ignores escaping", blockParsesTo "  \\  " "\\") -- this is a single \
-    , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey")
-    , ("zero common indentation is possible", blockParsesTo " \naa \n  bbbb \ncccc " "aa\n  bbbb\ncccc")
-    , ("common indentation is removed", blockParsesTo " \n   i have 3 \n    i have 4 \n   i also have 3 " "i have 3\n i have 4\ni also have 3")
     -}
     ]
 

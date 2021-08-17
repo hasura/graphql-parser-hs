@@ -115,13 +115,14 @@ genBlockText =
       , (5, genMinIndentedText 10)
       , (4, return "")
       , (3, return " ")
+      , (6, return "\t")
       , (3, return "\"") -- "
       , (3, return "\\") -- \
       ]
   genLines :: Gen Text
   genLines = do
-    n <- Gen.int (Range.linear 1 100)
-    x <- Gen.list (Range.linear 1 n) simple
+    n <- Gen.int (Range.linear 0 100)
+    x <- Gen.list (Range.linear 0 n) simple
     return (T.unlines x)
 
 -- | Like `genText` but with random indentation in the start of the string according
@@ -135,10 +136,10 @@ genMinIndentedText min_ = do
 
 genIndentation :: Gen Text
 genIndentation = do
-  n <- Gen.int (Range.linear 1 30)
+  n <- Gen.int (Range.linear 0 30)
   T.concat <$> Gen.choice
-    [ Gen.list (Range.linear 1 n) (return " ")
-    , Gen.list (Range.linear 1 (n * 100)) (return " ")
+    [ Gen.list (Range.linear 0 n) (return " ")
+    , Gen.list (Range.linear 0 (n * 100)) (return " ")
     ]
 
 
