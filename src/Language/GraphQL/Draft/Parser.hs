@@ -495,11 +495,12 @@ blockString :: Parser Text
 blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotes <?> "the body of a triple quoted string"
+
+  let headline = if lines_ == [] then "" else head lines_
   let tail_ = drop 1 lines_
+
   let smallest = foldr min maxBound (countIndentation <$> tail_)
   let rlines = foldr (fixIndentation smallest) Nothing tail_
-  let headline = if lines_ == [] then "" else head lines_
-
   case rlines of
     Nothing -> return headline
     Just reformatedLines -> do
@@ -511,18 +512,24 @@ blockString = do
   rebuild :: [Text] -> Text
   rebuild xs = 
     case T.unsnoc $ foldr (\a b -> a<>"\n"<>b) "" xs of
-      Just (t,_) -> t
+      Just (t,_last) -> t -- quick fix so we don't have to check inside the foldr if acc is null
       Nothing -> ""
 
   sanitize xs = 
-    let f = head xs
-        m = reverse $ drop 1 (reverse $ drop 1 xs) -- TODO urgh
-        l = head (reverse xs)
-     in (if allSpace f then [] else [f])
-     <> m
-     <> (if allSpace l then [] else [l])
+    case foldr sanitizeLeft Nothing xs of -- foldr uses sanitizeLeft
+      Nothing -> []
+      Just ys ->
+        case foldl sanitizeRight Nothing ys of -- foldl uses sanitizeRight
+          Nothing -> [] -- this will never happen
+          Just zs -> zs
+   where
+    sanitizeLeft a = \case
+      Nothing -> if allSpace a then Nothing else Just [a]
+      Just acc -> Just (a:acc)
+    sanitizeRight Nothing a = if allSpace a then Nothing else Just [a]
+    sanitizeRight (Just acc) a = Just (acc<>[a])
 
-  allSpace = T.all ws
+  allSpace t = T.null t || T.all ws t
 
   -- used to remove the common indentation from each line.
   fixIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 

@@ -25,12 +25,8 @@ blockTest = do
     , ("", blockParsesTo "\nx\n" "x")
     , ("empty single line", blockParsesTo "" "")
     , ("empty two lines", blockParsesTo "\n" "")
-    , ("empty three lines", blockParsesTo "\n\n" "") -- first is deleted, third is deleted
-    , ("empty four lines", blockParsesTo "\n\n\n" "\n")
-    , ("empty four lines", blockParsesTo "\n\n\n\n" "\n\n")
-    , ("empty four lines", blockParsesTo "\n\n\n\n\n" "\n\n\n")
-    , ("empty four lines", blockParsesTo "\n\n\n\n\n\n" "\n\n\n\n")
-    --, ("empty three lines", blockParsesTo "\n \n \n" "")
+    , ("empty three lines", blockParsesTo "\n\n" "")
+    , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
     ]
 
 -- note that this function is only for block strings
