@@ -25,7 +25,8 @@ blockTest = do
     , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey  ")
     , ("", blockParsesTo "\nx\n" "x")
     , ("", blockParsesTo "\n\n" "")
-    --, ("", blockParsesTo "\n\n\n\n" "\n\n") -- TODO this should not be failing
+    --, ("", blockParsesTo "\n\n\n\n" "\n\n")
+    --, ("", blockParsesTo "\n \n \n\n " " \n \n")
     --, ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
     --, ("parses newlines in empty block", blockParsesTo " \n   \n  \n            \n\n " "")
     {-

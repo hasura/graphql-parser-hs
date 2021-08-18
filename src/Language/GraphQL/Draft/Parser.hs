@@ -497,11 +497,9 @@ blockString = do
   let tail_ = drop 1 lines_
   let smallest = foldr min maxBound (countIndentation <$> tail_)
   let fixedLines_ = foldr (fixIndentation smallest) Nothing tail_
+  let xxx = if lines_ == [] then return "" else return $ head lines_
   case fixedLines_ of
-    Nothing -> 
-      if lines_ == []
-      then return ""
-      else return $ head lines_
+    Nothing -> return xxx -- TODO WIP
     Just fixedLines -> 
       if lines_ == []
       then do
@@ -513,6 +511,7 @@ blockString = do
 
  where
 
+  -- TODO these 2 are wrong
   sanitizeEnd t = 
     if T.null t
        then t
