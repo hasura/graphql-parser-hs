@@ -495,55 +495,34 @@ blockString :: Parser Text
 blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotes <?> "the body of a triple quoted string"
-
   let headline = if lines_ == [] then "" else head lines_
-  let tail_ = drop 1 lines_
-
-  let smallest = foldr min maxBound (countIndentation <$> tail_)
-  let rlines = foldr (fixIndentation smallest) Nothing tail_
-  case rlines of
-    Nothing -> return headline
-    Just reformatedLines -> do
-        let x = rebuild (sanitize $ headline:reformatedLines)
-        return x
-
+  let tail_ = drop 1 lines_ -- not tail
+  let commonIndentation = foldr min maxBound (countIndentation <$> tail_)
+  let rlines = foldr (removeCommonIndentation commonIndentation) Nothing tail_
+  return $ case rlines of
+    Nothing -> headline
+    Just reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
  where
-
   rebuild :: [Text] -> Text
-  rebuild xs = 
-    case T.unsnoc $ foldr (\a b -> a<>"\n"<>b) "" xs of
-      Just (t,_last) -> t -- quick fix so we don't have to check inside the foldr if acc is null
-      Nothing -> ""
-
-  sanitize xs = 
-    case foldr sanitizeLeft Nothing xs of -- foldr uses sanitizeLeft
-      Nothing -> []
-      Just ys ->
-        case foldl sanitizeRight Nothing ys of -- foldl uses sanitizeRight
-          Nothing -> [] -- this will never happen
-          Just zs -> zs
-   where
-    sanitizeLeft a = \case
-      Nothing -> if allSpace a then Nothing else Just [a]
-      Just acc -> Just (a:acc)
-    sanitizeRight Nothing a = if allSpace a then Nothing else Just [a]
-    sanitizeRight (Just acc) a = Just (acc<>[a])
-
-  allSpace t = T.null t || T.all ws t
-
-  -- used to remove the common indentation from each line.
-  fixIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
-  fixIndentation smallest a x = 
+  rebuild = fromMaybe "" . fmap fst . T.unsnoc . T.unlines
+  sanitize :: [Text] -> [Text]
+  sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
+  onlyWhiteSpace :: Text -> Bool
+  onlyWhiteSpace t = T.null t || T.all ws t
+  removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
+  removeCommonIndentation smallest a x = 
     let new = T.drop smallest a
      in case x of
       Nothing -> Just [new]
       Just acc -> Just $ new:acc
-
   countIndentation :: Text -> Int
   countIndentation = fromMaybe maxBound . T.findIndex (not . ws)
-
   tripleQuotes = AT.string "\"\"\""
 
 -- whitespace
 ws :: Char -> Bool
 ws c = c == ' ' || c == '\t'
+
+-- copied from https://hackage.haskell.org/package/extra-1.7.9/docs/src/Data.List.Extra.html
+dropWhileEnd' :: (a -> Bool) -> [a] -> [a]
+dropWhileEnd' p = foldr (\x xs -> if null xs && p x then [] else x : xs) []
