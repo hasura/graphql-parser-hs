@@ -1,4 +1,3 @@
-
 -- | Regression tests for issue #20 https://github.com/hasura/graphql-parser-hs/issues/20
 
 module BlockStrings where
@@ -29,7 +28,6 @@ blockTest = do
     , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
     ]
 
--- note that this function is only for block strings
 blockParsesTo :: T.Text -> T.Text -> Property
 blockParsesTo unparsed expected =
   withTests 1 $ property $ do
@@ -42,6 +40,5 @@ blockParsesTo unparsed expected =
     onError errorMsg = do
       footnote (T.unpack errorMsg)
       failure
-
-tripleQuoted :: T.Text -> T.Text
-tripleQuoted t = "\"\"\"" <> t <> "\"\"\""
+    tripleQuoted :: T.Text -> T.Text
+    tripleQuoted t = "\"\"\"" <> t <> "\"\"\""
