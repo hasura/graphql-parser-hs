@@ -49,6 +49,7 @@ import           Data.Void                     (Void)
 import           Data.Maybe                    (fromMaybe)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
+import Debug.Trace
 
 -- * Document
 
@@ -496,38 +497,40 @@ blockString = do
   lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotes <?> "the body of a triple quoted string"
   let tail_ = drop 1 lines_
   let smallest = foldr min maxBound (countIndentation <$> tail_)
-  let fixedLines_ = foldr (fixIndentation smallest) Nothing tail_
-  let xxx = if lines_ == [] then return "" else return $ head lines_
-  case fixedLines_ of
-    Nothing -> return xxx -- TODO WIP
-    Just fixedLines -> 
-      if lines_ == []
-      then do
-        let x = toStrict . TB.toLazyText $ fixedLines
-        return $ sanitizeStart . sanitizeEnd $ x
-      else do
-        let x = toStrict . TB.toLazyText $ TB.fromText (head lines_) <> fixedLines
-        return $ sanitizeStart . sanitizeEnd $ x
+  let rlines = foldr (fixIndentation smallest) Nothing tail_
+  let headline = if lines_ == [] then "" else head lines_
+
+  case rlines of
+    Nothing -> return headline
+    Just reformatedLines -> do
+        let x = rebuild (sanitize $ headline:reformatedLines)
+        return x
 
  where
 
-  -- TODO these 2 are wrong
-  sanitizeEnd t = 
-    if T.null t
-       then t
-       else if T.last t == '\n' then T.take (T.length t - 1) t else t
-  sanitizeStart t = 
-    if T.null t
-       then t
-       else if T.head t == '\n' then T.tail t else t
+  rebuild :: [Text] -> Text
+  rebuild xs = 
+    case T.unsnoc $ foldr (\a b -> a<>"\n"<>b) "" xs of
+      Just (t,_) -> t
+      Nothing -> ""
+
+  sanitize xs = 
+    let f = head xs
+        m = reverse $ drop 1 (reverse $ drop 1 xs) -- TODO urgh
+        l = head (reverse xs)
+     in (if allSpace f then [] else [f])
+     <> m
+     <> (if allSpace l then [] else [l])
+
+  allSpace = T.all ws
 
   -- used to remove the common indentation from each line.
-  fixIndentation :: Int -> Text -> Maybe TB.Builder -> Maybe TB.Builder 
+  fixIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
   fixIndentation smallest a x = 
-    let new = TB.fromText (T.drop smallest a)
+    let new = T.drop smallest a
      in case x of
-      Nothing -> Just new
-      Just acc -> Just $ new <> "\n" <> acc
+      Nothing -> Just [new]
+      Just acc -> Just $ new:acc
 
   countIndentation :: Text -> Int
   countIndentation = fromMaybe maxBound . T.findIndex (not . ws)

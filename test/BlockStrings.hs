@@ -15,7 +15,6 @@ blockTest = do
     , ("do not remove WS from the end of lines", blockParsesTo "\nFoo \nbar  " "Foo \nbar  ")
     , ("tabs are WS as well", blockParsesTo "\n\t\tFoo\n\t\tbar\n\t\t\tqux" "Foo\nbar\n\tqux")
     , ("tabs work with spaces", blockParsesTo "\n\t Foo\n \tbar\n\t\t qux" "Foo\nbar\n qux")
-    , ("parses empty string", blockParsesTo "" "")
     , ("parses newline", blockParsesTo "\n" "")
     , ("parses very simples not-empty block", blockParsesTo "x" "x")
     , ("common indentation is removed", blockParsesTo "\n  a \n   b \n  c " "a \n b \nc ")
@@ -24,13 +23,14 @@ blockTest = do
     , ("ignores escaping", blockParsesTo "  \\  " "  \\  ") -- this is a single \
     , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey  ")
     , ("", blockParsesTo "\nx\n" "x")
-    , ("", blockParsesTo "\n\n" "")
-    --, ("", blockParsesTo "\n\n\n\n" "\n\n")
-    --, ("", blockParsesTo "\n \n \n\n " " \n \n")
-    --, ("only strip first and last empty lines", blockParsesTo "\n \n \n \n\n " " \n \n \n")
-    --, ("parses newlines in empty block", blockParsesTo " \n   \n  \n            \n\n " "")
-    {-
-    -}
+    , ("empty single line", blockParsesTo "" "")
+    , ("empty two lines", blockParsesTo "\n" "")
+    , ("empty three lines", blockParsesTo "\n\n" "") -- first is deleted, third is deleted
+    , ("empty four lines", blockParsesTo "\n\n\n" "\n")
+    , ("empty four lines", blockParsesTo "\n\n\n\n" "\n\n")
+    , ("empty four lines", blockParsesTo "\n\n\n\n\n" "\n\n\n")
+    , ("empty four lines", blockParsesTo "\n\n\n\n\n\n" "\n\n\n\n")
+    --, ("empty three lines", blockParsesTo "\n \n \n" "")
     ]
 
 -- note that this function is only for block strings
