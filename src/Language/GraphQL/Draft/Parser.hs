@@ -18,7 +18,6 @@ module Language.GraphQL.Draft.Parser
   , parseGraphQLType
 
   , Parser
-
   , runParser
   , blockString
   ) where
