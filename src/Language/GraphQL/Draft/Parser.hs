@@ -46,7 +46,6 @@ import           Data.Void                     (Void)
 import           Data.Maybe                    (fromMaybe)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
-import Debug.Trace
 
 -- * Document
 
