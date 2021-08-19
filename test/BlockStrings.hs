@@ -18,7 +18,7 @@ blockTest = do
     , ("parses very simples not-empty block", blockParsesTo "x" "x")
     , ("common indentation is removed", blockParsesTo "\n  a \n   b \n  c " "a \n b \nc ")
     , ("zero common indentation is possible", blockParsesTo "\na \n b \nc " "a \n b \nc ")
-    , ("single lines works like a string", blockParsesTo "  abc " "  abc ")
+    , ("no whitespace is removed from the first line", blockParsesTo "  abc " "  abc ")
     , ("ignores escaping", blockParsesTo "  \\  " "  \\  ") -- this is a single \
     , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey  ")
     , ("", blockParsesTo "\nx\n" "x")
