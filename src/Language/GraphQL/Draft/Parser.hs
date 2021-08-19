@@ -505,7 +505,7 @@ blockString = do
   sanitize :: [Text] -> [Text]
   sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
   onlyWhiteSpace :: Text -> Bool
-  onlyWhiteSpace t = T.null t || T.all ws t
+  onlyWhiteSpace t = T.all ws t
   removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
   removeCommonIndentation smallest a x = 
     let new = T.drop smallest a
