@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns #-}
 
 -- | Description: Parse text into GraphQL ASTs
 module Language.GraphQL.Draft.Parser
