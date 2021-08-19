@@ -41,7 +41,6 @@ import           Data.Functor
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Scientific               (Scientific)
 import           Data.Text                     (Text, find)
-
 import           Data.Text.Lazy                (toStrict)
 import           Data.Void                     (Void)
 import           Data.Maybe                    (fromMaybe)
