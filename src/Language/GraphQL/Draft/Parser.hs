@@ -190,7 +190,8 @@ value = tok (
   <|> AST.VBoolean                         <$> booleanLiteral
   <|> AST.VString AST.BlockStringCharacter <$> blockString
   <|> AST.VString AST.StringCharacter      <$> stringLiteral
-  <|> AST.VEnum                            <$> (fmap AST.EnumValue nameParser <?> "name") -- `true` and `false` have been tried before
+  -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
+  <|> AST.VEnum                            <$> (fmap AST.EnumValue nameParser <?> "name")
   <|> AST.VList                            <$> listLiteral
   <|> AST.VObject                          <$> objectLiteral
   <?> "value")
