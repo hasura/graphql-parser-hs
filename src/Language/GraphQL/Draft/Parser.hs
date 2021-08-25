@@ -186,7 +186,7 @@ value = tok (
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
   <|> AST.VNull    <$  literal "null"
   <|> AST.VBoolean <$> booleanLiteral
-  -- <|> AST.VString  <$> blockString
+  <|> AST.VString  <$> blockString
   <|> AST.VString  <$> stringLiteral
   -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
   <|> AST.VEnum    <$> (fmap AST.EnumValue nameParser <?> "name")
@@ -486,8 +486,7 @@ optempty = option mempty
 
 
 data BlockState
-  = BlockWasNeverClosed
-  | Escaped Int 
+  = Escaped Int 
   | Closing Int
   | Normal
   | Done
@@ -498,9 +497,8 @@ blockString :: Parser Text
 blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- AT.runScanner Normal scanner >>= \case
-    (_,BlockWasNeverClosed) -> fail "Block never closed"
-    (lines_,Done)           -> return (T.lines (T.dropEnd 3 lines_))
-    (lines_,bs)             -> return (T.lines lines_)
+    (lines_,Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes
+    (_,_)         -> fail "could'nt parse block string"
   let headline = if lines_ == [] then "" else head lines_
   let tail_ = drop 1 lines_ -- not tail
   let commonIndentation = foldr min maxBound (countIndentation <$> tail_)
@@ -517,9 +515,10 @@ blockString = do
     case s of
       Done -> Nothing
       Normal ->
-        if ch == '\\' 
-        then Just (Escaped 0)
-        else if ch == '"' then Just (Closing 1) else Just Normal
+        case ch of
+          '\\' -> Just (Escaped 0)
+          '"'  -> Just (Closing 1)
+          _    -> Just Normal
       -- we are counting " for a possible closing delimiter
       Closing 1 -> if ch == '"' then Just (Closing 2) else Just Normal
       Closing 2 -> if ch == '"' then Just Done else Just Normal
