@@ -76,9 +76,6 @@ module Language.GraphQL.Draft.Syntax (
   , fmapSelectionSetFragment
   , fmapSelectionFragment
   , fmapInlineFragment
-
-  -- unsorted
-  , StringType(..)
   ) where
 
 import                qualified Data.Aeson                     as J
@@ -322,7 +319,7 @@ data Value var
   | VNull
   | VInt Integer
   | VFloat Scientific
-  | VString StringType Text
+  | VString Text
   | VBoolean Bool
   | VEnum EnumValue
   | VList [Value var]
@@ -335,7 +332,7 @@ instance Lift var => Lift (Value var) where
   liftTyped VNull         = [|| VNull ||]
   liftTyped (VInt a)      = [|| VInt a ||]
   liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(TH.liftTyped $ toRational a) ||]
-  liftTyped (VString t a) = [|| VString t a ||]
+  liftTyped (VString a)   = [|| VString a ||]
   liftTyped (VBoolean a)  = [|| VBoolean a ||]
   liftTyped (VEnum a)     = [|| VEnum a ||]
   liftTyped (VList a)     = [|| VList a ||]
@@ -343,12 +340,6 @@ instance Lift var => Lift (Value var) where
 
 literal :: Value Void -> Value var
 literal = fmap absurd
-
-data StringType = StringCharacter | BlockStringCharacter
-  deriving (Show, Eq, Ord, Generic)
-instance Hashable StringType
-instance NFData StringType
-instance Lift StringType
 
 -- * Directives
 

@@ -78,11 +78,6 @@ mkPropParserPrinter printer = \space ->
   withTests space $ property $ do
     someRandomDoc <- forAll genExecutableDocument
     let rendered = printer <$> Input.parseExecutableDoc (printer someRandomDoc)
-    -- the reason why we render twice is to make sure that
-    -- when comparing we already "normalized" the block
-    -- string, so each reparsing of the blockstring will no
-    -- longer be different because the indentations are
-    -- already at the minimun possible.
     let reRendered = printer <$> (Input.parseExecutableDoc =<< rendered)
     case (rendered, reRendered) of
         (Left  e, _      ) -> onError e

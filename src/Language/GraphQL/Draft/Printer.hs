@@ -236,19 +236,17 @@ variableP v = charP '$' <> printP v
 
 value :: (Print var, Printer a) => Value var -> a
 value = \case
-  VVariable v    -> variableP v
-  VInt i         -> intP i
-  VFloat d       -> doubleP d
-  VString t s    -> dispatchStringPrinter t s
-  VBoolean b     -> fromBool b
-  VNull          -> "null"
-  VList xs       -> listValue xs
-  VObject o      -> objectValue o
-  VEnum ev       -> nameP $ unEnumValue ev
+  VVariable v -> variableP v
+  VInt i      -> intP i
+  VFloat d    -> doubleP d
+  VString s   -> dispatchStringPrinter s
+  VBoolean b  -> fromBool b
+  VNull       -> "null"
+  VList xs    -> listValue xs
+  VObject o   -> objectValue o
+  VEnum ev    -> nameP $ unEnumValue ev
 
-dispatchStringPrinter t s = case t of
-  StringCharacter -> stringValue s
-  BlockStringCharacter -> blockStringValue s
+dispatchStringPrinter s = undefined
 
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a

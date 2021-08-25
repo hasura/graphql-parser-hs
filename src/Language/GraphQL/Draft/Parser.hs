@@ -186,14 +186,14 @@ value :: Variable var => Parser (AST.Value var)
 value = tok (
       AST.VVariable    <$> variable
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull        <$  literal "null"
-  <|> AST.VBoolean                         <$> booleanLiteral
-  <|> AST.VString AST.BlockStringCharacter <$> blockString
-  <|> AST.VString AST.StringCharacter      <$> stringLiteral
+  <|> AST.VNull    <$  literal "null"
+  <|> AST.VBoolean <$> booleanLiteral
+  <|> AST.VString  <$> blockString
+  <|> AST.VString  <$> stringLiteral
   -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
-  <|> AST.VEnum                            <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VList                            <$> listLiteral
-  <|> AST.VObject                          <$> objectLiteral
+  <|> AST.VEnum    <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VList    <$> listLiteral
+  <|> AST.VObject  <$> objectLiteral
   <?> "value")
 
 booleanLiteral :: Parser Bool
