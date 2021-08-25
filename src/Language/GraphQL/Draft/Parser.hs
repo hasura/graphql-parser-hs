@@ -496,10 +496,6 @@ data BlockState
 -- http://spec.graphql.org/June2018/#sec-String-Value
 blockString :: Parser Text
 blockString = do
-
-  -- TODO this need to be replaced with AT.scan
-  --lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotesFoo <?> "the body of a triple quoted string"
-
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- AT.runScanner Normal scanner >>= \case
     (_,BlockWasNeverClosed) -> fail ""
@@ -534,7 +530,7 @@ blockString = do
   sanitize :: [Text] -> [Text]
   sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
   onlyWhiteSpace :: Text -> Bool
-  onlyWhiteSpace t = T.all ws t
+  onlyWhiteSpace t = T.all isWhitespace t
   removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
   removeCommonIndentation smallest a x = 
     let new = T.drop smallest a
@@ -542,7 +538,7 @@ blockString = do
       Nothing -> Just [new]
       Just acc -> Just $ new:acc
   countIndentation :: Text -> Int
-  countIndentation = fromMaybe maxBound . T.findIndex (not . ws)
+  countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)
   tripleQuotes = AT.string "\"\"\""
   tripleQuotesFoo = do
     AT.option False (AT.string "\\" >> AT.string "\"\"\"" >> pure True) >>= \case
@@ -550,8 +546,8 @@ blockString = do
       False -> tripleQuotes
 
 -- whitespace
-ws :: Char -> Bool
-ws c = c == ' ' || c == '\t'
+isWhitespace :: Char -> Bool
+isWhitespace c = c == ' ' || c == '\t'
 
 -- copied from https://hackage.haskell.org/package/extra-1.7.9/docs/src/Data.List.Extra.html
 dropWhileEnd' :: (a -> Bool) -> [a] -> [a]
