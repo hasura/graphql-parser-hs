@@ -186,7 +186,7 @@ value = tok (
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
   <|> AST.VNull    <$  literal "null"
   <|> AST.VBoolean <$> booleanLiteral
-  <|> AST.VString  <$> blockString
+  -- <|> AST.VString  <$> blockString
   <|> AST.VString  <$> stringLiteral
   -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
   <|> AST.VEnum    <$> (fmap AST.EnumValue nameParser <?> "name")
@@ -498,7 +498,7 @@ blockString :: Parser Text
 blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- AT.runScanner Normal scanner >>= \case
-    (_,BlockWasNeverClosed) -> fail ""
+    (_,BlockWasNeverClosed) -> fail "Block never closed"
     (lines_,Done)           -> return (T.lines (T.dropEnd 3 lines_))
     (lines_,bs)             -> return (T.lines lines_)
   let headline = if lines_ == [] then "" else head lines_
@@ -509,8 +509,9 @@ blockString = do
     Nothing -> headline
     Just reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
  where
-
-  -- also known as go
+  -- this function is used to parse the body of the string
+  -- while counting stuff that we might need for escaping,
+  -- for example
   scanner :: BlockState -> Char -> Maybe BlockState
   scanner s ch = 
     case s of
@@ -519,8 +520,10 @@ blockString = do
         if ch == '\\' 
         then Just (Escaped 0)
         else if ch == '"' then Just (Closing 1) else Just Normal
+      -- we are counting " for a possible closing delimiter
       Closing 1 -> if ch == '"' then Just (Closing 2) else Just Normal
       Closing 2 -> if ch == '"' then Just Done else Just Normal
+      -- we are counting escaped characters when "
       Escaped 0 -> if ch == '"' then Just (Escaped 1) else Just Normal
       Escaped 1 -> if ch == '"' then Just (Escaped 2) else Just Normal
       Escaped 2 -> Just Normal
@@ -534,7 +537,7 @@ blockString = do
   removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
   removeCommonIndentation smallest a x = 
     let new = T.drop smallest a
-     in case x of
+    in case x of
       Nothing -> Just [new]
       Just acc -> Just $ new:acc
   countIndentation :: Text -> Int
