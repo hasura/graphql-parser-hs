@@ -498,7 +498,7 @@ blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- AT.runScanner Normal scanner >>= \case
     (lines_,Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes
-    (_,_)         -> fail "could'nt parse block string"
+    (_,_)         -> fail "couldn't parse block string"
   let headline = if lines_ == [] then "" else head lines_
   let tail_ = drop 1 lines_ -- not tail
   let commonIndentation = foldr min maxBound (countIndentation <$> tail_)

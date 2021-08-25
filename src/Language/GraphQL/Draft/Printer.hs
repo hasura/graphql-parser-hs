@@ -248,57 +248,53 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
-data C
+data BlockStatus
   = Starting
   | NormalString
   | KeepGoing
 
-data S = S
+data BlockState = BlockState
   { atLeastOneZeroIndent :: Bool
   , doNotStartWithNL     :: Bool
   , hasEscapedNewLines   :: Bool
   }
 
--- TODO refactor
--- | We cannot print the strings always as a block string
 dispatchStringPrinter :: Printer a => Text -> a
 dispatchStringPrinter t = 
   let ls = T.lines t
-      he = head $ reverse ls
-      fo = T.null he || T.all isWhitespace he
-   in 
-    if T.null t
-    then if fo 
-      then stringValue t
-      else handleResult $ foldr go (Starting, S False True False) ls
-    else stringValue ""
+   in if T.null t 
+      then stringValue ""
+      else if T.all isWhitespace (last ls)
+           then stringValue t
+           else handleResult $ foldr go (Starting, BlockState False True False) ls
  where
-  -- "\\n" -> block
   go a acc = 
     case acc of
       (NormalString, s) -> (NormalString, s)
       (Starting, s) -> 
         if T.null a
            then (NormalString, s { doNotStartWithNL = False })
-           else (KeepGoing, s { atLeastOneZeroIndent = checkAtLeastOneZeroIndent (atLeastOneZeroIndent s) a
-                              , hasEscapedNewLines = checkEscapedNewLines (hasEscapedNewLines s) a
-                              }
-                )
-      (KeepGoing, s) -> (KeepGoing, s { atLeastOneZeroIndent = checkAtLeastOneZeroIndent (atLeastOneZeroIndent s) a
-                                      , hasEscapedNewLines = checkEscapedNewLines (hasEscapedNewLines s) a
-                                      })
+           else (KeepGoing, 
+                    s { atLeastOneZeroIndent = checkAtLeastOneZeroIndent (atLeastOneZeroIndent s) a
+                      , hasEscapedNewLines = checkEscapedNewLines (hasEscapedNewLines s) a
+                      })
+      (KeepGoing, s) -> 
+        (KeepGoing
+          , s { atLeastOneZeroIndent = checkAtLeastOneZeroIndent (atLeastOneZeroIndent s) a
+          , hasEscapedNewLines = checkEscapedNewLines (hasEscapedNewLines s) a
+          })
   handleResult (_,s) = 
-    if not $ atLeastOneZeroIndent s || hasEscapedNewLines s
+    if not (atLeastOneZeroIndent s || hasEscapedNewLines s)
        then stringValue t
        else if doNotStartWithNL s
           then blockStringValue t
           else stringValue t
 
-checkAtLeastOneZeroIndent p t = if p then p else T.null (T.takeWhile isWhitespace t)
-checkEscapedNewLines p t = if p then p else "\\n" `T.isInfixOf` t
+  checkAtLeastOneZeroIndent p t = if p then p else T.null (T.takeWhile isWhitespace t)
+  checkEscapedNewLines p t = if p then p else "\\n" `T.isInfixOf` t
 
-isWhitespace :: Char -> Bool
-isWhitespace c = c == ' ' || c == '\t'
+  isWhitespace :: Char -> Bool
+  isWhitespace c = c == ' ' || c == '\t'
 
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
