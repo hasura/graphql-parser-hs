@@ -27,7 +27,6 @@ import qualified Data.Attoparsec.Text          as AT
 import qualified Data.HashMap.Strict           as M
 import qualified Data.Text                     as T
 import qualified Data.Text.Encoding            as T
-import qualified Data.Text.Lazy.Builder        as TB
 
 import           Control.Applicative
 import           Control.Monad
@@ -41,7 +40,6 @@ import           Data.Functor
 import           Data.HashMap.Strict           (HashMap)
 import           Data.Scientific               (Scientific)
 import           Data.Text                     (Text, find)
-import           Data.Text.Lazy                (toStrict)
 import           Data.Void                     (Void)
 import           Data.Maybe                    (fromMaybe)
 
@@ -486,12 +484,27 @@ between open close p = tok open *> p <* tok close
 optempty :: Monoid a => Parser a -> Parser a
 optempty = option mempty
 
+
+data BlockState
+  = BlockWasNeverClosed
+  | Escaped Int 
+  | Closing Int
+  | Normal
+  | Done
+
 -- | Parses strings delimited by triple quotes. 
 -- http://spec.graphql.org/June2018/#sec-String-Value
 blockString :: Parser Text
 blockString = do
+
+  -- TODO this need to be replaced with AT.scan
+  --lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotesFoo <?> "the body of a triple quoted string"
+
   _ <- tripleQuotes <?> "opening triple quotes"
-  lines_ <- T.lines . T.pack <$> AT.manyTill AT.anyChar tripleQuotes <?> "the body of a triple quoted string"
+  lines_ <- AT.runScanner Normal scanner >>= \case
+    (_,BlockWasNeverClosed) -> fail ""
+    (lines_,Done)           -> return (T.lines (T.dropEnd 3 lines_))
+    (lines_,bs)             -> return (T.lines lines_)
   let headline = if lines_ == [] then "" else head lines_
   let tail_ = drop 1 lines_ -- not tail
   let commonIndentation = foldr min maxBound (countIndentation <$> tail_)
@@ -500,6 +513,22 @@ blockString = do
     Nothing -> headline
     Just reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
  where
+
+  -- also known as go
+  scanner :: BlockState -> Char -> Maybe BlockState
+  scanner s ch = 
+    case s of
+      Done -> Nothing
+      Normal ->
+        if ch == '\\' 
+        then Just (Escaped 0)
+        else if ch == '"' then Just (Closing 1) else Just Normal
+      Closing 1 -> if ch == '"' then Just (Closing 2) else Just Normal
+      Closing 2 -> if ch == '"' then Just Done else Just Normal
+      Escaped 0 -> if ch == '"' then Just (Escaped 1) else Just Normal
+      Escaped 1 -> if ch == '"' then Just (Escaped 2) else Just Normal
+      Escaped 2 -> Just Normal
+
   rebuild :: [Text] -> Text
   rebuild = fromMaybe "" . fmap fst . T.unsnoc . T.unlines
   sanitize :: [Text] -> [Text]
@@ -515,6 +544,10 @@ blockString = do
   countIndentation :: Text -> Int
   countIndentation = fromMaybe maxBound . T.findIndex (not . ws)
   tripleQuotes = AT.string "\"\"\""
+  tripleQuotesFoo = do
+    AT.option False (AT.string "\\" >> AT.string "\"\"\"" >> pure True) >>= \case
+      True -> fail ""
+      False -> tripleQuotes
 
 -- whitespace
 ws :: Char -> Bool

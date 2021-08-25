@@ -29,7 +29,7 @@ blockTest = do
 
     , ("", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
     , ("", blockParsesTo "\n\"\n" "\"")
-    , ("", blockParsesTo "\n\\\"\"\"\n" "\\\"\"\"")
+    , ("escaped triple-quotes are ignored as block terminator", blockParsesTo "\n   \\\"\"\"hey\n   friends\n" "\\\"\"\"hey\nfriends")
     ]
 
 blockParsesTo :: T.Text -> T.Text -> Property
