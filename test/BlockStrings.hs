@@ -26,6 +26,10 @@ blockTest = do
     , ("empty two lines", blockParsesTo "\n" "")
     , ("empty three lines", blockParsesTo "\n\n" "")
     , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
+
+    , ("", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
+    , ("", blockParsesTo "\n\"\n" "\"")
+    , ("", blockParsesTo "\n\\\"\"\"\n" "\\\"\"\"")
     ]
 
 blockParsesTo :: T.Text -> T.Text -> Property
@@ -33,7 +37,7 @@ blockParsesTo unparsed expected =
   withTests 1 $ property $ do
     let result =
           case parseOnly blockString (tripleQuoted unparsed) of
-            Left l -> Left ("Parser failed: " <> T.pack l)
+            Left l -> Left ("Block parser failed: " <> T.pack l)
             Right r -> Right r
     either onError (expected ===) result
   where

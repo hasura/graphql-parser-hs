@@ -39,17 +39,17 @@ propNullNameName :: Property
 propNullNameName = property $ testRoundTrip nameParser P.nameP $$(litName "nullColumntwo")
 
 propHandleNulString :: Property
-propHandleNulString = property $ testRoundTripValue $ VString StringCharacter "\NUL"
+propHandleNulString = property $ testRoundTripValue $ VString "\NUL"
 
 propHandleNewlineString :: Property
-propHandleNewlineString = property $ testRoundTripValue $ VString StringCharacter "\n"
+propHandleNewlineString = property $ testRoundTripValue $ VString "\n"
 
 propHandleControlString :: Property
-propHandleControlString = property $ testRoundTripValue $ VString StringCharacter "\x0011"
+propHandleControlString = property $ testRoundTripValue $ VString "\x0011"
 
 propHandleUnicodeCharacters :: Property
 propHandleUnicodeCharacters = property $ for_ [minBound..maxBound] \c ->
-  testRoundTripValue $ VString StringCharacter $ singleton c
+  testRoundTripValue $ VString $ singleton c
 
 
 testRoundTripValue :: Value Void -> PropertyT IO ()

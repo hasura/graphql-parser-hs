@@ -246,7 +246,10 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
-dispatchStringPrinter s = undefined
+dispatchStringPrinter s = 
+  -- in here we are gonna decide how to print the string
+  -- according to heuristics
+  undefined
 
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
