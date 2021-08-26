@@ -484,7 +484,6 @@ between open close p = tok open *> p <* tok close
 optempty :: Monoid a => Parser a -> Parser a
 optempty = option mempty
 
-
 data BlockState
   = Escaped Int 
   | Closing Int
@@ -497,7 +496,7 @@ blockString :: Parser Text
 blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- AT.runScanner Normal scanner >>= \case
-    (lines_,Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes
+    (lines_,Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes (since we are using a different parser)
     (_,_)         -> fail "couldn't parse block string"
   let headline = if lines_ == [] then "" else head lines_
   let tail_ = drop 1 lines_ -- not tail
@@ -507,9 +506,9 @@ blockString = do
     Nothing -> headline
     Just reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
  where
-  -- this function is used to parse the body of the string
+  -- | This function is used to parse the body of the string
   -- while counting stuff that we might need for escaping,
-  -- for example
+  -- for example.
   scanner :: BlockState -> Char -> Maybe BlockState
   scanner s ch = 
     case s of

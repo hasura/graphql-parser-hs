@@ -26,11 +26,25 @@ blockTest = do
     , ("empty two lines", blockParsesTo "\n" "")
     , ("empty three lines", blockParsesTo "\n\n" "")
     , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
-
-    , ("", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
+    , ("preserves escaped newlines", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
     , ("", blockParsesTo "\n\"\n" "\"")
     , ("escaped triple-quotes are ignored as block terminator", blockParsesTo "\n   \\\"\"\"hey\n   friends\n" "\\\"\"\"hey\nfriends")
+    , ("fails for normal string",blockParseFail (\t -> "\"" <> t <> "\"") "hey") 
+    , ("fails for block string that is not closed",blockParseFail (\t -> "\"\"\"" <> t) "hey") 
+    , ("fails for block string that is not closed when there are escaped triple-quotes",
+          blockParseFail (\t -> "\"\"\"" <> t <> "\\\"\"\"" <> t) "hey") 
     ]
+
+blockParseFail :: (T.Text -> T.Text) -> T.Text -> Property
+blockParseFail tripleQuoted unparsed =
+  withTests 1 $ property $ do
+    case parseOnly blockString (tripleQuoted unparsed) of
+      Left l -> () === ()
+      Right r -> do
+        footnote ("Should have failed for: "<>T.unpack (tripleQuoted unparsed))
+        failure
+
+-------------------------------------------------------------------
 
 blockParsesTo :: T.Text -> T.Text -> Property
 blockParsesTo unparsed expected =
@@ -44,5 +58,4 @@ blockParsesTo unparsed expected =
     onError errorMsg = do
       footnote (T.unpack errorMsg)
       failure
-    tripleQuoted :: T.Text -> T.Text
     tripleQuoted t = "\"\"\"" <> t <> "\"\"\""
