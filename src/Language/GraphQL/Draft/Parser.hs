@@ -497,54 +497,53 @@ blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
   lines_ <- AT.runScanner Normal scanner >>= \case
     (lines_,Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes (since we are using a different parser)
-    (_,_)         -> fail "couldn't parse block string"
+    (_     ,   _) -> fail "couldn't parse block string" -- there is only one way to get to a Done, so we need this here because runScanner never fails
+  -- the reason why we have the headline here is
+  -- to simply separate the head of the list so we don't
+  -- operate on it.
   let headline = if lines_ == [] then "" else head lines_
-  let tail_ = drop 1 lines_ -- not tail
-  let commonIndentation = foldr min maxBound (countIndentation <$> tail_)
-  let rlines = foldr (removeCommonIndentation commonIndentation) Nothing tail_
+  let indentedRemainder = drop 1 lines_ -- not tail
+  let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
+  let rlines = foldr (removeCommonIndentation commonIndentation) Nothing indentedRemainder
   return $ case rlines of
     Nothing -> headline
     Just reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
- where
-  -- | This function is used to parse the body of the string
-  -- while counting stuff that we might need for escaping,
-  -- for example.
-  scanner :: BlockState -> Char -> Maybe BlockState
-  scanner s ch = 
-    case s of
-      Done -> Nothing
-      Normal ->
-        case ch of
-          '\\' -> Just (Escaped 0)
-          '"'  -> Just (Closing 1)
-          _    -> Just Normal
-      -- we are counting " for a possible closing delimiter
-      Closing 1 -> if ch == '"' then Just (Closing 2) else Just Normal
-      Closing 2 -> if ch == '"' then Just Done else Just Normal
-      -- we are counting escaped characters when "
-      Escaped 0 -> if ch == '"' then Just (Escaped 1) else Just Normal
-      Escaped 1 -> if ch == '"' then Just (Escaped 2) else Just Normal
-      Escaped 2 -> Just Normal
+  where
+    -- | This function is used to parse the body of the string
+    -- while counting stuff that we might need for escaping,
+    -- for example.
+    scanner :: BlockState -> Char -> Maybe BlockState
+    scanner s ch = 
+      case s of
+        Done -> Nothing
+        Normal ->
+          case ch of
+            '\\' -> Just (Escaped 0)
+            '"'  -> Just (Closing 1)
+            _    -> Just Normal
+        -- we are counting " for a possible closing delimiter
+        Closing 1 -> if ch == '"' then Just (Closing 2) else Just Normal
+        Closing 2 -> if ch == '"' then Just Done else Just Normal
+        -- we are counting escaped characters when "
+        Escaped 0 -> if ch == '"' then Just (Escaped 1) else Just Normal
+        Escaped 1 -> if ch == '"' then Just (Escaped 2) else Just Normal
+        Escaped 2 -> Just Normal
 
-  rebuild :: [Text] -> Text
-  rebuild = fromMaybe "" . fmap fst . T.unsnoc . T.unlines
-  sanitize :: [Text] -> [Text]
-  sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
-  onlyWhiteSpace :: Text -> Bool
-  onlyWhiteSpace t = T.all isWhitespace t
-  removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
-  removeCommonIndentation smallest a x = 
-    let new = T.drop smallest a
-    in case x of
-      Nothing -> Just [new]
-      Just acc -> Just $ new:acc
-  countIndentation :: Text -> Int
-  countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)
-  tripleQuotes = AT.string "\"\"\""
-  tripleQuotesFoo = do
-    AT.option False (AT.string "\\" >> AT.string "\"\"\"" >> pure True) >>= \case
-      True -> fail ""
-      False -> tripleQuotes
+    rebuild :: [Text] -> Text
+    rebuild = fromMaybe "" . fmap fst . T.unsnoc . T.unlines
+    sanitize :: [Text] -> [Text]
+    sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
+    onlyWhiteSpace :: Text -> Bool
+    onlyWhiteSpace t = T.all isWhitespace t
+    removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
+    removeCommonIndentation smallest a x = 
+      let new = T.drop smallest a
+      in case x of
+        Nothing -> Just [new]
+        Just acc -> Just $ new:acc
+    countIndentation :: Text -> Int
+    countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)
+    tripleQuotes = AT.string "\"\"\""
 
 -- whitespace
 isWhitespace :: Char -> Bool

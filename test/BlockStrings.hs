@@ -33,6 +33,8 @@ blockTest = do
     , ("fails for block string that is not closed",blockParseFail (\t -> "\"\"\"" <> t) "hey") 
     , ("fails for block string that is not closed when there are escaped triple-quotes",
           blockParseFail (\t -> "\"\"\"" <> t <> "\\\"\"\"" <> t) "hey") 
+          -- TODO
+    --, ("does not ignores escaping when its part of a escaped tripe-quotes", blockParsesTo "\\" "\\") -- this is a single \, but it touches the """ at the end
     ]
 
 -- | We use this function to tests cases that we know should
