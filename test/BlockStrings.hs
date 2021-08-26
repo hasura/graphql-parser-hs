@@ -35,6 +35,10 @@ blockTest = do
           blockParseFail (\t -> "\"\"\"" <> t <> "\\\"\"\"" <> t) "hey") 
     ]
 
+-- | We use this function to tests cases that we know should
+-- fail, when we pass a function to construct wrapped the
+-- body in a delimiter, where we will probably be testing
+-- for errors using it.
 blockParseFail :: (T.Text -> T.Text) -> T.Text -> Property
 blockParseFail tripleQuoted unparsed =
   withTests 1 $ property $ do
@@ -44,8 +48,9 @@ blockParseFail tripleQuoted unparsed =
         footnote ("Should have failed for: "<>T.unpack (tripleQuoted unparsed))
         failure
 
--------------------------------------------------------------------
-
+-- | We use this to wrap the first argument with I've been
+-- calling "triple-quotes", which are the delimiters for the
+-- block strings.
 blockParsesTo :: T.Text -> T.Text -> Property
 blockParsesTo unparsed expected =
   withTests 1 $ property $ do
