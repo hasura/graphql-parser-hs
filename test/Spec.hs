@@ -76,15 +76,13 @@ propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . Outp
 mkPropParserPrinter :: (ExecutableDocument Name -> T.Text) -> (TestLimit -> Property)
 mkPropParserPrinter printer = \space ->
   withTests space $ property $ do
-    someRandomDoc <- forAll genExecutableDocument
-    let rendered = printer <$> Input.parseExecutableDoc (printer someRandomDoc)
-    let reRendered = printer <$> (Input.parseExecutableDoc =<< rendered)
-    case (rendered, reRendered) of
-        (Left  e, _      ) -> onError e
-        (_      , Left  e) -> onError e
-        (Right a, Right b) -> a === b
+    xs <- forAll genExecutableDocument
+    let rendered = printer xs
+    either onError (xs ===) $ Input.parseExecutableDoc rendered
   where
-    onError (T.unpack -> errorMsg) = footnote errorMsg >> failure
+    onError (T.unpack -> errorMsg) = do
+      footnote errorMsg
+      failure
 
 bsToTxt :: BL.ByteString -> T.Text
 bsToTxt = TL.toStrict . TL.decodeUtf8With TE.lenientDecode

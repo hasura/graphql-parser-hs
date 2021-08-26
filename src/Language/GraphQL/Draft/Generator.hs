@@ -88,7 +88,6 @@ genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
                    , VEnum <$> genEnumValue
                    , VFloat . fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
                    , VString <$> genText
-                   , VString <$> genBlockText
                    , VBoolean <$> Gen.bool
                    ] <> [VVariable <$> var | var <- varGens]
 
