@@ -22,8 +22,8 @@ import qualified Language.GraphQL.Draft.Parser         as Input
 import qualified Language.GraphQL.Draft.Printer        as Output
 import           Language.GraphQL.Draft.Syntax
 
-import           Keywords
 import           BlockStrings
+import           Keywords
 
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)

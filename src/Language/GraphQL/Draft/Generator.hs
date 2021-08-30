@@ -7,9 +7,9 @@ import           Data.Void
 import           Hedgehog
 
 import qualified Data.HashMap.Strict           as M
+import qualified Data.Text                     as T
 import qualified Hedgehog.Gen                  as Gen
 import qualified Hedgehog.Range                as Range
-import qualified Data.Text                     as T
 
 import           Language.GraphQL.Draft.Syntax
 
@@ -87,7 +87,7 @@ genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
                    , VInt . fromIntegral <$> Gen.int32 (Range.linear 1 99999)
                    , VEnum <$> genEnumValue
                    , VFloat . fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
-                   , VString <$> genText
+                   , VString <$> Gen.choice [genText, genBlockText]
                    , VBoolean <$> Gen.bool
                    ] <> [VVariable <$> var | var <- varGens]
 

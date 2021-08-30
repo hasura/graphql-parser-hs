@@ -38,10 +38,10 @@ import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
 import           Data.Functor
 import           Data.HashMap.Strict           (HashMap)
+import           Data.Maybe                    (fromMaybe)
 import           Data.Scientific               (Scientific)
 import           Data.Text                     (Text, find)
 import           Data.Void                     (Void)
-import           Data.Maybe                    (fromMaybe)
 
 import qualified Language.GraphQL.Draft.Syntax as AST
 
@@ -484,63 +484,74 @@ between open close p = tok open *> p <* tok close
 optempty :: Monoid a => Parser a -> Parser a
 optempty = option mempty
 
+data Expecting
+  = Anything
+  | Open
+  | Closed
+
 data BlockState
-  = Escaped Int 
-  | Closing Int
-  | Normal
+  = Escaped Expecting
+  | Quoting Expecting
+  | Continue
   | Done
 
--- | Parses strings delimited by triple quotes. 
+-- | Parses strings delimited by triple quotes.
 -- http://spec.graphql.org/June2018/#sec-String-Value
 blockString :: Parser Text
 blockString = do
   _ <- tripleQuotes <?> "opening triple quotes"
-  lines_ <- AT.runScanner Normal scanner >>= \case
-    (lines_,Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes (since we are using a different parser)
-    (_     ,   _) -> fail "couldn't parse block string" -- there is only one way to get to a Done, so we need this here because runScanner never fails
+  lines_ <- AT.runScanner Continue scanner >>= \case
+    (lines_, Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes (since we are using a different parser)
+
+    (_     ,   _)  -> fail "couldn't parse block string" -- there is only one way to get to a Done, so we need this here because runScanner never fails
   -- the reason why we have the headline here is
   -- to simply separate the head of the list so we don't
   -- operate on it.
-  let headline = if lines_ == [] then "" else head lines_
+  let headline = if null lines_ then "" else head lines_
   let indentedRemainder = drop 1 lines_ -- not tail
   let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
   let rlines = foldr (removeCommonIndentation commonIndentation) Nothing indentedRemainder
   return $ case rlines of
-    Nothing -> headline
+    Nothing              -> headline
     Just reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
   where
     -- | This function is used to parse the body of the string
     -- while counting stuff that we might need for escaping,
     -- for example.
     scanner :: BlockState -> Char -> Maybe BlockState
-    scanner s ch = 
+    scanner s ch =
       case s of
         Done -> Nothing
-        Normal ->
+        Continue ->
           case ch of
-            '\\' -> Just (Escaped 0)
-            '"'  -> Just (Closing 1)
-            _    -> Just Normal
+            '\\' -> Just (Escaped Anything)
+            '"'  -> Just (Quoting Open)
+            _    -> Just Continue
         -- we are counting " for a possible closing delimiter
-        Closing 1 -> if ch == '"' then Just (Closing 2) else Just Normal
-        Closing 2 -> if ch == '"' then Just Done else Just Normal
+        Quoting Open -> if ch == '"' then Just (Quoting Closed) else Just Continue
+        Quoting Closed -> if ch == '"' then Just Done else Just Continue
+        Quoting _ -> Just Continue
         -- we are counting escaped characters when "
-        Escaped 0 -> if ch == '"' then Just (Escaped 1) else Just Normal
-        Escaped 1 -> if ch == '"' then Just (Escaped 2) else Just Normal
-        Escaped 2 -> Just Normal
+        Escaped Anything -> if ch == '"' then Just (Escaped Open) else Just Continue
+        Escaped Open -> if ch == '"' then Just (Escaped Closed) else Just Continue
+        Escaped Closed -> Just Continue
 
     rebuild :: [Text] -> Text
-    rebuild = fromMaybe "" . fmap fst . T.unsnoc . T.unlines
+    rebuild = maybe "" fst . T.unsnoc . T.unlines
+
     sanitize :: [Text] -> [Text]
     sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
+
     onlyWhiteSpace :: Text -> Bool
     onlyWhiteSpace t = T.all isWhitespace t
-    removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text] 
-    removeCommonIndentation smallest a x = 
+
+    removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text]
+    removeCommonIndentation smallest a x =
       let new = T.drop smallest a
       in case x of
-        Nothing -> Just [new]
+        Nothing  -> Just [new]
         Just acc -> Just $ new:acc
+
     countIndentation :: Text -> Int
     countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)
     tripleQuotes = AT.string "\"\"\""

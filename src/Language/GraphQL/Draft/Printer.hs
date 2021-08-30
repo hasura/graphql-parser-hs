@@ -11,6 +11,7 @@ import           Data.List                          (intersperse, sort)
 import           Data.Scientific                    (Scientific)
 import           Data.String                        (IsString)
 import           Data.Text                          (Text)
+import qualified Data.Text                          as T
 import qualified Data.Text.Lazy                     as LT hiding (singleton)
 import qualified Data.Text.Lazy.Builder             as LT
 import qualified Data.Text.Lazy.Builder.Int         as LTBI
@@ -19,7 +20,6 @@ import qualified Data.Text.Lazy.Encoding            as LTE
 import qualified Data.Text.Prettyprint.Doc          as PP
 import           Data.Void                          (Void, absurd)
 import qualified Text.Builder                       as Text
-import qualified Data.Text                          as T
 
 import           Language.GraphQL.Draft.Syntax
 
@@ -250,34 +250,35 @@ value = \case
 
 data BlockStatus
   = NormalString
-  | KeepGoing    AtLeastOneZeroIndent HasEscapedNewlines
-type AtLeastOneZeroIndent = Bool; type HasEscapedNewlines = Bool
+  | KeepGoing AtLeastOneZeroIndent HasEscapedNewlines
+
+type AtLeastOneZeroIndent = Bool
+type HasEscapedNewlines = Bool
 
 -- | We us this function to decide how to print a string,
 -- which might be a normal string or a block string.
 dispatchStringPrinter :: Printer a => Text -> a
-dispatchStringPrinter t = 
-  let ls = T.lines t
-   in if T.null t 
-      then stringValue ""
-      else if T.all isWhitespace (last ls) || T.all isWhitespace (head ls)
-           then stringValue t
-           else handleResult $ foldr go (KeepGoing False False) ls
+dispatchStringPrinter t
+  | T.null t = stringValue ""
+  | not (T.null . T.takeWhile isWhitespace $ t) =  stringValue t
+  | not (T.null . T.takeWhileEnd isWhitespace $ t) = stringValue t
+  | otherwise = handleResult $ foldr go (KeepGoing False False) (T.lines t)
  where
   go a = \case
     NormalString  -> NormalString
     KeepGoing x y -> KeepGoing (checkAtLeastOneZeroIndent x a) (checkEscapedNewLines y a)
+
   handleResult = \case
     NormalString -> stringValue t
-    KeepGoing atLeastOneZeroIndent hasEscapedNewLines -> 
-      if atLeastOneZeroIndent || hasEscapedNewLines 
+    KeepGoing atLeastOneZeroIndent hasEscapedNewLines ->
+      if atLeastOneZeroIndent || hasEscapedNewLines
          then blockStringValue t else stringValue t
 
-  checkAtLeastOneZeroIndent p t = if p then p else T.null (T.takeWhile isWhitespace t)
-  checkEscapedNewLines p t = if p then p else "\\n" `T.isInfixOf` t
+  checkAtLeastOneZeroIndent p str = if p then p else T.null (T.takeWhile isWhitespace str)
+  checkEscapedNewLines p str = if p then p else "\\n" `T.isInfixOf` str
 
   isWhitespace :: Char -> Bool
-  isWhitespace c = c == ' ' || c == '\t'
+  isWhitespace c = c == ' ' || c == '\t' || c == '\n'
 
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
