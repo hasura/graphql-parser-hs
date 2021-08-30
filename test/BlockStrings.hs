@@ -54,7 +54,7 @@ blockTest = do
 -- for errors using it.
 blockParseFail :: (T.Text -> T.Text) -> T.Text -> Property
 blockParseFail tripleQuoted unparsed = withTests 1 $ property $ do
-  case parseOnly blockString (tripleQuoted unparsed) of
+  case runParser blockString (tripleQuoted unparsed) of
     Left _ -> success
     Right _ -> do
       footnote ("Should have failed for: " <> T.unpack (tripleQuoted unparsed))
