@@ -21,6 +21,7 @@ import qualified Data.Text.Prettyprint.Doc          as PP
 import           Data.Void                          (Void, absurd)
 import qualified Text.Builder                       as Text
 
+import           Data.Char                          (isPrint)
 import           Language.GraphQL.Draft.Syntax
 
 
@@ -248,11 +249,11 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
-data HasEscapedNewlines = NoEscapedNewLines | HasEscapedNewlines
+data HasNonPrintable = NoNonPrintable | HasNonPrintable
 data AtLeastOneZeroIndent = AtLeastOneZeroIndent | NoZeroIdent
 data BlockStatus
   = NormalString
-  | KeepGoing !AtLeastOneZeroIndent !HasEscapedNewlines
+  | KeepGoing !AtLeastOneZeroIndent !HasNonPrintable
 
 
 -- | We us this function to decide how to print a string,
@@ -262,27 +263,27 @@ dispatchStringPrinter t
   | T.null t = stringValue ""
   | not (T.null . T.takeWhile isWhitespace $ t) =  stringValue t
   | not (T.null . T.takeWhileEnd isWhitespace $ t) = stringValue t
-  | otherwise = handleResult $ foldr go (KeepGoing NoZeroIdent NoEscapedNewLines) (T.lines t)
+  | otherwise = handleResult $ foldr go (KeepGoing NoZeroIdent NoNonPrintable) (T.lines t)
  where
   go a = \case
     NormalString  -> NormalString
     KeepGoing x y -> KeepGoing (checkAtLeastOneZeroIndent x a) (checkEscapedNewLines y a)
 
   handleResult = \case
-    NormalString                     -> stringValue t
-    KeepGoing AtLeastOneZeroIndent _ -> blockStringValue t
-    KeepGoing _ NoEscapedNewLines    -> blockStringValue t
-    KeepGoing _ HasEscapedNewlines   -> stringValue t
+    KeepGoing AtLeastOneZeroIndent NoNonPrintable -> blockStringValue t
+    _                                             -> stringValue t
+
 
   checkAtLeastOneZeroIndent AtLeastOneZeroIndent _ = AtLeastOneZeroIndent
   checkAtLeastOneZeroIndent _ str
     | T.null (T.takeWhile isWhitespace str) = AtLeastOneZeroIndent
     | otherwise = NoZeroIdent
 
-  checkEscapedNewLines HasEscapedNewlines _ = HasEscapedNewlines
-  checkEscapedNewLines NoEscapedNewLines str
-    | "\\n" `T.isInfixOf` str = HasEscapedNewlines
-    | otherwise = NoEscapedNewLines
+  checkEscapedNewLines HasNonPrintable _ = HasNonPrintable
+  checkEscapedNewLines NoNonPrintable str
+    | "\\n" `T.isInfixOf` str = HasNonPrintable
+    | T.any (not . isPrint) str = HasNonPrintable
+    | otherwise = NoNonPrintable
 
   isWhitespace :: Char -> Bool
   isWhitespace c = c == ' ' || c == '\t' || c == '\n'
