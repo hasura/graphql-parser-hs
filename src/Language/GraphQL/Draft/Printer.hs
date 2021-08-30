@@ -248,12 +248,12 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
+data HasEscapedNewlines = NoEscapedNewLines | HasEscapedNewlines
+data AtLeastOneZeroIndent = AtLeastOneZeroIndent | NoZeroIdent
 data BlockStatus
   = NormalString
-  | KeepGoing AtLeastOneZeroIndent HasEscapedNewlines
+  | KeepGoing !AtLeastOneZeroIndent !HasEscapedNewlines
 
-type AtLeastOneZeroIndent = Bool
-type HasEscapedNewlines = Bool
 
 -- | We us this function to decide how to print a string,
 -- which might be a normal string or a block string.
@@ -262,20 +262,27 @@ dispatchStringPrinter t
   | T.null t = stringValue ""
   | not (T.null . T.takeWhile isWhitespace $ t) =  stringValue t
   | not (T.null . T.takeWhileEnd isWhitespace $ t) = stringValue t
-  | otherwise = handleResult $ foldr go (KeepGoing False False) (T.lines t)
+  | otherwise = handleResult $ foldr go (KeepGoing NoZeroIdent NoEscapedNewLines) (T.lines t)
  where
   go a = \case
     NormalString  -> NormalString
     KeepGoing x y -> KeepGoing (checkAtLeastOneZeroIndent x a) (checkEscapedNewLines y a)
 
   handleResult = \case
-    NormalString -> stringValue t
-    KeepGoing atLeastOneZeroIndent hasEscapedNewLines ->
-      if atLeastOneZeroIndent || hasEscapedNewLines
-         then blockStringValue t else stringValue t
+    NormalString                     -> stringValue t
+    KeepGoing AtLeastOneZeroIndent _ -> blockStringValue t
+    KeepGoing _ NoEscapedNewLines    -> blockStringValue t
+    KeepGoing _ HasEscapedNewlines   -> stringValue t
 
-  checkAtLeastOneZeroIndent p str = if p then p else T.null (T.takeWhile isWhitespace str)
-  checkEscapedNewLines p str = if p then p else "\\n" `T.isInfixOf` str
+  checkAtLeastOneZeroIndent AtLeastOneZeroIndent _ = AtLeastOneZeroIndent
+  checkAtLeastOneZeroIndent _ str
+    | T.null (T.takeWhile isWhitespace str) = AtLeastOneZeroIndent
+    | otherwise = NoZeroIdent
+
+  checkEscapedNewLines HasEscapedNewlines _ = HasEscapedNewlines
+  checkEscapedNewLines NoEscapedNewLines str
+    | "\\n" `T.isInfixOf` str = HasEscapedNewlines
+    | otherwise = NoEscapedNewLines
 
   isWhitespace :: Char -> Bool
   isWhitespace c = c == ' ' || c == '\t' || c == '\n'

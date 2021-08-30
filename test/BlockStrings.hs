@@ -29,8 +29,8 @@ blockTest = do
     , ("preserves escaped newlines", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
     , ("", blockParsesTo "\n\"\n" "\"")
     , ("escaped triple-quotes are ignored as block terminator", blockParsesTo "\n   \\\"\"\"hey\n   friends\n" "\\\"\"\"hey\nfriends")
-    , ("fails for normal string",blockParseFail (\t -> "\"" <> t <> "\"") "hey")
-    , ("fails for block string that is not closed",blockParseFail ("\"\"\"" <>) "hey")
+    , ("fails for normal string", blockParseFail (\t -> "\"" <> t <> "\"") "hey")
+    , ("fails for block string that is not closed", blockParseFail ("\"\"\"" <>) "hey")
     , ("fails for block string that is not closed when there are escaped triple-quotes",
           blockParseFail (\t -> "\"\"\"" <> t <> "\\\"\"\"" <> t) "hey")
     , ("does not ignore escaping when its part of a escaped tripel-quotes",
