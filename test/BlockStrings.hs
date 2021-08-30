@@ -66,8 +66,8 @@ blockParseFail tripleQuoted unparsed = withTests 1 $ property $ do
 blockParsesTo :: T.Text -> T.Text -> Property
 blockParsesTo unparsed expected = withTests 1 $ property $ do
   let result =
-        case parseOnly blockString (tripleQuoted unparsed) of
-          Left l  -> Left ("Block parser failed: " <> T.pack l)
+        case runParser blockString (tripleQuoted unparsed) of
+          Left l  -> Left ("Block parser failed: " <> l)
           Right r -> Right r
   either onError (expected ===) result
   where
