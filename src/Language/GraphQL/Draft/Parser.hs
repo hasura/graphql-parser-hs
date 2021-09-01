@@ -498,24 +498,29 @@ data BlockState
 -- | Parses strings delimited by triple quotes.
 -- http://spec.graphql.org/June2018/#sec-String-Value
 blockString :: Parser Text
-blockString = do
-  _ <- tripleQuotes <?> "opening triple quotes"
-  lines_ <- AT.runScanner Continue scanner >>= \case
-    (lines_, Done) -> return (T.lines (T.dropEnd 3 lines_)) -- this drop the parsed closing quotes (since we are using a different parser)
-
-    (_     ,   _)  -> fail "couldn't parse block string" -- there is only one way to get to a Done, so we need this here because runScanner never fails
-  -- the reason why we have the headline here is
-  -- to simply separate the head of the list so we don't
-  -- operate on it.
-  let headline = if null lines_ then "" else head lines_
-  let indentedRemainder = drop 1 lines_ -- not tail
-  let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
-  let rlines = foldr (removeCommonIndentation commonIndentation) Nothing indentedRemainder
-  return $ case rlines of
-    Nothing              -> headline
-    Just reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
+blockString = extractText <$> (tripleQuotes *> blockContents)
   where
-    -- | This function is used to parse the body of the string
+    blockContents = AT.runScanner Continue scanner >>= \case
+      -- this drop the parsed closing quotes (since we are using a different parser)
+      (textBlock, Done) -> return $ T.lines (T.dropEnd 3 textBlock)
+
+      -- there is only one way to get to a Done, so we need this here because runScanner never fails
+      _  -> fail "couldn't parse block string" 
+
+    extractText = \case
+      [] -> ""
+      -- we keep the first line apart as, per the specification, it should not count for
+      -- the calculation of the common minimum indentation:
+      -- see item 3.a in http://spec.graphql.org/June2018/#BlockStringValue()
+      headline:indentedRemainder ->
+        let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
+            rlines = T.drop commonIndentation <$> indentedRemainder
+        in
+        case rlines of
+          []              -> headline
+          reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
+
+    -- This function is used to parse the body of the string
     -- while counting stuff that we might need for escaping,
     -- for example.
     scanner :: BlockState -> Char -> Maybe BlockState
@@ -536,6 +541,9 @@ blockString = do
         Escaped Open -> if ch == '"' then Just (Escaped Closed) else Just Continue
         Escaped Closed -> Just Continue
 
+    -- Joins all the lines into a single block of text
+    -- we drop the las new line character that is added
+    -- automatically by T.unlines
     rebuild :: [Text] -> Text
     rebuild = maybe "" fst . T.unsnoc . T.unlines
 
@@ -544,13 +552,6 @@ blockString = do
 
     onlyWhiteSpace :: Text -> Bool
     onlyWhiteSpace t = T.all isWhitespace t
-
-    removeCommonIndentation :: Int -> Text -> Maybe [Text] -> Maybe [Text]
-    removeCommonIndentation smallest a x =
-      let new = T.drop smallest a
-      in case x of
-        Nothing  -> Just [new]
-        Just acc -> Just $ new:acc
 
     countIndentation :: Text -> Int
     countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)

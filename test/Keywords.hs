@@ -55,7 +55,6 @@ propHandleUnicodeCharacters = property $ for_ [minBound..maxBound] \c ->
 propHandleTripleQuote :: Property
 propHandleTripleQuote = property $ testRoundTripValue $ VString "\"\"\""
 
-
 testRoundTripValue :: Value Void -> PropertyT IO ()
 testRoundTripValue = testRoundTrip value P.value
 

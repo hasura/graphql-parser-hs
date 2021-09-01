@@ -250,7 +250,7 @@ value = \case
   VEnum ev    -> nameP $ unEnumValue ev
 
 data HasNonPrintable = NoNonPrintable | HasNonPrintable
-data AtLeastOneZeroIndent = AtLeastOneZeroIndent | NoZeroIdent
+data AtLeastOneZeroIndent = AtLeastOneZeroIndent | NoZeroIndent
 data BlockStatus
   = NormalString
   | KeepGoing !AtLeastOneZeroIndent !HasNonPrintable
@@ -263,7 +263,8 @@ dispatchStringPrinter t
   | T.null t = stringValue ""
   | not (T.null . T.takeWhile isWhitespace $ t) =  stringValue t
   | not (T.null . T.takeWhileEnd isWhitespace $ t) = stringValue t
-  | otherwise = handleResult $ foldr go (KeepGoing NoZeroIdent NoNonPrintable) (T.lines t)
+  | "\"\"\"" `T.isInfixOf` t = stringValue t
+  | otherwise = handleResult $ foldr go (KeepGoing NoZeroIndent NoNonPrintable) (T.lines t)
  where
   go a = \case
     NormalString  -> NormalString
@@ -277,7 +278,7 @@ dispatchStringPrinter t
   checkAtLeastOneZeroIndent AtLeastOneZeroIndent _ = AtLeastOneZeroIndent
   checkAtLeastOneZeroIndent _ str
     | T.null (T.takeWhile isWhitespace str) = AtLeastOneZeroIndent
-    | otherwise = NoZeroIdent
+    | otherwise = NoZeroIndent
 
   checkEscapedNewLines HasNonPrintable _ = HasNonPrintable
   checkEscapedNewLines NoNonPrintable str
