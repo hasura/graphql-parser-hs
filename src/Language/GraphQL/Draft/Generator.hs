@@ -129,7 +129,7 @@ genMinIndentedText min_ = do
 
 genIndentation :: Gen Text
 genIndentation = do
-  Gen.text (Range.linear 0 100) (return " ")
+  Gen.text (Range.linear 0 100) (return ' ')
 
 
 -- | *Definitions*
