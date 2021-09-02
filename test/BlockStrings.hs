@@ -27,25 +27,23 @@ blockTest = do
     , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
     , ("preserves escaped newlines", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
     , ("", blockParsesTo "\n\"\n" "\"")
-    , ("escaped triple-quotes are ignored as block terminator", blockParsesTo "\n   \\\"\"\"hey\n   friends\n" "\"\"\"hey\nfriends")
-    , ("fails for normal string", blockParseFail (\t -> "\"" <> t <> "\"") "hey")
-    , ("fails for block string that is not closed", blockParseFail ("\"\"\"" <>) "hey")
-    , ("fails for block string that is not closed when there are escaped triple-quotes",
-          blockParseFail (\t -> "\"\"\"" <> t <> "\\\"\"\"" <> t) "hey")
-    , ("does not ignore escaping when it's part of an escaped triple-quotes",
-          blockParseFail (\t -> "\"\"\"" <> t <> "\"\"\"") "\\") -- this is a single \, but it touches the """ at the end
+    , ("escaped triple-quotes are ignored as block terminator", blockParseFail "\n   \\\"\"\"hey\n   friends\n\"\"\"hey\nfriends")
+    , ("fails for normal string", blockParseFail "\"hey\"")
+    , ("fails for block string that is not closed", blockParseFail "\"\"\" hey")
+    , ("fails for block string that is not closed when there are escaped triple-quotes", blockParseFail "\"\"\" hey\\\"\"\"hey")
+    , ("does not ignore escaping when it's part of an escaped triple-quotes", blockParseFail "\"\"\"\\\"\"\"" ) -- this is a single \, but it touches the """ at the end
     ]
 
 -- | We use this function to tests cases that we know should
 -- fail, when we pass a function to construct wrapped the
 -- body in a delimiter, where we will probably be testing
 -- for errors using it.
-blockParseFail :: (T.Text -> T.Text) -> T.Text -> Property
-blockParseFail tripleQuoted unparsed = withTests 1 $ property $ do
-  case runParser blockString (tripleQuoted unparsed) of
+blockParseFail :: T.Text -> Property
+blockParseFail unparsed = withTests 1 $ property $ do
+  case runParser blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
     Left _ -> success
     Right _ -> do
-      footnote ("Should have failed for: " <> T.unpack (tripleQuoted unparsed))
+      footnote ("Should have failed for: " <> T.unpack ("\"\"\"" <> unparsed <> "\"\"\""))
       failure
 
 -- | Test whether certain block string content parses to the expected value.
