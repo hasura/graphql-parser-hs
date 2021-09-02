@@ -184,14 +184,14 @@ value :: Variable var => Parser (AST.Value var)
 value = tok (
       AST.VVariable    <$> variable
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull    <$  literal "null"
-  <|> AST.VBoolean <$> booleanLiteral
-  <|> AST.VString  <$> blockString
-  <|> AST.VString  <$> stringLiteral
+  <|> AST.VNull        <$  literal "null"
+  <|> AST.VBoolean     <$> booleanLiteral
+  <|> AST.VString      <$> blockString
+  <|> AST.VString      <$> stringLiteral
   -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
-  <|> AST.VEnum    <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VList    <$> listLiteral
-  <|> AST.VObject  <$> objectLiteral
+  <|> AST.VEnum        <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VList        <$> listLiteral
+  <|> AST.VObject      <$> objectLiteral
   <?> "value")
 
 booleanLiteral :: Parser Bool
@@ -504,7 +504,7 @@ blockString = extractText <$> (tripleQuotes *> blockContents)
       -- this drop the parsed closing quotes (since we are using a different parser)
       (textBlock, Done) -> return $ T.lines (T.dropEnd 3 textBlock)
       -- there is only one way to get to a Done, so we need this here because runScanner never fails
-      _  -> fail "couldn't parse block string" 
+      _                 -> fail "couldn't parse block string"
 
     extractText = \case
       [] -> ""
