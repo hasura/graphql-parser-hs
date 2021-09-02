@@ -249,45 +249,38 @@ value = \case
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
-data HasNonPrintable = NoNonPrintable | HasNonPrintable
-data AtLeastOneZeroIndent = AtLeastOneZeroIndent | NoZeroIndent
-data BlockStatus
-  = NormalString
-  | KeepGoing !AtLeastOneZeroIndent !HasNonPrintable
-
-
--- | We us this function to decide how to print a string,
--- which might be a normal string or a block string.
+-- | Print a given text as a normal string or as a block string, depending on
+-- its content.
 dispatchStringPrinter :: Printer a => Text -> a
-dispatchStringPrinter t
-  | T.null t = stringValue ""
-  | not (T.null . T.takeWhile isWhitespace $ t) =  stringValue t
-  | not (T.null . T.takeWhileEnd isWhitespace $ t) = stringValue t
-  | "\"\"\"" `T.isInfixOf` t = stringValue t
-  | otherwise = handleResult $ foldr go (KeepGoing NoZeroIndent NoNonPrintable) (T.lines t)
- where
-  go a = \case
-    NormalString  -> NormalString
-    KeepGoing x y -> KeepGoing (checkAtLeastOneZeroIndent x a) (checkEscapedNewLines y a)
+dispatchStringPrinter t =
+  if printAsBlockString then blockStringValue t else stringValue t
+  where
+    printAsBlockString =
+      hasNewlines && onlySourceCharacter && not (hasWhitespaceEnd || hasZeroIndentation || hasTripleQuotes)
+    -- Condition 1: if there are no newlines, there's no point to print a text
+    -- as a block string
+    hasNewlines = "\n" `T.isInfixOf` t
+    -- Condition 2: block strings only support GraphQL's SourceCharacters
+    -- http://spec.graphql.org/June2018/#SourceCharacter
+    onlySourceCharacter = T.all isSourceCharacter t
+    -- Condition 3: if the text ends in a line containing only whitespace, we
+    -- can't print it as a block string
+    hasWhitespaceEnd = T.all isWhitespace $ T.takeWhileEnd (/='\n') t
+    -- Condition 4: if none of the remaining lines (i.e. not the first line)
+    -- contains nonzero indentation, we can't print it as a block string
+    hasZeroIndentation = any lineZeroIndentation $ tail $ T.lines t
+      where
+        lineZeroIndentation line = case T.uncons line of
+          Nothing -> False -- empty lines don't count
+          Just (firstChar,_) -> not (isWhitespace firstChar)
+    -- Condition 5: although """ is printable in block strings as \""", this
+    -- isn't currently implemented
+    hasTripleQuotes = "\"\"\"" `T.isInfixOf` t
 
-  handleResult = \case
-    KeepGoing AtLeastOneZeroIndent NoNonPrintable -> blockStringValue t
-    _                                             -> stringValue t
-
-
-  checkAtLeastOneZeroIndent AtLeastOneZeroIndent _ = AtLeastOneZeroIndent
-  checkAtLeastOneZeroIndent _ str
-    | T.null (T.takeWhile isWhitespace str) = AtLeastOneZeroIndent
-    | otherwise = NoZeroIndent
-
-  checkEscapedNewLines HasNonPrintable _ = HasNonPrintable
-  checkEscapedNewLines NoNonPrintable str
-    | "\\n" `T.isInfixOf` str = HasNonPrintable
-    | T.any (not . isPrint) str = HasNonPrintable
-    | otherwise = NoNonPrintable
-
-  isWhitespace :: Char -> Bool
-  isWhitespace c = c == ' ' || c == '\t' || c == '\n'
+    isWhitespace :: Char -> Bool
+    isWhitespace c = c == ' ' || c == '\t'
+    isSourceCharacter :: Char -> Bool
+    isSourceCharacter = not . isControl
 
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
