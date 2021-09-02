@@ -503,7 +503,6 @@ blockString = extractText <$> (tripleQuotes *> blockContents)
     blockContents = AT.runScanner Continue scanner >>= \case
       -- this drop the parsed closing quotes (since we are using a different parser)
       (textBlock, Done) -> return $ T.lines (T.dropEnd 3 textBlock)
-
       -- there is only one way to get to a Done, so we need this here because runScanner never fails
       _  -> fail "couldn't parse block string" 
 
@@ -515,14 +514,10 @@ blockString = extractText <$> (tripleQuotes *> blockContents)
       headline:indentedRemainder ->
         let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
             rlines = T.drop commonIndentation <$> indentedRemainder
-        in
-        case rlines of
-          []              -> headline
-          reformatedLines -> rebuild (sanitize $ headline:reformatedLines)
+        in rebuild (sanitize $ headline:rlines)
 
-    -- This function is used to parse the body of the string
-    -- while counting stuff that we might need for escaping,
-    -- for example.
+    -- Take characters from the block string until the first
+    -- non-escaped triple quotes.
     scanner :: BlockState -> Char -> Maybe BlockState
     scanner s ch =
       case s of
@@ -542,7 +537,7 @@ blockString = extractText <$> (tripleQuotes *> blockContents)
         Escaped Closed -> Just Continue
 
     -- Joins all the lines into a single block of text
-    -- we drop the las new line character that is added
+    -- we drop the last new line character that is added
     -- automatically by T.unlines
     rebuild :: [Text] -> Text
     rebuild = maybe "" fst . T.unsnoc . T.unlines

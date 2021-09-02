@@ -27,12 +27,12 @@ blockTest = do
     , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
     , ("preserves escaped newlines", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
     , ("", blockParsesTo "\n\"\n" "\"")
-    , ("escaped triple-quotes are ignored as block terminator", blockParsesTo "\n   \\\"\"\"hey\n   friends\n" "\\\"\"\"hey\nfriends")
+    , ("escaped triple-quotes are ignored as block terminator", blockParsesTo "\n   \\\"\"\"hey\n   friends\n" "\"\"\"hey\nfriends")
     , ("fails for normal string", blockParseFail (\t -> "\"" <> t <> "\"") "hey")
     , ("fails for block string that is not closed", blockParseFail ("\"\"\"" <>) "hey")
     , ("fails for block string that is not closed when there are escaped triple-quotes",
           blockParseFail (\t -> "\"\"\"" <> t <> "\\\"\"\"" <> t) "hey")
-    , ("does not ignore escaping when its part of a escaped tripel-quotes",
+    , ("does not ignore escaping when it's part of an escaped triple-quotes",
           blockParseFail (\t -> "\"\"\"" <> t <> "\"\"\"") "\\") -- this is a single \, but it touches the """ at the end
     ]
 
@@ -48,18 +48,11 @@ blockParseFail tripleQuoted unparsed = withTests 1 $ property $ do
       footnote ("Should have failed for: " <> T.unpack (tripleQuoted unparsed))
       failure
 
--- | We use this to wrap the first argument with I've been
--- calling "triple-quotes", which are the delimiters for the
--- block strings.
+-- | Test whether certain block string content parses to the expected value.
 blockParsesTo :: T.Text -> T.Text -> Property
 blockParsesTo unparsed expected = withTests 1 $ property $ do
-  let result =
-        case runParser blockString (tripleQuoted unparsed) of
-          Left l  -> Left ("Block parser failed: " <> l)
-          Right r -> Right r
-  either onError (expected ===) result
-  where
-    onError errorMsg = do
-      footnote (T.unpack errorMsg)
+  case runParser blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
+    Right r -> expected === r
+    Left l  -> do
+      footnote $ T.unpack $ "Block parser failed: " <> l
       failure
-    tripleQuoted t = "\"\"\"" <> t <> "\"\"\""
