@@ -21,7 +21,7 @@ import qualified Data.Text.Prettyprint.Doc          as PP
 import           Data.Void                          (Void, absurd)
 import qualified Text.Builder                       as Text
 
-import           Data.Char                          (isPrint)
+import           Data.Char                          (isControl)
 import           Language.GraphQL.Draft.Syntax
 
 
@@ -271,7 +271,7 @@ dispatchStringPrinter t =
     hasZeroIndentation = any lineZeroIndentation $ tail $ T.lines t
       where
         lineZeroIndentation line = case T.uncons line of
-          Nothing -> False -- empty lines don't count
+          Nothing            -> False -- empty lines don't count
           Just (firstChar,_) -> not (isWhitespace firstChar)
     -- Condition 5: although """ is printable in block strings as \""", this
     -- isn't currently implemented
