@@ -498,7 +498,7 @@ data BlockState
 -- | Parses strings delimited by triple quotes.
 -- http://spec.graphql.org/June2018/#sec-String-Value
 blockString :: Parser Text
-blockString = extractText <$> (tripleQuotes *> blockContents)
+blockString = extractText <$> ("\"\"\"" *> blockContents)
   where
     blockContents = AT.runScanner Continue scanner >>= \case
       -- this drop the parsed closing quotes (since we are using a different parser)
@@ -550,7 +550,6 @@ blockString = extractText <$> (tripleQuotes *> blockContents)
 
     countIndentation :: Text -> Int
     countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)
-    tripleQuotes = AT.string "\"\"\""
 
 -- whitespace
 isWhitespace :: Char -> Bool
