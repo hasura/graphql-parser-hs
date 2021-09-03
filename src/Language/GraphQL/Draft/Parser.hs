@@ -506,7 +506,7 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
       -- there is only one way to get to a Done, so we need this here because runScanner never fails
       _                 -> fail "couldn't parse block string"
 
-    extractText = \case
+    extractText = T.replace "\\\"\"\"" "\"\"\"" . \case
       [] -> ""
       -- we keep the first line apart as, per the specification, it should not count for
       -- the calculation of the common minimum indentation:

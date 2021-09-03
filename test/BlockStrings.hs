@@ -9,26 +9,25 @@ import           Language.GraphQL.Draft.Parser
 blockTest :: IO Bool
 blockTest = do
   checkParallel $ Group "Test.parser.block-string.unit"
-    [ ("parses the specExample", blockParsesTo "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  " "Hello,\n  World!\n\nYours,\n  GraphQL.")
-    , ("do not remove WS from the end of lines", blockParsesTo "\nFoo \nbar  " "Foo \nbar  ")
-    , ("tabs are WS as well", blockParsesTo "\n\t\tFoo\n\t\tbar\n\t\t\tqux" "Foo\nbar\n\tqux")
-    , ("tabs work with spaces", blockParsesTo "\n\t Foo\n \tbar\n\t\t qux" "Foo\nbar\n qux")
-    , ("parses newline", blockParsesTo "\n" "")
-    , ("parses very simples not-empty block", blockParsesTo "x" "x")
-    , ("common indentation is removed", blockParsesTo "\n  a \n   b \n  c " "a \n b \nc ")
-    , ("zero common indentation is possible", blockParsesTo "\na \n b \nc " "a \n b \nc ")
-    , ("no whitespace is removed from the first line", blockParsesTo "  abc " "  abc ")
-    , ("ignores escaping", blockParsesTo "  \\  " "  \\  ") -- this is a single \
-    , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey  ")
-    , ("", blockParsesTo "\nx\n" "x") -- TODO missing description
-    , ("empty single line", blockParsesTo "" "")
-    , ("empty two lines", blockParsesTo "\n" "")
-    , ("empty three lines", blockParsesTo "\n\n" "")
-    , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
-    , ("preserves escaped newlines", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
-    , ("", blockParsesTo "\n\"\n" "\"") -- TODO missing description
-    , ("", blockParsesTo "\n   \\\"\"\"\n   friends\n"     "\"\"\"hey\nfriends") -- TODO missing description
-    , ("escaped triple-quotes are ignored as block terminator", blockParseFail "\n   \\\"\"\"hey\n   friends\n\"\"\"hey\nfriends")
+    [ ("parses the specExample", "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  " `shouldParseTo` "Hello,\n  World!\n\nYours,\n  GraphQL.")
+    , ("do not remove WS from the end of lines", "\nFoo \nbar  " `shouldParseTo` "Foo \nbar  ")
+    , ("tabs are WS as well", "\n\t\tFoo\n\t\tbar\n\t\t\tqux" `shouldParseTo` "Foo\nbar\n\tqux")
+    , ("tabs work with spaces", "\n\t Foo\n \tbar\n\t\t qux" `shouldParseTo` "Foo\nbar\n qux")
+    , ("parses newline", "\n" `shouldParseTo` "")
+    , ("parses very simples not-empty block", "x" `shouldParseTo` "x")
+    , ("common indentation is removed", "\n  a \n   b \n  c " `shouldParseTo` "a \n b \nc ")
+    , ("zero common indentation is possible", "\na \n b \nc " `shouldParseTo` "a \n b \nc ")
+    , ("no whitespace is removed from the first line", "  abc " `shouldParseTo` "  abc ")
+    , ("ignores escaping", "  \\  " `shouldParseTo` "  \\  ") -- this is a single \
+    , ("\n in first characters is parsed", "\n hey  " `shouldParseTo` "hey  ")
+    , ("simple case", "\nx\n" `shouldParseTo` "x")
+    , ("empty single line", "" `shouldParseTo` "")
+    , ("empty two lines", "\n" `shouldParseTo` "")
+    , ("empty three lines", "\n\n" `shouldParseTo` "")
+    , ("empty X lines", "\n\n\n\n\n\n" `shouldParseTo` "")
+    , ("preserves escaped newlines", "\nhello\\nworld\n" `shouldParseTo` "hello\\nworld")
+    , ("double-quotes are parsed normally", "\n\"\n" `shouldParseTo` "\"")
+    , ("escaped triple-quotes are ignored as block terminator", "\n   \\\"\"\"hey\n   friends\n" `shouldParseTo` "\"\"\"hey\nfriends")
     , ("fails for normal string", blockParseFail "\"hey\"")
     , ("fails for block string that is not closed", blockParseFail "\"\"\" hey")
     , ("fails for block string that is not closed when there are escaped triple-quotes", blockParseFail "\"\"\" hey\\\"\"\"hey")
@@ -48,8 +47,8 @@ blockParseFail unparsed = withTests 1 $ property $ do
       failure
 
 -- | Test whether certain block string content parses to the expected value.
-blockParsesTo :: T.Text -> T.Text -> Property
-blockParsesTo unparsed expected = withTests 1 $ property $ do
+shouldParseTo :: T.Text -> T.Text -> Property
+shouldParseTo unparsed expected = withTests 1 $ property $ do
   case runParser blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
     Right r -> expected === r
     Left l  -> do
