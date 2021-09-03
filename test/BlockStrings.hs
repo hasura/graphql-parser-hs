@@ -20,13 +20,14 @@ blockTest = do
     , ("no whitespace is removed from the first line", blockParsesTo "  abc " "  abc ")
     , ("ignores escaping", blockParsesTo "  \\  " "  \\  ") -- this is a single \
     , ("\n in first characters is parsed", blockParsesTo "\n hey  " "hey  ")
-    , ("", blockParsesTo "\nx\n" "x")
+    , ("", blockParsesTo "\nx\n" "x") -- TODO missing description
     , ("empty single line", blockParsesTo "" "")
     , ("empty two lines", blockParsesTo "\n" "")
     , ("empty three lines", blockParsesTo "\n\n" "")
     , ("empty X lines", blockParsesTo "\n\n\n\n\n\n" "")
     , ("preserves escaped newlines", blockParsesTo "\nhello\\nworld\n" "hello\\nworld")
-    , ("", blockParsesTo "\n\"\n" "\"")
+    , ("", blockParsesTo "\n\"\n" "\"") -- TODO missing description
+    , ("", blockParsesTo "\n   \\\"\"\"\n   friends\n"     "\"\"\"hey\nfriends") -- TODO missing description
     , ("escaped triple-quotes are ignored as block terminator", blockParseFail "\n   \\\"\"\"hey\n   friends\n\"\"\"hey\nfriends")
     , ("fails for normal string", blockParseFail "\"hey\"")
     , ("fails for block string that is not closed", blockParseFail "\"\"\" hey")
