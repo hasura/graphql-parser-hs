@@ -506,15 +506,20 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
       -- there is only one way to get to a Done, so we need this here because runScanner never fails
       _                 -> fail "couldn't parse block string"
 
-    extractText = T.replace "\\\"\"\"" "\"\"\"" . \case
-      [] -> ""
-      -- we keep the first line apart as, per the specification, it should not count for
-      -- the calculation of the common minimum indentation:
-      -- see item 3.a in http://spec.graphql.org/June2018/#BlockStringValue()
-      headline:indentedRemainder ->
-        let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
-            rlines = T.drop commonIndentation <$> indentedRemainder
-        in rebuild (sanitize $ headline:rlines)
+    extractText = 
+      -- The reason we have this replace here is to convert
+      -- an escapped triple-quotes to the way it should be
+      -- represented in the parsed strings. The printer will
+      -- deal with it normally.
+      T.replace "\\\"\"\"" "\"\"\"" . \case
+          [] -> ""
+          -- we keep the first line apart as, per the specification, it should not count for
+          -- the calculation of the common minimum indentation:
+          -- see item 3.a in http://spec.graphql.org/June2018/#BlockStringValue()
+          headline:indentedRemainder ->
+            let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
+                rlines = T.drop commonIndentation <$> indentedRemainder
+            in rebuild (sanitize $ headline:rlines)
 
     -- Take characters from the block string until the first
     -- non-escaped triple quotes.
