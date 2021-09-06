@@ -508,7 +508,7 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
 
     extractText = 
       -- The reason we have this replace here is to convert
-      -- an escapped triple-quotes to the way it should be
+      -- an escaped triple-quotes to the way it should be
       -- represented in the parsed strings. The printer will
       -- deal with it normally.
       T.replace "\\\"\"\"" "\"\"\"" . \case
