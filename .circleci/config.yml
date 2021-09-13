@@ -21,7 +21,7 @@ jobs:
           command: cabal new-build
       - run:
           name: Run tests
-          command: cabal test --test-show-details=streaming
+          command: cabal new-test --test-show-details=streaming --release
           no_output_timeout: 20m
       - save_cache:
           name: Cache Dependencies
