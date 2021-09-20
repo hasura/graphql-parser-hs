@@ -13,7 +13,7 @@ import qualified Data.Text.Encoding.Error              as TE
 import qualified Data.Text.Lazy                        as TL
 import qualified Data.Text.Lazy.Builder                as TL
 import qualified Data.Text.Lazy.Encoding               as TL
-import qualified Data.Text.Prettyprint.Doc             as PP
+import qualified Prettyprinter                         as PP
 import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
 import qualified Text.Builder                          as TB
 
