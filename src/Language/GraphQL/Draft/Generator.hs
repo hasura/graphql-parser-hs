@@ -35,26 +35,28 @@ generate = Gen.sample
 
 genDocument :: Gen Document
 genDocument =
-  Document <$> Gen.list (Range.linear 1 3) genDefinition
+  Document <$> Gen.list (Range.linear 0 3) genDefinition
 
 genExecutableDocument :: Generator a => Gen (ExecutableDocument a)
 genExecutableDocument =
   ExecutableDocument <$> Gen.list (Range.linear 1 3) genExecutableDefinition
-
-genSchemaDocument :: Gen SchemaDocument
-genSchemaDocument =
-  SchemaDocument <$> Gen.list (Range.linear 1 5) genTypeSystemDefinition
 
 
 
 -- | *Identifiers*
 
 genText :: Gen Text
-genText = Gen.text (Range.linear 1 11) Gen.unicode
+genText = Gen.text (Range.linear 0 11) Gen.unicode
+
+alpha_ :: Gen Char
+alpha_ = Gen.choice [Gen.alpha, pure '_']
+
+alphaNum_ :: Gen Char
+alphaNum_ = Gen.choice [Gen.alphaNum, pure '_']
 
 genGraphqlName :: Gen Text
-genGraphqlName = Gen.text (Range.singleton 1) Gen.alpha <>
-                 Gen.text (Range.linear 1 11) Gen.alphaNum
+genGraphqlName = Gen.text (Range.singleton 1) alpha_ <>
+                 Gen.text (Range.linear 0 11) alphaNum_
 
 genName :: Gen Name
 genName = unsafeMkName <$> genGraphqlName
@@ -322,7 +324,7 @@ genTypeSystemDirectiveLocation =
 -- | *Structure*
 
 genSelectionSet :: Generator a => Gen (SelectionSet FragmentSpread a)
-genSelectionSet = mkList genSelection
+genSelectionSet = mkListNonEmpty genSelection
 
 genSelection :: Generator a => Gen (Selection FragmentSpread a)
 genSelection =
@@ -367,4 +369,7 @@ genArgument = (,) <$> genName <*> genValue
 -- | *Helpers*
 
 mkList :: Gen a -> Gen [a]
-mkList = Gen.list $ Range.linear 1 11
+mkList = Gen.list $ Range.linear 0 11
+
+mkListNonEmpty :: Gen a -> Gen [a]
+mkListNonEmpty = Gen.list $ Range.linear 1 11
