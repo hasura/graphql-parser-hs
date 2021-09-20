@@ -21,7 +21,7 @@ jobs:
           command: cabal new-build
       - run:
           name: Run tests
-          command: cabal run graphql-parser-test -- release
+          command: cabal new-test --test-show-details=streaming
           no_output_timeout: 20m
       - save_cache:
           name: Cache Dependencies
