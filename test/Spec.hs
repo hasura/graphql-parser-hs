@@ -13,7 +13,7 @@ import qualified Data.Text.Encoding.Error              as TE
 import qualified Data.Text.Lazy                        as TL
 import qualified Data.Text.Lazy.Builder                as TL
 import qualified Data.Text.Lazy.Encoding               as TL
-import qualified Data.Text.Prettyprint.Doc             as PP
+import qualified Prettyprinter                         as PP
 import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
 import qualified Text.Builder                          as TB
 
@@ -22,6 +22,7 @@ import qualified Language.GraphQL.Draft.Parser         as Input
 import qualified Language.GraphQL.Draft.Printer        as Output
 import           Language.GraphQL.Draft.Syntax
 
+import           BlockStrings
 import           Keywords
 
 data TestMode = TMDev | TMQuick | TMRelease
@@ -43,8 +44,9 @@ main = do
 
 runTest :: TestLimit -> IO ()
 runTest limit = do
-  allGood <- tests limit
-  unless allGood exitFailure
+  allGood1 <- tests limit
+  allGood2 <- blockTest
+  unless (allGood1 && allGood2) exitFailure
 
 tests :: TestLimit -> IO Bool
 tests nTests =

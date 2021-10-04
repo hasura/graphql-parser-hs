@@ -7,6 +7,7 @@ import           Data.Void
 import           Hedgehog
 
 import qualified Data.HashMap.Strict           as M
+import qualified Data.Text                     as T
 import qualified Hedgehog.Gen                  as Gen
 import qualified Hedgehog.Range                as Range
 
@@ -88,7 +89,7 @@ genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
                    , VInt . fromIntegral <$> Gen.int32 (Range.linear 1 99999)
                    , VEnum <$> genEnumValue
                    , VFloat . fromFloatDigits <$> Gen.double (Range.linearFrac 1.1 999999.99999)
-                   , VString <$> genText
+                   , VString <$> Gen.choice [genText, genBlockText]
                    , VBoolean <$> Gen.bool
                    ] <> [VVariable <$> var | var <- varGens]
 
@@ -103,6 +104,34 @@ genObjectValue genVal = M.fromList <$> mkList genObjectField
   where
     genObjectField = (,) <$> genName <*> genVal
 
+genBlockText :: Gen Text
+genBlockText = T.unlines <$> Gen.list (Range.linear 0 20) line
+  where
+    line = do
+      Gen.frequency
+        [ (10, Gen.text (Range.linear 1 10) Gen.unicode)
+        , (10, return "\n")
+        , (6, genIndentation)
+        , (5, genMinIndentedText 10)
+        , (4, return "")
+        , (3, return " ")
+        , (6, return "\t")
+        , (3, return "\"") -- "
+        , (3, return "\\") -- \
+        ]
+
+-- | Like `genText` but with random indentation in the start of the string according
+-- to a minimum value.
+genMinIndentedText :: Int -> Gen Text
+genMinIndentedText min_ = do
+  let minIndent = T.replicate min_ " "
+  i <- genIndentation
+  t <- genText
+  return (minIndent <> i <> t)
+
+genIndentation :: Gen Text
+genIndentation = do
+  Gen.text (Range.linear 0 100) (return ' ')
 
 
 -- | *Definitions*
@@ -335,7 +364,6 @@ genDirectives = mkList genDirective
 
 genArgument :: Generator a => Gen (Name, Value a)
 genArgument = (,) <$> genName <*> genValue
-
 
 
 -- | *Helpers*

@@ -92,7 +92,7 @@ import                          Data.Hashable
 import                          Data.Scientific
 import                          Data.String                    (IsString (..))
 import                          Data.Text                      (Text)
-import                          Data.Text.Prettyprint.Doc      (Pretty (..))
+import                          Prettyprinter                  (Pretty (..))
 import                          Data.Void
 import                          GHC.Generics                   (Generic)
 import                          Instances.TH.Lift              ()

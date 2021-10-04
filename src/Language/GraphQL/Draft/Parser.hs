@@ -19,6 +19,7 @@ module Language.GraphQL.Draft.Parser
 
   , Parser
   , runParser
+  , blockString
   ) where
 
 import qualified Data.Attoparsec.ByteString    as A
@@ -37,6 +38,7 @@ import           Data.Char                     (isAsciiLower, isAsciiUpper,
                                                 isDigit)
 import           Data.Functor
 import           Data.HashMap.Strict           (HashMap)
+import           Data.Maybe                    (fromMaybe)
 import           Data.Scientific               (Scientific)
 import           Data.Text                     (Text, find)
 import           Data.Void                     (Void)
@@ -180,15 +182,16 @@ number = do
 -- explicit types use the `typedValue` parser.
 value :: Variable var => Parser (AST.Value var)
 value = tok (
-      AST.VVariable <$> variable
+      AST.VVariable    <$> variable
   <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull     <$  literal "null"
-  <|> AST.VBoolean  <$> booleanLiteral
-  <|> AST.VString   <$> stringLiteral
-  -- `true` and `false` have been tried before
-  <|> AST.VEnum     <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VList     <$> listLiteral
-  <|> AST.VObject   <$> objectLiteral
+  <|> AST.VNull        <$  literal "null"
+  <|> AST.VBoolean     <$> booleanLiteral
+  <|> AST.VString      <$> blockString
+  <|> AST.VString      <$> stringLiteral
+  -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
+  <|> AST.VEnum        <$> (fmap AST.EnumValue nameParser <?> "name")
+  <|> AST.VList        <$> listLiteral
+  <|> AST.VObject      <$> objectLiteral
   <?> "value")
 
 booleanLiteral :: Parser Bool
@@ -203,7 +206,7 @@ stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
     -- | Parse a string without a leading quote, ignoring any escaped characters.
     jstring_ :: Parser Text
     jstring_ = scan False go <* anyChar
-
+    go :: Bool -> Char -> Maybe Bool
     go previousWasEscapingCharacter current
       -- if the previous character was an escaping character, we skip this one
       | previousWasEscapingCharacter = Just False
@@ -218,6 +221,7 @@ stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
     -- Turns out this is really tricky, so we're going to cheat by
     -- reconstructing a literal string (by putting quotes around it) and
     -- delegating all the hard work to Aeson.
+    unescapeText :: Text -> Parser Text
     unescapeText str = either fail pure $ A.parseOnly jstring ("\"" <> T.encodeUtf8 str <> "\"")
 
 listLiteral :: Variable var => Parser [AST.Value var]
@@ -316,7 +320,7 @@ objectTypeDefinition = AST.ObjectTypeDefinition
 interfaces :: Parser [AST.Name]
 interfaces = tok "implements" *> nameParser `sepBy1` tok "&"
 
-fieldDefinitions :: Parser [(AST.FieldDefinition AST.InputValueDefinition)]
+fieldDefinitions :: Parser [AST.FieldDefinition AST.InputValueDefinition]
 fieldDefinitions = braces $ many1 fieldDefinition
 
 fieldDefinition :: Parser (AST.FieldDefinition AST.InputValueDefinition)
@@ -479,3 +483,83 @@ between open close p = tok open *> p <* tok close
 -- `empty` /= `pure mempty` for `Parser`.
 optempty :: Monoid a => Parser a -> Parser a
 optempty = option mempty
+
+data Expecting
+  = Anything
+  | Open
+  | Closed
+
+data BlockState
+  = Escaped Expecting
+  | Quoting Expecting
+  | Continue
+  | Done
+
+-- | Parses strings delimited by triple quotes.
+-- http://spec.graphql.org/June2018/#sec-String-Value
+blockString :: Parser Text
+blockString = extractText <$> ("\"\"\"" *> blockContents)
+  where
+    blockContents = AT.runScanner Continue scanner >>= \case
+      -- this drop the parsed closing quotes (since we are using a different parser)
+      (textBlock, Done) -> return $ T.lines (T.dropEnd 3 textBlock)
+      -- there is only one way to get to a Done, so we need this here because runScanner never fails
+      _                 -> fail "couldn't parse block string"
+
+    extractText = 
+      -- The reason we have this replace here is to convert
+      -- an escaped triple-quotes to the way it should be
+      -- represented in the parsed strings. The printer will
+      -- deal with it normally.
+      T.replace "\\\"\"\"" "\"\"\"" . \case
+          [] -> ""
+          -- we keep the first line apart as, per the specification, it should not count for
+          -- the calculation of the common minimum indentation:
+          -- see item 3.a in http://spec.graphql.org/June2018/#BlockStringValue()
+          headline:indentedRemainder ->
+            let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
+                rlines = T.drop commonIndentation <$> indentedRemainder
+            in rebuild (sanitize $ headline:rlines)
+
+    -- Take characters from the block string until the first
+    -- non-escaped triple quotes.
+    scanner :: BlockState -> Char -> Maybe BlockState
+    scanner s ch =
+      case s of
+        Done -> Nothing
+        Continue ->
+          case ch of
+            '\\' -> Just (Escaped Anything)
+            '"'  -> Just (Quoting Open)
+            _    -> Just Continue
+        -- we are counting " for a possible closing delimiter
+        Quoting Open -> if ch == '"' then Just (Quoting Closed) else Just Continue
+        Quoting Closed -> if ch == '"' then Just Done else Just Continue
+        Quoting _ -> Just Continue
+        -- we are counting escaped characters when "
+        Escaped Anything -> if ch == '"' then Just (Escaped Open) else Just Continue
+        Escaped Open -> if ch == '"' then Just (Escaped Closed) else Just Continue
+        Escaped Closed -> Just Continue
+
+    -- Joins all the lines into a single block of text
+    -- we drop the last new line character that is added
+    -- automatically by T.unlines
+    rebuild :: [Text] -> Text
+    rebuild = maybe "" fst . T.unsnoc . T.unlines
+
+    sanitize :: [Text] -> [Text]
+    sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
+
+    onlyWhiteSpace :: Text -> Bool
+    onlyWhiteSpace t = T.all isWhitespace t
+
+    countIndentation :: Text -> Int
+    countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)
+
+-- whitespace
+isWhitespace :: Char -> Bool
+isWhitespace c = c == ' ' || c == '\t'
+
+-- copied from https://hackage.haskell.org/package/extra-1.7.9/docs/src/Data.List.Extra.html
+dropWhileEnd' :: (a -> Bool) -> [a] -> [a]
+dropWhileEnd' p = foldr (\x xs -> if null xs && p x then [] else x : xs) []

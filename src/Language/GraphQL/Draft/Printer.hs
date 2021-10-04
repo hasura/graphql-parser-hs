@@ -11,6 +11,7 @@ import           Data.List                          (intersperse, sort)
 import           Data.Scientific                    (Scientific)
 import           Data.String                        (IsString)
 import           Data.Text                          (Text)
+import qualified Data.Text                          as T
 import qualified Data.Text.Lazy                     as LT hiding (singleton)
 import qualified Data.Text.Lazy.Builder             as LT
 import qualified Data.Text.Lazy.Builder.Int         as LTBI
@@ -20,7 +21,9 @@ import qualified Data.Text.Prettyprint.Doc          as PP
 import           Data.Void                          (Void, absurd)
 import qualified Text.Builder                       as Text
 
+import           Data.Char                          (isControl)
 import           Language.GraphQL.Draft.Syntax
+
 
 class (Monoid a, IsString a) => Printer a where
   textP    :: Text -> a
@@ -239,16 +242,52 @@ value = \case
   VVariable v -> variableP v
   VInt i      -> intP i
   VFloat d    -> doubleP d
-  VString s   -> stringValue s
+  VString s   -> dispatchStringPrinter s
   VBoolean b  -> fromBool b
   VNull       -> "null"
   VList xs    -> listValue xs
   VObject o   -> objectValue o
   VEnum ev    -> nameP $ unEnumValue ev
 
+-- | Print a given text as a normal string or as a block string, depending on
+-- its content.
+dispatchStringPrinter :: Printer a => Text -> a
+dispatchStringPrinter t =
+  if printAsBlockString then blockStringValue t else stringValue t
+  where
+    printAsBlockString =
+      hasNewlines && onlySourceCharacter && not (hasWhitespaceEnd || hasZeroIndentation || hasTripleQuotes)
+    -- Condition 1: if there are no newlines, there's no point to print a text
+    -- as a block string
+    hasNewlines = "\n" `T.isInfixOf` t
+    -- Condition 2: block strings only support GraphQL's SourceCharacters
+    -- http://spec.graphql.org/June2018/#SourceCharacter
+    onlySourceCharacter = T.all isSourceCharacter t
+    -- Condition 3: if the text ends in a line containing only whitespace, we
+    -- can't print it as a block string
+    hasWhitespaceEnd = T.all isWhitespace $ T.takeWhileEnd (/='\n') t
+    -- Condition 4: if none of the remaining lines (i.e. not the first line)
+    -- contains nonzero indentation, we can't print it as a block string
+    hasZeroIndentation = any lineZeroIndentation $ tail $ T.lines t
+      where
+        lineZeroIndentation line = case T.uncons line of
+          Nothing            -> False -- empty lines don't count
+          Just (firstChar,_) -> not (isWhitespace firstChar)
+    -- Condition 5: although """ is printable in block strings as \""", this
+    -- isn't currently implemented
+    hasTripleQuotes = "\"\"\"" `T.isInfixOf` t
+
+    isWhitespace :: Char -> Bool
+    isWhitespace c = c == ' ' || c == '\t'
+    isSourceCharacter :: Char -> Bool
+    isSourceCharacter = not . isControl
+
 -- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
 stringValue :: Printer a => Text -> a
 stringValue s = textP $ LT.toStrict $ LTE.decodeUtf8 $ J.encode s
+
+blockStringValue :: Printer a => Text -> a
+blockStringValue t = textP "\"\"\"\n" <> textP t <> textP "\n\"\"\""
 
 listValue :: (Print var, Printer a) => [Value var] -> a
 listValue xs = mconcat [ charP '[' , li , charP ']' ]

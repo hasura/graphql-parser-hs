@@ -26,6 +26,7 @@ primitiveTests =
   , ("a string containing \\n is handled correctly", withTests 1 propHandleNewlineString)
   , ("a string containing \\x0011 is handled correctly", withTests 1 propHandleControlString)
   , ("all unicode characters are supported", withTests 1 propHandleUnicodeCharacters)
+  , ("triple quotes is a valid string", withTests 1 propHandleTripleQuote)
   ]
 
 
@@ -51,6 +52,8 @@ propHandleUnicodeCharacters :: Property
 propHandleUnicodeCharacters = property $ for_ [minBound..maxBound] \c ->
   testRoundTripValue $ VString $ singleton c
 
+propHandleTripleQuote :: Property
+propHandleTripleQuote = property $ testRoundTripValue $ VString "\"\"\""
 
 testRoundTripValue :: Value Void -> PropertyT IO ()
 testRoundTripValue = testRoundTrip value P.value
