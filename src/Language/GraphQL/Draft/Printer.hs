@@ -219,7 +219,7 @@ defaultValue v = " = " <> value v
 
 description :: Printer a => Maybe Description -> a
 description Nothing     = mempty
-description (Just desc) = (stringValue $ unDescription desc) <> " \n"
+description (Just desc) = (dispatchStringPrinter $ unDescription desc) <> " \n"
 -- | Type Reference
 
 graphQLType :: Printer a => GType -> a

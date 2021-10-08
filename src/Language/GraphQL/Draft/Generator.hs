@@ -72,7 +72,7 @@ genType =
   [TypeList  <$> genNullability <*> genType]
 
 genDescription :: Gen Description
-genDescription = Description <$> genText
+genDescription = Description <$> Gen.choice [genText, genBlockText]
 
 
 

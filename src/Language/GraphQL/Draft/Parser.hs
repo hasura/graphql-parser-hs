@@ -305,7 +305,7 @@ typeDefinition =
   <?> "type definition"
 
 optDesc :: Parser (Maybe AST.Description)
-optDesc = optional (AST.Description <$> stringLiteral)
+optDesc = optional (AST.Description <$> (blockString <|> stringLiteral))
 
 objectTypeDefinition :: Parser (AST.ObjectTypeDefinition AST.InputValueDefinition)
 objectTypeDefinition = AST.ObjectTypeDefinition
@@ -506,7 +506,7 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
       -- there is only one way to get to a Done, so we need this here because runScanner never fails
       _                 -> fail "couldn't parse block string"
 
-    extractText = 
+    extractText =
       -- The reason we have this replace here is to convert
       -- an escaped triple-quotes to the way it should be
       -- represented in the parsed strings. The printer will
