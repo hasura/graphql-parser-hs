@@ -49,25 +49,26 @@ propHandleControlString :: Property
 propHandleControlString = property $ testRoundTripValue $ VString "\x0011"
 
 propHandleUnicodeCharacters :: Property
-propHandleUnicodeCharacters = property $ for_ [minBound..maxBound] \c ->
+propHandleUnicodeCharacters = property $ liftTest $ for_ [minBound..maxBound] \c ->
   testRoundTripValue $ VString $ singleton c
 
 propHandleTripleQuote :: Property
 propHandleTripleQuote = property $ testRoundTripValue $ VString "\"\"\""
 
-testRoundTripValue :: Value Void -> PropertyT IO ()
+testRoundTripValue :: MonadTest m => Value Void -> m ()
 testRoundTripValue = testRoundTrip value P.value
 
 testRoundTrip
-  :: (Show a, Eq a)
+  :: (Show a, Eq a, MonadTest m)
   => Parser a
   -> (a -> Builder)
   -> a
-  -> PropertyT IO ()
+  -> m ()
 testRoundTrip parser printer ast = either onError (ast ===) astRoundTrip
   where
     astRoundTrip = runParser parser printed
     printed      = run $ printer ast
     onError e = do
       footnote $ show printed
-      fail $ unpack e
+      footnote $ unpack e
+      failure
