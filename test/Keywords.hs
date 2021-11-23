@@ -48,26 +48,32 @@ propHandleNewlineString = property $ testRoundTripValue $ VString "\n"
 propHandleControlString :: Property
 propHandleControlString = property $ testRoundTripValue $ VString "\x0011"
 
+-- NB: 'liftTest' is explicitly used to restrict the 'for_' block to operate in
+-- the 'Test' type (i.e. 'type Test = TestT Identity'), as opposed to 'PropertyT
+-- IO'.  The 'Test' monad is a thinner monad stack & therefore doesn't suffer
+-- from memory leakage caused by, among others, Hedgehog's 'TreeT', which is
+-- used for automatic shrinking (which we don't need in this test).
 propHandleUnicodeCharacters :: Property
-propHandleUnicodeCharacters = property $ for_ [minBound..maxBound] \c ->
+propHandleUnicodeCharacters = property $ liftTest $ for_ [minBound..maxBound] \c ->
   testRoundTripValue $ VString $ singleton c
 
 propHandleTripleQuote :: Property
 propHandleTripleQuote = property $ testRoundTripValue $ VString "\"\"\""
 
-testRoundTripValue :: Value Void -> PropertyT IO ()
+testRoundTripValue :: MonadTest m => Value Void -> m ()
 testRoundTripValue = testRoundTrip value P.value
 
 testRoundTrip
-  :: (Show a, Eq a)
+  :: (Show a, Eq a, MonadTest m)
   => Parser a
   -> (a -> Builder)
   -> a
-  -> PropertyT IO ()
+  -> m ()
 testRoundTrip parser printer ast = either onError (ast ===) astRoundTrip
   where
     astRoundTrip = runParser parser printed
     printed      = run $ printer ast
     onError e = do
       footnote $ show printed
-      fail $ unpack e
+      footnote $ unpack e
+      failure
