@@ -10,3 +10,13 @@ package *
 
 package graphql-parser
   ghc-options: -j
+
+-- Temporary GHC 9.2 migration stuff (do not merge this to master)
+
+-- Pointing to someone else's version that supports GHC 9.2
+source-repository-package
+  type: git
+  location: https://github.com/patrickt/haskell-hedgehog.git
+  tag: 362d226e2e215e73f7939386e55dcfbd51957e65
+  subdir: hedgehog
+
