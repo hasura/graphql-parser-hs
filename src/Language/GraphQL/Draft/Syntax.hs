@@ -548,7 +548,7 @@ data TypeSystemDirectiveLocation
 instance Hashable TypeSystemDirectiveLocation
 instance NFData   TypeSystemDirectiveLocation
 
-liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
+liftTypedHashMap :: (Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
 liftTypedHashMap a = [|| M.fromList $$(TH.liftTyped $ M.toList a) ||]
 
 inline :: NoFragments var -> FragmentSpread var
