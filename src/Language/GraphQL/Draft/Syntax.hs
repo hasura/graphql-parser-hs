@@ -78,11 +78,11 @@ module Language.GraphQL.Draft.Syntax (
   , fmapInlineFragment
   ) where
 
-import                qualified Data.Aeson                     as J
-import                qualified Data.Char                      as C
-import                qualified Data.HashMap.Strict            as M
-import                qualified Data.Text                      as T
-import                qualified Language.Haskell.TH.Syntax     as TH
+import                qualified Data.Aeson                        as J
+import                qualified Data.Char                         as C
+import                qualified Data.HashMap.Strict               as M
+import                qualified Data.Text                         as T
+import                qualified Language.Haskell.TH.Syntax.Compat as TH
 
 import                          Control.DeepSeq
 import                          Data.Bool                      (bool)
@@ -95,7 +95,7 @@ import                          Prettyprinter                  (Pretty (..))
 import                          Data.Void
 import                          GHC.Generics                   (Generic)
 import                          Instances.TH.Lift              ()
-import                          Language.Haskell.TH.Syntax     (Lift, Q)
+import                          Language.Haskell.TH.Syntax     (Lift (liftTyped))
 
 import {-# SOURCE #-}           Language.GraphQL.Draft.Parser  (parseExecutableDoc,
                                                                 parseSchemaDocument)
@@ -124,8 +124,8 @@ parseName :: MonadFail m => Text -> m Name
 parseName text = maybe (fail errorMessage) pure $ mkName text
   where errorMessage = T.unpack text <> " is not valid GraphQL name"
 
-litName :: Text -> TH.Code Q Name
-litName txt = parseName txt `TH.bindCode` TH.liftTyped
+litName :: Text -> TH.SpliceQ Name
+litName txt = TH.fromCode $ parseName txt `TH.bindCode` TH.liftTypedQuote
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
@@ -330,7 +330,7 @@ instance Lift var => Lift (Value var) where
   liftTyped (VVariable a) = [|| VVariable a ||]
   liftTyped VNull         = [|| VNull ||]
   liftTyped (VInt a)      = [|| VInt a ||]
-  liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(TH.liftTyped $ toRational a) ||]
+  liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(TH.fromCode $ TH.liftTypedQuote $ toRational a) ||]
   liftTyped (VString a)   = [|| VString a ||]
   liftTyped (VBoolean a)  = [|| VBoolean a ||]
   liftTyped (VEnum a)     = [|| VEnum a ||]
@@ -547,8 +547,8 @@ data TypeSystemDirectiveLocation
 instance Hashable TypeSystemDirectiveLocation
 instance NFData   TypeSystemDirectiveLocation
 
-liftTypedHashMap :: (Hashable k, Lift k, Lift v, TH.Quote m) => HashMap k v -> TH.Code m (HashMap k v)
-liftTypedHashMap a = [|| M.fromList $$(TH.liftTyped $ M.toList a) ||]
+liftTypedHashMap :: (Hashable k, Lift k, Lift v) => HashMap k v -> TH.SpliceQ (HashMap k v)
+liftTypedHashMap a = [|| M.fromList $$(TH.fromCode $TH.liftTypedQuote $ M.toList a) ||]
 
 inline :: NoFragments var -> FragmentSpread var
 inline x = case x of {}
