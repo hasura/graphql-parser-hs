@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Description: The GraphQL AST
@@ -78,14 +79,14 @@ module Language.GraphQL.Draft.Syntax (
   , fmapInlineFragment
   ) where
 
-import                qualified Data.Aeson                     as J
-import                qualified Data.Char                      as C
-import                qualified Data.HashMap.Strict            as M
-import                qualified Data.Text                      as T
-import                qualified Language.Haskell.TH.Syntax     as TH
+import                qualified Data.Aeson                        as J
+import                qualified Data.Char                         as C
+import                qualified Data.HashMap.Strict               as M
+import                qualified Data.Text                         as T
+import                qualified Language.Haskell.TH.Syntax        as TH
+import                qualified Language.Haskell.TH.Syntax.Compat as THC
 
 import                          Control.DeepSeq
-import                          Control.Monad
 import                          Data.Bool                      (bool)
 import                          Data.HashMap.Strict            (HashMap)
 import                          Data.Hashable
@@ -96,7 +97,7 @@ import                          Prettyprinter                  (Pretty (..))
 import                          Data.Void
 import                          GHC.Generics                   (Generic)
 import                          Instances.TH.Lift              ()
-import                          Language.Haskell.TH.Syntax     (Lift, Q)
+import                          Language.Haskell.TH.Syntax     (Lift (liftTyped))
 
 import {-# SOURCE #-}           Language.GraphQL.Draft.Parser  (parseExecutableDoc,
                                                                 parseSchemaDocument)
@@ -125,8 +126,8 @@ parseName :: MonadFail m => Text -> m Name
 parseName text = maybe (fail errorMessage) pure $ mkName text
   where errorMessage = T.unpack text <> " is not valid GraphQL name"
 
-litName :: Text -> Q (TH.TExp Name)
-litName = parseName >=> \name -> [|| name ||]
+litName :: Text -> THC.SpliceQ Name
+litName txt = THC.fromCode $ parseName txt `THC.bindCode` THC.liftTypedQuote
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
@@ -331,7 +332,7 @@ instance Lift var => Lift (Value var) where
   liftTyped (VVariable a) = [|| VVariable a ||]
   liftTyped VNull         = [|| VNull ||]
   liftTyped (VInt a)      = [|| VInt a ||]
-  liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(TH.liftTyped $ toRational a) ||]
+  liftTyped (VFloat a)    = [|| VFloat $ fromRational $$(THC.fromCode $ THC.liftTypedQuote $ toRational a) ||]
   liftTyped (VString a)   = [|| VString a ||]
   liftTyped (VBoolean a)  = [|| VBoolean a ||]
   liftTyped (VEnum a)     = [|| VEnum a ||]
@@ -548,7 +549,11 @@ data TypeSystemDirectiveLocation
 instance Hashable TypeSystemDirectiveLocation
 instance NFData   TypeSystemDirectiveLocation
 
-liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
+#if MIN_VERSION_template_haskell(2,17,0)
+liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v, TH.Quote m) => HashMap k v -> TH.Code m (HashMap k v)
+#else
+liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v) => HashMap k v -> TH.Q (TH.TExp (HashMap k v))
+#endif
 liftTypedHashMap a = [|| M.fromList $$(TH.liftTyped $ M.toList a) ||]
 
 inline :: NoFragments var -> FragmentSpread var

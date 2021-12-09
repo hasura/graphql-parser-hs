@@ -47,6 +47,7 @@ library
     , template-haskell
     , text
     , text-builder
+    , th-compat
     , th-lift-instances
     , unordered-containers
     , vector
