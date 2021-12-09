@@ -85,7 +85,6 @@ import                qualified Data.Text                      as T
 import                qualified Language.Haskell.TH.Syntax     as TH
 
 import                          Control.DeepSeq
-import                          Control.Monad
 import                          Data.Bool                      (bool)
 import                          Data.HashMap.Strict            (HashMap)
 import                          Data.Hashable
@@ -125,8 +124,8 @@ parseName :: MonadFail m => Text -> m Name
 parseName text = maybe (fail errorMessage) pure $ mkName text
   where errorMessage = T.unpack text <> " is not valid GraphQL name"
 
-litName :: Text -> Q (TH.TExp Name)
-litName = parseName >=> \name -> [|| name ||]
+litName :: Text -> TH.Code Q Name
+litName txt = parseName txt `TH.bindCode` TH.liftTyped
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
@@ -548,7 +547,7 @@ data TypeSystemDirectiveLocation
 instance Hashable TypeSystemDirectiveLocation
 instance NFData   TypeSystemDirectiveLocation
 
-liftTypedHashMap :: (Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
+liftTypedHashMap :: (Hashable k, Lift k, Lift v, TH.Quote m) => HashMap k v -> TH.Code m (HashMap k v)
 liftTypedHashMap a = [|| M.fromList $$(TH.liftTyped $ M.toList a) ||]
 
 inline :: NoFragments var -> FragmentSpread var
