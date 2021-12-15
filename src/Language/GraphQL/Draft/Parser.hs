@@ -454,10 +454,14 @@ whiteSpace = do
   AT.skipWhile isSpaceLike
   (comment *> whiteSpace) <|> pure ()
 
+-- | Valid name is: at least one isFirstChar followed by zero or more isNonFirstChar
 nameParser :: AT.Parser AST.Name
-nameParser =
-  AST.unsafeMkName <$> tok ((<>) <$> AT.takeWhile1 isFirstChar
-                                 <*> AT.takeWhile isNonFirstChar)
+nameParser = AST.unsafeMkName <$> tok scanName where
+  scanName = do
+    t <- scan isFirstChar go
+    when (T.null t) $ fail "nameParser"
+    return t
+  go p c = isNonFirstChar <$ guard (p c)
 {-# INLINE nameParser #-}
 
 isFirstChar :: Char -> Bool
