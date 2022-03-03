@@ -1,29 +1,26 @@
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE ViewPatterns #-}
 
-import           Control.Monad                         (unless)
-import           Hedgehog
-import           System.Environment                    (getArgs)
-import           System.Exit                           (exitFailure)
-
-import qualified Data.ByteString.Builder               as BS
-import qualified Data.ByteString.Lazy                  as BL
-import qualified Data.Text                             as T
-import qualified Data.Text.Encoding.Error              as TE
-import qualified Data.Text.Lazy                        as TL
-import qualified Data.Text.Lazy.Builder                as TL
-import qualified Data.Text.Lazy.Encoding               as TL
-import qualified Prettyprinter                         as PP
+import BlockStrings
+import Control.Monad (unless)
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding.Error as TE
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Builder as TL
+import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
-import qualified Text.Builder                          as TB
-
-import           Language.GraphQL.Draft.Generator
-import qualified Language.GraphQL.Draft.Parser         as Input
-import qualified Language.GraphQL.Draft.Printer        as Output
-import           Language.GraphQL.Draft.Syntax
-
-import           BlockStrings
-import           Keywords
+import Hedgehog
+import Keywords
+import Language.GraphQL.Draft.Generator
+import qualified Language.GraphQL.Draft.Parser as Input
+import qualified Language.GraphQL.Draft.Printer as Output
+import Language.GraphQL.Draft.Syntax
+import qualified Prettyprinter as PP
+import System.Environment (getArgs)
+import System.Exit (exitFailure)
+import qualified Text.Builder as TB
 
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
@@ -32,15 +29,15 @@ main :: IO ()
 main = do
   args <- getArgs
   case parseArgs args of
-    TMQuick   -> runTest 100
-    TMDev     -> runTest 500
+    TMQuick -> runTest 100
+    TMDev -> runTest 500
     TMRelease -> runTest 1000
   where
     parseArgs = foldr parseArg TMDev
     parseArg str _ = case str of
-      "quick"   -> TMQuick
+      "quick" -> TMQuick
       "release" -> TMRelease
-      _         -> TMDev
+      _ -> TMDev
 
 runTest :: TestLimit -> IO ()
 runTest limit = do
@@ -50,13 +47,14 @@ runTest limit = do
 
 tests :: TestLimit -> IO Bool
 tests nTests =
-  checkParallel $ Group "Test.printer.parser" $
-    [ ("property [ parse (prettyPrint ast) == ast ]", propParserPrettyPrinter nTests)
-    , ("property [ parse (textBuilderPrint ast) == ast ]", propParserTextPrinter nTests)
-    , ("property [ parse (lazyTextBuilderPrint ast) == ast ]", propParserLazyTextPrinter nTests)
-    , ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBSPrinter nTests)
-    ]
-    ++ Keywords.primitiveTests
+  checkParallel $
+    Group "Test.printer.parser" $
+      [ ("property [ parse (prettyPrint ast) == ast ]", propParserPrettyPrinter nTests),
+        ("property [ parse (textBuilderPrint ast) == ast ]", propParserTextPrinter nTests),
+        ("property [ parse (lazyTextBuilderPrint ast) == ast ]", propParserLazyTextPrinter nTests),
+        ("property [ parse (bytestringBuilderPrint ast) == ast ]", propParserBSPrinter nTests)
+      ]
+        ++ Keywords.primitiveTests
 
 propParserPrettyPrinter :: TestLimit -> Property
 propParserPrettyPrinter = mkPropParserPrinter $ prettyPrinter . Output.executableDocument
@@ -75,10 +73,11 @@ propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . Outp
 
 mkPropParserPrinter :: (ExecutableDocument Name -> T.Text) -> (TestLimit -> Property)
 mkPropParserPrinter printer = \space ->
-  withTests space $ property $ do
-    xs <- forAll genExecutableDocument
-    let rendered = printer xs
-    either onError (xs ===) $ Input.parseExecutableDoc rendered
+  withTests space $
+    property $ do
+      xs <- forAll genExecutableDocument
+      let rendered = printer xs
+      either onError (xs ===) $ Input.parseExecutableDoc rendered
   where
     onError (T.unpack -> errorMsg) = do
       footnote errorMsg
