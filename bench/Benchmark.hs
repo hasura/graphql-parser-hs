@@ -1,5 +1,4 @@
 import Control.Monad
-import Criterion.Main
 import qualified Data.ByteString.Builder as BS
 import Data.Functor ((<&>))
 import Data.Maybe (catMaybes)
@@ -12,6 +11,7 @@ import Language.GraphQL.Draft.Generator
 import Language.GraphQL.Draft.Parser (parseExecutableDoc)
 import Language.GraphQL.Draft.Printer
 import Language.GraphQL.Draft.Syntax
+import Test.Tasty.Bench
 import qualified Text.Builder as TB
 
 genDocs :: Int -> IO [(Int, ExecutableDocument Name)]
