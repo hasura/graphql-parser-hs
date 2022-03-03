@@ -1,27 +1,26 @@
 cabal-version: 3.0
-
-name:           graphql-parser
-version:        0.2.0.0
-synopsis:       A native Haskell GraphQL parser.
-homepage:       https://github.com/hasura/graphql-parser-hs
-bug-reports:    https://github.com/hasura/graphql-parser-hs/issues
-author:         Vamshi Surabhi
-maintainer:     vamshi@hasura.io
-copyright:      2018–2020 Hasura Inc., 2015 J. Daniel Navarro
-license:        BSD-3-Clause
-license-file:   LICENSE
-build-type:     Simple
+name:          graphql-parser
+version:       0.2.0.0
+synopsis:      A native Haskell GraphQL parser.
+homepage:      https://github.com/hasura/graphql-parser-hs
+bug-reports:   https://github.com/hasura/graphql-parser-hs/issues
+author:        Vamshi Surabhi
+maintainer:    vamshi@hasura.io
+copyright:     2018–2020 Hasura Inc., 2015 J. Daniel Navarro
+license:       BSD-3-Clause
+license-file:  LICENSE
+build-type:    Simple
 
 source-repository head
-  type: git
+  type:     git
   location: https://github.com/hasura/graphql-parser-hs
 
 -------------------------------------------------------------------------------
 
 flag hedgehog
   description: Provides hedgehog generators for GraphQL syntax constructs.
-  default: False
-  manual: True
+  default:     False
+  manual:      True
 
 -------------------------------------------------------------------------------
 
@@ -34,7 +33,7 @@ common common-settings
     -Wno-unsafe -Wno-safe -Wno-missing-safe-haskell-mode
     -Wno-missing-local-signatures -Wno-monomorphism-restriction
 
-  default-language: Haskell2010
+  default-language:   Haskell2010
   default-extensions:
     BlockArguments
     ConstraintKinds
@@ -61,13 +60,14 @@ common common-settings
 -- Libraries shared between most components.
 common common-libraries
   build-depends:
-    , base >=4.7 && <5
     , aeson
     , attoparsec
+    , base                  >=4.7 && <5
     , bytestring
     , containers
     , deepseq
     , filepath
+    , hashable
     , hedgehog
     , prettyprinter
     , scientific
@@ -77,54 +77,55 @@ common common-libraries
     , th-lift-instances
     , unordered-containers
     , vector
-    , hashable
 
   if flag(hedgehog)
     build-depends: hedgehog
 
 -- Settings shared between all test and benchmark components.
 common common-tests-benchmarks
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:   -threaded -rtsopts -with-rtsopts=-N
   build-depends: graphql-parser-hs
 
 -------------------------------------------------------------------------------
 
 library
-  import: 
+  import:
     common-settings,
     common-libraries
-  hs-source-dirs: src
+
+  hs-source-dirs:  src
   exposed-modules:
+    Language.GraphQL.Draft.Generator
     Language.GraphQL.Draft.Parser
     Language.GraphQL.Draft.Printer
     Language.GraphQL.Draft.Syntax
-    Language.GraphQL.Draft.Generator
 
 -------------------------------------------------------------------------------
 
 test-suite graphql-parser-test
-  import: 
+  import:
     common-settings,
     common-libraries,
     common-tests-benchmarks
+
   hs-source-dirs: test
-  main-is: Spec.hs
-  type: exitcode-stdio-1.0
+  main-is:        Spec.hs
+  type:           exitcode-stdio-1.0
   other-modules:
-    Keywords
     BlockStrings
-  build-depends:
-    , hedgehog
+    Keywords
+
+  build-depends:  hedgehog
 
 -------------------------------------------------------------------------------
 
 benchmark graphql-parser-bench
-  import: 
+  import:
     common-settings,
     common-libraries,
     common-tests-benchmarks
+
   hs-source-dirs: bench
-  main-is: Benchmark.hs
-  type: exitcode-stdio-1.0
-  build-depends:
-    , criterion
+  main-is:        Benchmark.hs
+  type:           exitcode-stdio-1.0
+  build-depends:  criterion
