@@ -62,8 +62,8 @@ common common-settings
     StrictData
     TupleSections
 
--- Libraries shared between most components.
-common common-libraries
+-- Dependencies shared between most components.
+common common-deps
   build-depends:
     , aeson
     , attoparsec
@@ -86,9 +86,8 @@ common common-libraries
   if flag(hedgehog)
     build-depends: hedgehog
 
--- Settings shared between all test and benchmark components.
-common common-tests-benchmarks
-  ghc-options:   -threaded -rtsopts -with-rtsopts=-N
+-- Dependencies shared between all test and benchmark components.
+common common-test-benchmark-deps
   build-depends: graphql-parser
 
 -------------------------------------------------------------------------------
@@ -96,7 +95,7 @@ common common-tests-benchmarks
 library
   import:
     common-settings,
-    common-libraries
+    common-deps,
 
   hs-source-dirs:  src
   exposed-modules:
@@ -112,9 +111,10 @@ library
 test-suite graphql-parser-test
   import:
     common-settings,
-    common-libraries,
-    common-tests-benchmarks
+    common-deps,
+    common-test-benchmark-deps
 
+  ghc-options:   -threaded -rtsopts -with-rtsopts=-N
   hs-source-dirs: test
   main-is:        Spec.hs
   type:           exitcode-stdio-1.0
@@ -122,17 +122,15 @@ test-suite graphql-parser-test
     BlockStrings
     Keywords
 
-  build-depends:  hedgehog
-
 -------------------------------------------------------------------------------
 
 benchmark graphql-parser-bench
   import:
     common-settings,
-    common-libraries,
-    common-tests-benchmarks
+    common-deps,
+    common-test-benchmark-deps
 
   hs-source-dirs: bench
   main-is:        Benchmark.hs
   type:           exitcode-stdio-1.0
-  build-depends:  criterion
+  build-depends:  tasty-bench
