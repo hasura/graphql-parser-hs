@@ -95,10 +95,12 @@ library
 
   hs-source-dirs:  src
   exposed-modules:
-    Language.GraphQL.Draft.Generator
     Language.GraphQL.Draft.Parser
     Language.GraphQL.Draft.Printer
     Language.GraphQL.Draft.Syntax
+
+  if flag(hedgehog)
+    exposed-modules: Language.GraphQL.Draft.Gen
 
 -------------------------------------------------------------------------------
 
