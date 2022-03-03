@@ -89,7 +89,7 @@ common common-libraries
 -- Settings shared between all test and benchmark components.
 common common-tests-benchmarks
   ghc-options:   -threaded -rtsopts -with-rtsopts=-N
-  build-depends: graphql-parser-hs
+  build-depends: graphql-parser
 
 -------------------------------------------------------------------------------
 

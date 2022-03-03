@@ -11,6 +11,8 @@ package *
 package graphql-parser
   flags: +hedgehog
   ghc-options: -j
+  tests: True
+  benchmarks: True
 
 package aeson
   flags: +cffi
