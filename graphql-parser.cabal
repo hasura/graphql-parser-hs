@@ -1,46 +1,63 @@
 cabal-version: 2.2
-
-name:           graphql-parser
-version:        0.2.0.0
-synopsis:       A native Haskell GraphQL parser.
-homepage:       https://github.com/hasura/graphql-parser-hs
-bug-reports:    https://github.com/hasura/graphql-parser-hs/issues
-author:         Vamshi Surabhi
-maintainer:     vamshi@hasura.io
-copyright:      2018–2020 Hasura Inc., 2015 J. Daniel Navarro
-license:        BSD-3-Clause
-license-file:   LICENSE
-build-type:     Simple
+name:          graphql-parser
+version:       0.2.0.0
+synopsis:      A native Haskell GraphQL parser.
+homepage:      https://github.com/hasura/graphql-parser-hs
+bug-reports:   https://github.com/hasura/graphql-parser-hs/issues
+author:        Vamshi Surabhi
+maintainer:    vamshi@hasura.io
+copyright:     2018–2020 Hasura Inc., 2015 J. Daniel Navarro
+license:       BSD-3-Clause
+license-file:  LICENSE
+build-type:    Simple
 
 source-repository head
-  type: git
+  type:     git
   location: https://github.com/hasura/graphql-parser-hs
 
 common common-all
   ghc-options:
-    -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
-  default-language: Haskell2010
+    -Wall -Wcompat -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Wredundant-constraints
+
+  default-language:   Haskell2010
   default-extensions:
-    BlockArguments ConstraintKinds DeriveFunctor DeriveGeneric DeriveLift
-    DeriveTraversable EmptyCase EmptyDataDeriving FlexibleContexts
-    FlexibleInstances FunctionalDependencies GeneralizedNewtypeDeriving
-    LambdaCase NamedFieldPuns OverloadedStrings RankNTypes RecordWildCards
-    RoleAnnotations StrictData TupleSections
+    BlockArguments
+    ConstraintKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    EmptyCase
+    EmptyDataDeriving
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    NamedFieldPuns
+    OverloadedStrings
+    RankNTypes
+    RecordWildCards
+    RoleAnnotations
+    StrictData
+    TupleSections
 
 common common-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
 library
-  import: common-all
-  hs-source-dirs: src
+  import:          common-all
+  hs-source-dirs:  src
   build-depends:
-    , base >=4.7 && <5
     , aeson
     , attoparsec
+    , base                  >=4.7 && <5
     , bytestring
     , containers
     , deepseq
     , filepath
+    , hashable
     , hedgehog
     , prettyprinter
     , scientific
@@ -50,43 +67,45 @@ library
     , th-lift-instances
     , unordered-containers
     , vector
-    , hashable
+
   exposed-modules:
+    Language.GraphQL.Draft.Generator
     Language.GraphQL.Draft.Parser
     Language.GraphQL.Draft.Printer
     Language.GraphQL.Draft.Syntax
-    Language.GraphQL.Draft.Generator
 
 test-suite graphql-parser-test
-  import: common-all, common-exe
-  type: exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is: Spec.hs
+  import:           common-all, common-exe
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Spec.hs
   other-modules:
-    Keywords
     BlockStrings
+    Keywords
+
   build-depends:
-    , base >=4.7 && <5
-    , graphql-parser
     , attoparsec
+    , base            >=4.7 && <5
     , bytestring
+    , graphql-parser
     , hedgehog
     , prettyprinter
     , scientific
     , text
     , text-builder
+
   default-language: Haskell2010
 
 benchmark graphql-parser-bench
-  import: common-all, common-exe
-  type: exitcode-stdio-1.0
+  import:         common-all, common-exe
+  type:           exitcode-stdio-1.0
   hs-source-dirs: bench
-  main-is: Benchmark.hs
+  main-is:        Benchmark.hs
   build-depends:
-    , base >=4.7 && <5
-    , graphql-parser
+    , base            >=4.7 && <5
     , bytestring
     , criterion
+    , graphql-parser
     , prettyprinter
     , text
     , text-builder
