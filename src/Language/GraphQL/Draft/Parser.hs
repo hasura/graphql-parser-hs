@@ -1,48 +1,56 @@
-{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Description: Parse text into GraphQL ASTs
 module Language.GraphQL.Draft.Parser
-  ( executableDocument
-  , parseExecutableDoc
-  , schemaDocument
-  , parseTypeSystemDefinitions
-  , parseSchemaDocument
+  ( executableDocument,
+    parseExecutableDoc,
+    schemaDocument,
+    parseTypeSystemDefinitions,
+    parseSchemaDocument,
+    Variable (..),
+    value,
+    PossibleTypes (..),
+    nameParser,
+    graphQLType,
+    parseGraphQLType,
+    Parser,
+    runParser,
+    blockString,
+  )
+where
 
-  , Variable(..)
-  , value
-  , PossibleTypes(..)
-  , nameParser
-
-  , graphQLType
-  , parseGraphQLType
-
-  , Parser
-  , runParser
-  , blockString
-  ) where
-
-import qualified Data.Attoparsec.ByteString    as A
-import qualified Data.Attoparsec.Text          as AT
-import qualified Data.HashMap.Strict           as M
-import qualified Data.Text                     as T
-import qualified Data.Text.Encoding            as T
-
-import           Control.Applicative
-import           Control.Monad
-import           Data.Aeson.Parser             (jstring)
-import           Data.Attoparsec.Text          (Parser, anyChar, char, many1,
-                                                match, option, scan, scientific,
-                                                sepBy1, (<?>))
-import           Data.Char                     (isAsciiLower, isAsciiUpper,
-                                                isDigit)
-import           Data.Functor
-import           Data.HashMap.Strict           (HashMap)
-import           Data.Maybe                    (fromMaybe)
-import           Data.Scientific               (Scientific)
-import           Data.Text                     (Text, find)
-import           Data.Void                     (Void)
-
+import Control.Applicative
+import Control.Monad
+import Data.Aeson.Parser (jstring)
+import qualified Data.Attoparsec.ByteString as A
+import Data.Attoparsec.Text
+  ( Parser,
+    anyChar,
+    char,
+    many1,
+    match,
+    option,
+    scan,
+    scientific,
+    sepBy1,
+    (<?>),
+  )
+import qualified Data.Attoparsec.Text as AT
+import Data.Char
+  ( isAsciiLower,
+    isAsciiUpper,
+    isDigit,
+  )
+import Data.Functor
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as M
+import Data.Maybe (fromMaybe)
+import Data.Scientific (Scientific)
+import Data.Text (Text, find)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import Data.Void (Void)
 import qualified Language.GraphQL.Draft.Syntax as AST
 
 -- * Document
@@ -67,27 +75,27 @@ parseSchemaDocument = runParser schemaDocument
 definitionExecutable :: Parser (AST.ExecutableDefinition AST.Name)
 definitionExecutable =
   AST.ExecutableDefinitionOperation <$> operationDefinition
-  <|> AST.ExecutableDefinitionFragment <$> fragmentDefinition
+    <|> AST.ExecutableDefinitionFragment <$> fragmentDefinition
 
 operationDefinition :: Parser (AST.OperationDefinition AST.FragmentSpread AST.Name)
 operationDefinition =
   AST.OperationDefinitionTyped <$> typedOperationDef
-  <|> (AST.OperationDefinitionUnTyped <$> selectionSet)
+    <|> (AST.OperationDefinitionUnTyped <$> selectionSet)
 
 operationTypeParser :: Parser AST.OperationType
 operationTypeParser =
   AST.OperationTypeQuery <$ tok "query"
-  <|> AST.OperationTypeMutation <$ tok "mutation"
-  <|> AST.OperationTypeSubscription <$ tok "subscription"
+    <|> AST.OperationTypeMutation <$ tok "mutation"
+    <|> AST.OperationTypeSubscription <$ tok "subscription"
 
 typedOperationDef :: Parser (AST.TypedOperationDefinition AST.FragmentSpread AST.Name)
 typedOperationDef =
   AST.TypedOperationDefinition
-  <$> operationTypeParser
-  <*> optional nameParser
-  <*> optempty variableDefinitions
-  <*> optempty directives
-  <*> selectionSet
+    <$> operationTypeParser
+    <*> optional nameParser
+    <*> optempty variableDefinitions
+    <*> optempty directives
+    <*> selectionSet
 
 variableDefinitions :: Parser [AST.VariableDefinition]
 variableDefinitions = parens (many1 variableDefinition)
@@ -95,22 +103,25 @@ variableDefinitions = parens (many1 variableDefinition)
 variableDefinition :: Parser AST.VariableDefinition
 variableDefinition =
   AST.VariableDefinition <$> variable
-                         <*  tok ":"
-                         <*> graphQLType
-                         <*> optional defaultValue
+    <* tok ":"
+    <*> graphQLType
+    <*> optional defaultValue
 
 defaultValue :: Parser (AST.Value Void)
 defaultValue = tok "=" *> value
 
 class Variable var where
   variable :: Parser var
+
 instance Variable Void where
   variable = empty
+
 instance Variable AST.Name where
   variable = tok "$" *> nameParser <?> "variable"
 
 class PossibleTypes pos where
   possibleTypes :: Parser pos
+
 instance PossibleTypes () where
   possibleTypes = pure ()
 
@@ -118,17 +129,18 @@ selectionSet :: Variable var => Parser (AST.SelectionSet AST.FragmentSpread var)
 selectionSet = braces $ many1 selection
 
 selection :: Variable var => Parser (AST.Selection AST.FragmentSpread var)
-selection = AST.SelectionField <$> field
-            -- Inline first to catch `on` case
-        <|> AST.SelectionInlineFragment <$> inlineFragment
-        <|> AST.SelectionFragmentSpread <$> fragmentSpread
+selection =
+  AST.SelectionField <$> field
+    -- Inline first to catch `on` case
+    <|> AST.SelectionInlineFragment <$> inlineFragment
+    <|> AST.SelectionFragmentSpread <$> fragmentSpread
 
 aliasAndFld :: Parser (Maybe AST.Name, AST.Name)
 aliasAndFld = do
   n <- nameParser
   colonM <- optional (tok ":")
   case colonM of
-    Just _  -> (Just n,) <$> nameParser
+    Just _ -> (Just n,) <$> nameParser
     Nothing -> return (Nothing, n)
 {-# INLINE aliasAndFld #-}
 
@@ -136,74 +148,80 @@ field :: Variable var => Parser (AST.Field AST.FragmentSpread var)
 field = do
   (alM, n) <- aliasAndFld
   AST.Field alM n
-   <$> optempty arguments
-   <*> optempty directives
-   <*> optempty selectionSet
+    <$> optempty arguments
+    <*> optempty directives
+    <*> optempty selectionSet
 
 -- * Fragments
 
 fragmentSpread :: Variable var => Parser (AST.FragmentSpread var)
 -- TODO: Make sure it fails when `... on`.
 -- See https://facebook.github.io/graphql/#FragmentSpread
-fragmentSpread = AST.FragmentSpread
-  <$  tok "..."
-  <*> nameParser
-  <*> optempty directives
+fragmentSpread =
+  AST.FragmentSpread
+    <$ tok "..."
+    <*> nameParser
+    <*> optempty directives
 
 -- InlineFragment tried first in order to guard against 'on' keyword
 inlineFragment :: Variable var => Parser (AST.InlineFragment AST.FragmentSpread var)
-inlineFragment = AST.InlineFragment
-  <$  tok "..."
-  <*> optional (tok "on" *> nameParser)
-  <*> optempty directives
-  <*> selectionSet
+inlineFragment =
+  AST.InlineFragment
+    <$ tok "..."
+    <*> optional (tok "on" *> nameParser)
+    <*> optempty directives
+    <*> selectionSet
 
 fragmentDefinition :: Parser AST.FragmentDefinition
-fragmentDefinition = AST.FragmentDefinition
-  <$  tok "fragment"
-  <*> nameParser
-  <*  tok "on"
-  <*> nameParser
-  <*> optempty directives
-  <*> selectionSet
+fragmentDefinition =
+  AST.FragmentDefinition
+    <$ tok "fragment"
+    <*> nameParser
+    <* tok "on"
+    <*> nameParser
+    <*> optempty directives
+    <*> selectionSet
 
 -- * Values
+
 number :: Parser (Either Scientific Integer)
 number = do
   (numText, num) <- match (tok scientific)
   pure $ case Data.Text.find (\c -> c == '.' || c == 'e' || c == 'E') numText of
-      -- Number specified with decimals and/or scientific notation, so
-      -- store as a 'Scientific'.
-    Just _  -> Left num
-      -- No '.' and not in scientific notation, so safe to convert to integer.
+    -- Number specified with decimals and/or scientific notation, so
+    -- store as a 'Scientific'.
+    Just _ -> Left num
+    -- No '.' and not in scientific notation, so safe to convert to integer.
     Nothing -> Right (floor num)
 
 -- This will try to pick the first type it can runParser. If you are working with
 -- explicit types use the `typedValue` parser.
 value :: Variable var => Parser (AST.Value var)
-value = tok (
-      AST.VVariable    <$> variable
-  <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
-  <|> AST.VNull        <$  literal "null"
-  <|> AST.VBoolean     <$> booleanLiteral
-  <|> AST.VString      <$> blockString
-  <|> AST.VString      <$> stringLiteral
-  -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
-  <|> AST.VEnum        <$> (fmap AST.EnumValue nameParser <?> "name")
-  <|> AST.VList        <$> listLiteral
-  <|> AST.VObject      <$> objectLiteral
-  <?> "value")
+value =
+  tok
+    ( AST.VVariable <$> variable
+        <|> (fmap (either AST.VFloat AST.VInt) number <?> "number")
+        <|> AST.VNull <$ literal "null"
+        <|> AST.VBoolean <$> booleanLiteral
+        <|> AST.VString <$> blockString
+        <|> AST.VString <$> stringLiteral
+        -- `true` and `false` have been tried before, so we can safely proceed with the enum parser
+        <|> AST.VEnum <$> (fmap AST.EnumValue nameParser <?> "name")
+        <|> AST.VList <$> listLiteral
+        <|> AST.VObject <$> objectLiteral
+        <?> "value"
+    )
 
 booleanLiteral :: Parser Bool
-booleanLiteral
-  =   True  <$ literal "true"
-  <|> False <$ literal "false"
-  <?> "boolean"
+booleanLiteral =
+  True <$ literal "true"
+    <|> False <$ literal "false"
+    <?> "boolean"
 
 stringLiteral :: Parser Text
 stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
   where
-    -- | Parse a string without a leading quote, ignoring any escaped characters.
+    -- Parse a string without a leading quote, ignoring any escaped characters.
     jstring_ :: Parser Text
     jstring_ = scan False go <* anyChar
     go :: Bool -> Char -> Maybe Bool
@@ -214,9 +232,10 @@ stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
       | current == '"' = Nothing
       -- otherwise, we continue, and track whether the current character is an escaping backslash
       | otherwise = Just $ current == backslash
-      where backslash = '\\'
+      where
+        backslash = '\\'
 
-    -- | Unescape a string.
+    -- Unescape a string.
     --
     -- Turns out this is really tricky, so we're going to cheat by
     -- reconstructing a literal string (by putting quotes around it) and
@@ -233,16 +252,16 @@ objectLiteral = braces (objectFields many) <?> "object"
 arguments :: Variable var => Parser (HashMap AST.Name (AST.Value var))
 arguments = parens (objectFields many1) <?> "arguments"
 
-objectFields
-  :: Variable var
-  => (forall b. Parser b -> Parser [b])
-  -> Parser (HashMap AST.Name (AST.Value var))
+objectFields ::
+  Variable var =>
+  (forall b. Parser b -> Parser [b]) ->
+  Parser (HashMap AST.Name (AST.Value var))
 objectFields several = foldM insertField M.empty =<< several objectField
   where
     objectField = (,) <$> nameParser <* tok ":" <*> value
     insertField obj (k, v)
       | k `M.member` obj = fail $ "multiple “" <> T.unpack (AST.unName k) <> "” fields"
-      | otherwise        = pure (M.insert k v obj)
+      | otherwise = pure (M.insert k v obj)
 
 -- * Directives
 
@@ -250,16 +269,17 @@ directives :: Variable var => Parser [AST.Directive var]
 directives = many1 directive
 
 directive :: Variable var => Parser (AST.Directive var)
-directive = AST.Directive
-  <$  tok "@"
-  <*> nameParser
-  <*> optempty arguments
+directive =
+  AST.Directive
+    <$ tok "@"
+    <*> nameParser
+    <*> optempty arguments
 
 -- * Type Reference
 
 graphQLType :: Parser AST.GType
 graphQLType =
-        (flip AST.TypeList <$> brackets graphQLType <*> nullability)
+  (flip AST.TypeList <$> brackets graphQLType <*> nullability)
     <|> (flip AST.TypeNamed <$> nameParser <*> nullability)
     <?> "type"
 
@@ -268,8 +288,8 @@ parseGraphQLType = runParser graphQLType
 
 nullability :: Parser AST.Nullability
 nullability =
-      (tok "!" $> AST.Nullability False)
-  <|> pure (AST.Nullability True)
+  (tok "!" $> AST.Nullability False)
+    <|> pure (AST.Nullability True)
 
 -- * Type Definition
 
@@ -278,10 +298,11 @@ rootOperationTypeDefinition =
   AST.RootOperationTypeDefinition <$> operationTypeParser <* tok ":" <*> nameParser
 
 schemaDefinition :: Parser AST.SchemaDefinition
-schemaDefinition = AST.SchemaDefinition
-  <$ tok "schema"
-  <*> optional directives
-  <*> rootOperationTypeDefinitions
+schemaDefinition =
+  AST.SchemaDefinition
+    <$ tok "schema"
+    <*> optional directives
+    <*> rootOperationTypeDefinitions
 
 rootOperationTypeDefinitions :: Parser [AST.RootOperationTypeDefinition]
 rootOperationTypeDefinitions = braces $ many1 rootOperationTypeDefinition
@@ -289,33 +310,34 @@ rootOperationTypeDefinitions = braces $ many1 rootOperationTypeDefinition
 typeSystemDefinition :: Parser AST.TypeSystemDefinition
 typeSystemDefinition =
   AST.TypeSystemDefinitionSchema <$> schemaDefinition
-  <|> AST.TypeSystemDefinitionType <$> typeDefinition
+    <|> AST.TypeSystemDefinitionType <$> typeDefinition
 
 parseTypeSystemDefinitions :: Text -> Either Text [AST.TypeSystemDefinition]
 parseTypeSystemDefinitions = runParser $ many1 typeSystemDefinition
 
 typeDefinition :: Parser (AST.TypeDefinition () AST.InputValueDefinition)
 typeDefinition =
-      AST.TypeDefinitionObject        <$> objectTypeDefinition
-  <|> AST.TypeDefinitionInterface     <$> interfaceTypeDefinition
-  <|> AST.TypeDefinitionUnion         <$> unionTypeDefinition
-  <|> AST.TypeDefinitionScalar        <$> scalarTypeDefinition
-  <|> AST.TypeDefinitionEnum          <$> enumTypeDefinition
-  <|> AST.TypeDefinitionInputObject   <$> inputObjectTypeDefinition
-  <?> "type definition"
+  AST.TypeDefinitionObject <$> objectTypeDefinition
+    <|> AST.TypeDefinitionInterface <$> interfaceTypeDefinition
+    <|> AST.TypeDefinitionUnion <$> unionTypeDefinition
+    <|> AST.TypeDefinitionScalar <$> scalarTypeDefinition
+    <|> AST.TypeDefinitionEnum <$> enumTypeDefinition
+    <|> AST.TypeDefinitionInputObject <$> inputObjectTypeDefinition
+    <?> "type definition"
 
 optDesc :: Parser (Maybe AST.Description)
 optDesc = optional (AST.Description <$> (blockString <|> stringLiteral))
 
 objectTypeDefinition :: Parser (AST.ObjectTypeDefinition AST.InputValueDefinition)
-objectTypeDefinition = AST.ObjectTypeDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*  tok "type"
-  <*> nameParser
-  <*> optempty interfaces
-  <*> optempty directives
-  <*> fieldDefinitions
+objectTypeDefinition =
+  AST.ObjectTypeDefinition
+    <$> optDesc
+    <* whiteSpace
+    <* tok "type"
+    <*> nameParser
+    <*> optempty interfaces
+    <*> optempty directives
+    <*> fieldDefinitions
 
 interfaces :: Parser [AST.Name]
 interfaces = tok "implements" *> nameParser `sepBy1` tok "&"
@@ -324,93 +346,101 @@ fieldDefinitions :: Parser [AST.FieldDefinition AST.InputValueDefinition]
 fieldDefinitions = braces $ many1 fieldDefinition
 
 fieldDefinition :: Parser (AST.FieldDefinition AST.InputValueDefinition)
-fieldDefinition = AST.FieldDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*> nameParser
-  <*> optempty argumentsDefinition
-  <*  tok ":"
-  <*> graphQLType
-  <*> optempty directives
+fieldDefinition =
+  AST.FieldDefinition
+    <$> optDesc
+    <* whiteSpace
+    <*> nameParser
+    <*> optempty argumentsDefinition
+    <* tok ":"
+    <*> graphQLType
+    <*> optempty directives
 
 argumentsDefinition :: Parser (AST.ArgumentsDefinition AST.InputValueDefinition)
 argumentsDefinition = parens $ many1 inputValueDefinition
 
 interfaceTypeDefinition :: PossibleTypes pos => Parser (AST.InterfaceTypeDefinition pos AST.InputValueDefinition)
-interfaceTypeDefinition = AST.InterfaceTypeDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*  tok "interface"
-  <*> nameParser
-  <*> optempty directives
-  <*> fieldDefinitions
-  <*> possibleTypes
+interfaceTypeDefinition =
+  AST.InterfaceTypeDefinition
+    <$> optDesc
+    <* whiteSpace
+    <* tok "interface"
+    <*> nameParser
+    <*> optempty directives
+    <*> fieldDefinitions
+    <*> possibleTypes
 
 unionTypeDefinition :: Parser AST.UnionTypeDefinition
-unionTypeDefinition = AST.UnionTypeDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*  tok "union"
-  <*> nameParser
-  <*> optempty directives
-  <*  tok "="
-  <*> unionMembers
+unionTypeDefinition =
+  AST.UnionTypeDefinition
+    <$> optDesc
+    <* whiteSpace
+    <* tok "union"
+    <*> nameParser
+    <*> optempty directives
+    <* tok "="
+    <*> unionMembers
 
 unionMembers :: Parser [AST.Name]
 unionMembers = nameParser `sepBy1` tok "|"
 
 scalarTypeDefinition :: Parser AST.ScalarTypeDefinition
-scalarTypeDefinition = AST.ScalarTypeDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*  tok "scalar"
-  <*> nameParser
-  <*> optempty directives
+scalarTypeDefinition =
+  AST.ScalarTypeDefinition
+    <$> optDesc
+    <* whiteSpace
+    <* tok "scalar"
+    <*> nameParser
+    <*> optempty directives
 
 enumTypeDefinition :: Parser AST.EnumTypeDefinition
-enumTypeDefinition = AST.EnumTypeDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*  tok "enum"
-  <*> nameParser
-  <*> optempty directives
-  <*> enumValueDefinitions
+enumTypeDefinition =
+  AST.EnumTypeDefinition
+    <$> optDesc
+    <* whiteSpace
+    <* tok "enum"
+    <*> nameParser
+    <*> optempty directives
+    <*> enumValueDefinitions
 
 enumValueDefinitions :: Parser [AST.EnumValueDefinition]
 enumValueDefinitions = braces $ many1 enumValueDefinition
 
 enumValueDefinition :: Parser AST.EnumValueDefinition
-enumValueDefinition = AST.EnumValueDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*> enumValue
-  <*> optempty directives
+enumValueDefinition =
+  AST.EnumValueDefinition
+    <$> optDesc
+    <* whiteSpace
+    <*> enumValue
+    <*> optempty directives
 
 -- TODO: should not be one of true/false/null
 enumValue :: Parser AST.EnumValue
 enumValue = AST.EnumValue <$> nameParser
 
 inputObjectTypeDefinition :: Parser (AST.InputObjectTypeDefinition AST.InputValueDefinition)
-inputObjectTypeDefinition = AST.InputObjectTypeDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*  tok "input"
-  <*> nameParser
-  <*> optempty directives
-  <*> inputValueDefinitions
+inputObjectTypeDefinition =
+  AST.InputObjectTypeDefinition
+    <$> optDesc
+    <* whiteSpace
+    <* tok "input"
+    <*> nameParser
+    <*> optempty directives
+    <*> inputValueDefinitions
 
 inputValueDefinitions :: Parser [AST.InputValueDefinition]
 inputValueDefinitions = braces $ many1 inputValueDefinition
 
 inputValueDefinition :: Parser AST.InputValueDefinition
-inputValueDefinition = AST.InputValueDefinition
-  <$> optDesc
-  <*  whiteSpace
-  <*> nameParser
-  <*  tok ":"
-  <*> graphQLType
-  <*> optional defaultValue
-  <*> optempty directives
+inputValueDefinition =
+  AST.InputValueDefinition
+    <$> optDesc
+    <* whiteSpace
+    <*> nameParser
+    <* tok ":"
+    <*> graphQLType
+    <*> optional defaultValue
+    <*> optempty directives
 
 -- * Internal
 
@@ -436,12 +466,12 @@ ends = do
   mc <- AT.peekChar
   case mc of
     Nothing -> pure ()
-    Just c  -> guard (not (isNonFirstChar c))
+    Just c -> guard (not (isNonFirstChar c))
 
 comment :: Parser ()
 comment =
-  AT.char '#' *>
-  AT.skipWhile (\c -> c /= '\n' && c /= '\r' )
+  AT.char '#'
+    *> AT.skipWhile (\c -> c /= '\n' && c /= '\r')
 {-# INLINE comment #-}
 
 isSpaceLike :: Char -> Bool
@@ -456,8 +486,11 @@ whiteSpace = do
 
 nameParser :: AT.Parser AST.Name
 nameParser =
-  AST.unsafeMkName <$> tok ((<>) <$> AT.takeWhile1 isFirstChar
-                                 <*> AT.takeWhile isNonFirstChar)
+  AST.unsafeMkName
+    <$> tok
+      ( (<>) <$> AT.takeWhile1 isFirstChar
+          <*> AT.takeWhile isNonFirstChar
+      )
 {-# INLINE nameParser #-}
 
 isFirstChar :: Char -> Bool
@@ -500,11 +533,12 @@ data BlockState
 blockString :: Parser Text
 blockString = extractText <$> ("\"\"\"" *> blockContents)
   where
-    blockContents = AT.runScanner Continue scanner >>= \case
-      -- this drop the parsed closing quotes (since we are using a different parser)
-      (textBlock, Done) -> return $ T.lines (T.dropEnd 3 textBlock)
-      -- there is only one way to get to a Done, so we need this here because runScanner never fails
-      _                 -> fail "couldn't parse block string"
+    blockContents =
+      AT.runScanner Continue scanner >>= \case
+        -- this drop the parsed closing quotes (since we are using a different parser)
+        (textBlock, Done) -> return $ T.lines (T.dropEnd 3 textBlock)
+        -- there is only one way to get to a Done, so we need this here because runScanner never fails
+        _ -> fail "couldn't parse block string"
 
     extractText =
       -- The reason we have this replace here is to convert
@@ -512,14 +546,14 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
       -- represented in the parsed strings. The printer will
       -- deal with it normally.
       T.replace "\\\"\"\"" "\"\"\"" . \case
-          [] -> ""
-          -- we keep the first line apart as, per the specification, it should not count for
-          -- the calculation of the common minimum indentation:
-          -- see item 3.a in http://spec.graphql.org/June2018/#BlockStringValue()
-          headline:indentedRemainder ->
-            let commonIndentation = minimum $ (maxBound:) $ countIndentation <$> indentedRemainder
-                rlines = T.drop commonIndentation <$> indentedRemainder
-            in rebuild (sanitize $ headline:rlines)
+        [] -> ""
+        -- we keep the first line apart as, per the specification, it should not count for
+        -- the calculation of the common minimum indentation:
+        -- see item 3.a in http://spec.graphql.org/June2018/#BlockStringValue()
+        headline : indentedRemainder ->
+          let commonIndentation = minimum $ (maxBound :) $ countIndentation <$> indentedRemainder
+              rlines = T.drop commonIndentation <$> indentedRemainder
+           in rebuild (sanitize $ headline : rlines)
 
     -- Take characters from the block string until the first
     -- non-escaped triple quotes.
@@ -530,8 +564,8 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
         Continue ->
           case ch of
             '\\' -> Just (Escaped Anything)
-            '"'  -> Just (Quoting Open)
-            _    -> Just Continue
+            '"' -> Just (Quoting Open)
+            _ -> Just Continue
         -- we are counting " for a possible closing delimiter
         Quoting Open -> if ch == '"' then Just (Quoting Closed) else Just Continue
         Quoting Closed -> if ch == '"' then Just Done else Just Continue
@@ -548,7 +582,7 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
     rebuild = maybe "" fst . T.unsnoc . T.unlines
 
     sanitize :: [Text] -> [Text]
-    sanitize = dropWhileEnd' onlyWhiteSpace  . dropWhile onlyWhiteSpace
+    sanitize = dropWhileEnd' onlyWhiteSpace . dropWhile onlyWhiteSpace
 
     onlyWhiteSpace :: Text -> Bool
     onlyWhiteSpace t = T.all isWhitespace t
