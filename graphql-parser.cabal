@@ -25,6 +25,8 @@ flag hedgehog
 -------------------------------------------------------------------------------
 
 -- Settings shared between all components.
+--
+-- NOTE: '-Wunused-packages' seems to introduce a lot of spurious warnings.
 common common-settings
   ghc-options:
     -Weverything -Wno-missing-exported-signatures
@@ -32,6 +34,8 @@ common common-settings
     -Wno-missed-specialisations -Wno-all-missed-specializations
     -Wno-unsafe -Wno-safe -Wno-missing-safe-haskell-mode
     -Wno-missing-local-signatures -Wno-monomorphism-restriction
+    -Wno-implicit-prelude
+    -Wno-unused-packages
 
   default-language:   Haskell2010
   default-extensions:
@@ -48,6 +52,7 @@ common common-settings
     FlexibleInstances
     FunctionalDependencies
     GeneralizedNewtypeDeriving
+    ImportQualifiedPost
     LambdaCase
     NamedFieldPuns
     OverloadedStrings
