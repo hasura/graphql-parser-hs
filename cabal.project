@@ -9,4 +9,8 @@ package *
   haddock-quickjump: true
 
 package graphql-parser
+  flags: +hedgehog
   ghc-options: -j
+
+package aeson
+  flags: +cffi
