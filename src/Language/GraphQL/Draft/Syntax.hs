@@ -79,19 +79,21 @@ module Language.GraphQL.Draft.Syntax
   )
 where
 
-import Control.DeepSeq
-import Control.Monad
+-------------------------------------------------------------------------------
+
+import Control.DeepSeq (NFData)
+import Control.Monad ((>=>))
 import qualified Data.Aeson as J
 import Data.Bool (bool)
 import qualified Data.Char as C
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as M
-import Data.Hashable
-import Data.Scientific
+import Data.Hashable (Hashable)
+import Data.Scientific (Scientific)
 import Data.String (IsString (..))
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Void
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Instances.TH.Lift ()
 import {-# SOURCE #-} Language.GraphQL.Draft.Parser
@@ -102,6 +104,8 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 import Language.Haskell.TH.Syntax (Lift, Q)
 import qualified Language.Haskell.TH.Syntax as TH
 import Prettyprinter (Pretty (..))
+
+-------------------------------------------------------------------------------
 
 newtype Name = Name {unName :: Text}
   deriving (Eq, Ord, Show, Hashable, NFData, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
@@ -636,7 +640,7 @@ instance Hashable TypeSystemDirectiveLocation
 
 instance NFData TypeSystemDirectiveLocation
 
-liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
+liftTypedHashMap :: (Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
 liftTypedHashMap a = [||M.fromList $$(TH.liftTyped $ M.toList a)||]
 
 inline :: NoFragments var -> FragmentSpread var
