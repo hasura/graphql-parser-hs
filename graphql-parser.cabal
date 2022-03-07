@@ -64,9 +64,7 @@ library
     , attoparsec
     , base                  >=4.7      && <5
     , bytestring
-    , containers
     , deepseq
-    , filepath
     , hashable
     , hedgehog
     , prettyprinter
@@ -76,7 +74,6 @@ library
     , text-builder
     , th-lift-instances
     , unordered-containers
-    , vector
 
   -- cabal-fmt: expand src
   --
