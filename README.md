@@ -1,6 +1,6 @@
 # graphql-parser
 
-[![build status](https://img.shields.io/github/workflow/status/hasura/graphql-parser-hs/ci/master?label=build%20status&logo=github&style=flat-square)](https://github.com/hasura/graphql-parser-hs/actions?query=workflow%3Aci+branch%3Amaster)
+[![build status](https://img.shields.io/github/workflow/status/hasura/graphql-parser-hs/ci/main?label=build%20status&logo=github&style=flat-square)](https://github.com/hasura/graphql-parser-hs/actions?query=workflow%3Aci+branch%3Amain)
 
 
 ## Style
