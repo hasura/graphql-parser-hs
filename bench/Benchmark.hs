@@ -1,4 +1,4 @@
-module Benchmark
+module Main
   ( main,
   )
 where
