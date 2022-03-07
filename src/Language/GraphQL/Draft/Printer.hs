@@ -24,6 +24,7 @@ import Data.Void (Void, absurd)
 import Language.GraphQL.Draft.Syntax
 import Prettyprinter qualified as PP
 import Text.Builder qualified as Text
+import Prelude
 
 -------------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 name:          graphql-parser
 version:       0.2.0.0
 synopsis:      A native Haskell GraphQL parser.
@@ -6,7 +6,7 @@ homepage:      https://github.com/hasura/graphql-parser-hs
 bug-reports:   https://github.com/hasura/graphql-parser-hs/issues
 author:        Vamshi Surabhi
 maintainer:    vamshi@hasura.io
-copyright:     2018–2020 Hasura Inc., 2015 J. Daniel Navarro
+copyright:     2018–2022 Hasura Inc., 2015 J. Daniel Navarro
 license:       BSD-3-Clause
 license-file:  LICENSE
 build-type:    Simple
@@ -16,18 +16,30 @@ source-repository head
   location: https://github.com/hasura/graphql-parser-hs
 
 common common-all
+  -- This warning strategy was inspired by Max Tagher's 'Enable All the
+  -- Warnings' blog post.
+  --
+  -- NOTE: '-Wno-prepositive-qualified-module' is currently a workaround for
+  -- https://github.com/haskell/cabal/pull/7352
   ghc-options:
-    -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints
+    -Weverything -Wno-missing-exported-signatures
+    -Wno-missing-import-lists -Wno-missing-export-lists
+    -Wno-missed-specialisations -Wno-all-missed-specializations
+    -Wno-unsafe -Wno-safe -Wno-missing-safe-haskell-mode
+    -Wno-missing-local-signatures -Wno-monomorphism-restriction
+    -Wno-prepositive-qualified-module
 
   default-language:   Haskell2010
   default-extensions:
+    NoImplicitPrelude
     BlockArguments
     ConstraintKinds
+    DeriveAnyClass
     DeriveFunctor
     DeriveGeneric
     DeriveLift
     DeriveTraversable
+    DerivingStrategies
     EmptyCase
     EmptyDataDeriving
     FlexibleContexts
@@ -52,9 +64,7 @@ library
     , attoparsec
     , base                  >=4.7      && <5
     , bytestring
-    , containers
     , deepseq
-    , filepath
     , hashable
     , hedgehog
     , prettyprinter
@@ -64,7 +74,6 @@ library
     , text-builder
     , th-lift-instances
     , unordered-containers
-    , vector
 
   -- cabal-fmt: expand src
   --
@@ -91,7 +100,6 @@ test-suite graphql-parser-test
     , graphql-parser
     , hedgehog
     , prettyprinter
-    , scientific
     , text
     , text-builder
 

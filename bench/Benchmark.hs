@@ -19,6 +19,7 @@ import Prettyprinter qualified as PP
 import Prettyprinter.Render.Text qualified as PP
 import Test.Tasty.Bench (bench, bgroup, defaultMain, nf, whnf)
 import Text.Builder qualified as STB -- Strict Text Builder
+import Prelude
 
 -------------------------------------------------------------------------------
 
