@@ -49,7 +49,7 @@ library
   build-depends:
     , aeson
     , attoparsec
-    , base                  >=4.7 && <5
+    , base                  >=4.7      && <5
     , bytestring
     , containers
     , deepseq
@@ -58,13 +58,15 @@ library
     , hedgehog
     , prettyprinter
     , scientific
-    , template-haskell >= 2.16.0.0
+    , template-haskell      >=2.16.0.0
     , text
     , text-builder
     , th-lift-instances
     , unordered-containers
     , vector
 
+  -- cabal-fmt: expand src
+  --
   exposed-modules:
     Language.GraphQL.Draft.Generator
     Language.GraphQL.Draft.Parser
@@ -77,9 +79,13 @@ test-suite graphql-parser-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Spec.hs
+
+  -- cabal-fmt: expand test
+  --
   other-modules:
     BlockStrings
     Keywords
+    Spec
 
   build-depends:
     , attoparsec
@@ -99,6 +105,10 @@ benchmark graphql-parser-bench
   type:           exitcode-stdio-1.0
   hs-source-dirs: bench
   main-is:        Benchmark.hs
+
+  -- cabal-fmt: expand bench
+  --
+  other-modules:  Benchmark
   build-depends:
     , base            >=4.7 && <5
     , bytestring
