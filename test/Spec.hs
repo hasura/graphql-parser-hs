@@ -1,17 +1,36 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
-import BlockStrings
+module Main
+  ( main,
+  )
+where
+
+-------------------------------------------------------------------------------
+
+import BlockStrings (blockTest)
 import Control.Monad (unless)
-import Data.ByteString.Builder qualified as BS
-import Data.ByteString.Lazy qualified as BL
+import Data.ByteString.Builder qualified as BSB
+import Data.ByteString.Lazy qualified as LBS
+import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding.Error qualified as TE
-import Data.Text.Lazy qualified as TL
-import Data.Text.Lazy.Builder qualified as TL
-import Data.Text.Lazy.Encoding qualified as TL
+import Data.Text.Encoding.Error qualified as TEE
+import Data.Text.Lazy qualified as LT
+import Data.Text.Lazy.Builder qualified as LTB
+import Data.Text.Lazy.Encoding qualified as LTE
 import Hedgehog
-import Keywords
+  ( Group (..),
+    Property,
+    TestLimit,
+    checkParallel,
+    failure,
+    footnote,
+    forAll,
+    property,
+    withTests,
+    (===),
+  )
+import Keywords qualified
 import Language.GraphQL.Draft.Generator
 import Language.GraphQL.Draft.Parser qualified as Input
 import Language.GraphQL.Draft.Printer qualified as Output
@@ -21,6 +40,8 @@ import Prettyprinter.Render.Text qualified as PP
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import Text.Builder qualified as TB
+
+-------------------------------------------------------------------------------
 
 data TestMode = TMDev | TMQuick | TMRelease
   deriving (Show)
@@ -59,19 +80,27 @@ tests nTests =
 propParserPrettyPrinter :: TestLimit -> Property
 propParserPrettyPrinter = mkPropParserPrinter $ prettyPrinter . Output.executableDocument
   where
-    prettyPrinter :: PP.Doc T.Text -> T.Text
+    prettyPrinter :: PP.Doc Text -> Text
     prettyPrinter = PP.renderStrict . PP.layoutPretty PP.defaultLayoutOptions
 
 propParserTextPrinter :: TestLimit -> Property
 propParserTextPrinter = mkPropParserPrinter $ TB.run . Output.executableDocument
 
 propParserLazyTextPrinter :: TestLimit -> Property
-propParserLazyTextPrinter = mkPropParserPrinter $ TL.toStrict . TL.toLazyText . Output.executableDocument
+propParserLazyTextPrinter =
+  mkPropParserPrinter $
+    LT.toStrict
+      . LTB.toLazyText
+      . Output.executableDocument
 
 propParserBSPrinter :: TestLimit -> Property
-propParserBSPrinter = mkPropParserPrinter $ bsToTxt . BS.toLazyByteString . Output.executableDocument
+propParserBSPrinter =
+  mkPropParserPrinter $
+    bsToTxt
+      . BSB.toLazyByteString
+      . Output.executableDocument
 
-mkPropParserPrinter :: (ExecutableDocument Name -> T.Text) -> (TestLimit -> Property)
+mkPropParserPrinter :: (ExecutableDocument Name -> Text) -> (TestLimit -> Property)
 mkPropParserPrinter printer = \space ->
   withTests space $
     property $ do
@@ -83,5 +112,5 @@ mkPropParserPrinter printer = \space ->
       footnote errorMsg
       failure
 
-bsToTxt :: BL.ByteString -> T.Text
-bsToTxt = TL.toStrict . TL.decodeUtf8With TE.lenientDecode
+bsToTxt :: LBS.ByteString -> Text
+bsToTxt = LT.toStrict . LTE.decodeUtf8With TEE.lenientDecode
