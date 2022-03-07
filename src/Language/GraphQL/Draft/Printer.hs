@@ -1,5 +1,7 @@
 module Language.GraphQL.Draft.Printer where
 
+-------------------------------------------------------------------------------
+
 import qualified Data.Aeson as J
 import Data.Bool (bool)
 import qualified Data.ByteString.Builder as BS
@@ -13,14 +15,17 @@ import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT hiding (singleton)
-import qualified Data.Text.Lazy.Builder as LT
+import qualified Data.Text.Lazy.Builder as LT (Builder)
+import qualified Data.Text.Lazy.Builder as LTB
 import qualified Data.Text.Lazy.Builder.Int as LTBI
 import qualified Data.Text.Lazy.Builder.Scientific as LTBS
 import qualified Data.Text.Lazy.Encoding as LTE
-import qualified Data.Text.Prettyprint.Doc as PP
 import Data.Void (Void, absurd)
 import Language.GraphQL.Draft.Syntax
+import qualified Prettyprinter as PP
 import qualified Text.Builder as Text
+
+-------------------------------------------------------------------------------
 
 class (Monoid a, IsString a) => Printer a where
   textP :: Text -> a
@@ -53,10 +58,10 @@ instance Printer BS.Builder where
   {-# INLINE doubleP #-}
 
 instance Printer LT.Builder where
-  textP = LT.fromText
+  textP = LTB.fromText
   {-# INLINE textP #-}
 
-  charP = LT.singleton
+  charP = LTB.singleton
   {-# INLINE charP #-}
 
   intP = LTBI.decimal
