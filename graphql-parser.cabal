@@ -34,6 +34,7 @@ common common-all
     FlexibleInstances
     FunctionalDependencies
     GeneralizedNewtypeDeriving
+    ImportQualifiedPost
     LambdaCase
     NamedFieldPuns
     OverloadedStrings

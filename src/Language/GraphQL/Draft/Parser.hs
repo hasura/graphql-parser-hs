@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-------------------------------------------------------------------------------
+
 -- | Description: Parse text into GraphQL ASTs
 module Language.GraphQL.Draft.Parser
   ( executableDocument,
@@ -20,10 +22,12 @@ module Language.GraphQL.Draft.Parser
   )
 where
 
-import Control.Applicative
-import Control.Monad
+-------------------------------------------------------------------------------
+
+import Control.Applicative (empty, many, optional, (<|>))
+import Control.Monad (foldM, guard)
 import Data.Aeson.Parser (jstring)
-import qualified Data.Attoparsec.ByteString as A
+import Data.Attoparsec.ByteString qualified as A
 import Data.Attoparsec.Text
   ( Parser,
     anyChar,
@@ -36,22 +40,22 @@ import Data.Attoparsec.Text
     sepBy1,
     (<?>),
   )
-import qualified Data.Attoparsec.Text as AT
+import Data.Attoparsec.Text qualified as AT
 import Data.Char
   ( isAsciiLower,
     isAsciiUpper,
     isDigit,
   )
-import Data.Functor
+import Data.Functor (($>))
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as M
+import Data.HashMap.Strict qualified as M
 import Data.Maybe (fromMaybe)
 import Data.Scientific (Scientific)
 import Data.Text (Text, find)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import Data.Text qualified as T
+import Data.Text.Encoding (encodeUtf8)
 import Data.Void (Void)
-import qualified Language.GraphQL.Draft.Syntax as AST
+import Language.GraphQL.Draft.Syntax qualified as AST
 
 -- * Document
 
@@ -241,7 +245,7 @@ stringLiteral = unescapeText =<< (char '"' *> jstring_ <?> "string")
     -- reconstructing a literal string (by putting quotes around it) and
     -- delegating all the hard work to Aeson.
     unescapeText :: Text -> Parser Text
-    unescapeText str = either fail pure $ A.parseOnly jstring ("\"" <> T.encodeUtf8 str <> "\"")
+    unescapeText str = either fail pure $ A.parseOnly jstring ("\"" <> encodeUtf8 str <> "\"")
 
 listLiteral :: Variable var => Parser [AST.Value var]
 listLiteral = brackets (many value) <?> "list"

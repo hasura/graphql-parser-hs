@@ -1,8 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-------------------------------------------------------------------------------
+
 -- | Regression tests for issue #20 https://github.com/hasura/graphql-parser-hs/issues/20
-module Keywords (primitiveTests) where
+module Keywords
+  ( primitiveTests,
+  )
+where
+
+-------------------------------------------------------------------------------
 
 import Data.Foldable (for_)
 import Data.Text (Text, singleton)
@@ -17,9 +24,11 @@ import Hedgehog
     withTests,
   )
 import Language.GraphQL.Draft.Parser (Parser, nameParser, runParser, value)
-import qualified Language.GraphQL.Draft.Printer as Printer
+import Language.GraphQL.Draft.Printer qualified as Printer
 import Language.GraphQL.Draft.Syntax (EnumValue (..), Value (..), litName)
 import Text.Builder (Builder, run)
+
+-------------------------------------------------------------------------------
 
 primitiveTests :: [(PropertyName, Property)]
 primitiveTests =

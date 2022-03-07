@@ -1,9 +1,27 @@
 -- | Regression tests for issue #20 https://github.com/hasura/graphql-parser-hs/issues/20
-module BlockStrings where
+module BlockStrings
+  ( blockTest,
+  )
+where
 
-import qualified Data.Text as T
+-------------------------------------------------------------------------------
+
+import Data.Text (Text)
+import Data.Text qualified as T
 import Hedgehog
-import Language.GraphQL.Draft.Parser
+  ( Group (..),
+    Property,
+    checkParallel,
+    failure,
+    footnote,
+    property,
+    success,
+    withTests,
+    (===),
+  )
+import Language.GraphQL.Draft.Parser (blockString, runParser)
+
+-------------------------------------------------------------------------------
 
 blockTest :: IO Bool
 blockTest = do
@@ -39,7 +57,7 @@ blockTest = do
 -- fail, when we pass a function to construct wrapped the
 -- body in a delimiter, where we will probably be testing
 -- for errors using it.
-blockParseFail :: T.Text -> Property
+blockParseFail :: Text -> Property
 blockParseFail unparsed = withTests 1 $
   property $ do
     case runParser blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
@@ -49,7 +67,7 @@ blockParseFail unparsed = withTests 1 $
         failure
 
 -- | Test whether certain block string content parses to the expected value.
-shouldParseTo :: T.Text -> T.Text -> Property
+shouldParseTo :: Text -> Text -> Property
 shouldParseTo unparsed expected = withTests 1 $
   property $ do
     case runParser blockString ("\"\"\"" <> unparsed <> "\"\"\"") of

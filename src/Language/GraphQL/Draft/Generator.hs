@@ -1,15 +1,87 @@
-module Language.GraphQL.Draft.Generator where
+module Language.GraphQL.Draft.Generator
+  ( -- * Generator
+    Generator (..),
+    generate,
 
-import Control.Monad.IO.Class
+    -- * Document
+    genDocument,
+    genExecutableDocument,
+
+    -- * Identifiers
+    genText,
+    alpha_,
+    alphaNum_,
+    genGraphqlName,
+    genName,
+    genNullability,
+    genType,
+    genDescription,
+    genValueWith,
+    genEnumValue,
+    genListValue,
+    genObjectValue,
+    genBlockText,
+    genMinIndentedText,
+    genIndentation,
+
+    -- * Definitions
+    genDefinition,
+    genExecutableDefinition,
+    genOperationDefinition,
+    genTypedOperationDefinition,
+    genVariableDefinition,
+    genFragmentDefinition,
+    genTypeSystemDefinition,
+    genSchemaDefinition,
+    genRootOperationTypeDefinition,
+    genOperationType,
+    genTypeDefinition,
+    genScalarTypeDefinition,
+    genObjectTypeDefinition,
+    genInterfaceTypeDefinition,
+    genUnionTypeDefinition,
+    genEnumTypeDefinition,
+    genInputObjectTypeDefinition,
+    genInputValueDefinition,
+    genEnumValueDefinition,
+    genFieldDefinition,
+    genFieldDefinitions,
+    genDirectiveDefinition,
+    genArgumentsDefinition,
+    genDirectiveLocation,
+    genExecutableDirectiveLocation,
+    genTypeSystemDirectiveLocation,
+
+    -- * Structure
+    genSelectionSet,
+    genSelection,
+    genFragmentSpread,
+    genInlineFragment,
+    genField,
+    genDirective,
+    genDirectives,
+    genArgument,
+
+    -- * Helpers
+    mkList,
+    mkListNonEmpty,
+  )
+where
+
+-------------------------------------------------------------------------------
+
+import Control.Monad.IO.Class (MonadIO)
 import Data.HashMap.Strict as M
 import Data.Scientific (fromFloatDigits)
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Void
-import Hedgehog
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import Data.Text qualified as T
+import Data.Void (Void)
+import Hedgehog (Gen)
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 import Language.GraphQL.Draft.Syntax
+
+-------------------------------------------------------------------------------
 
 -- | *Generator*
 class Generator a where
@@ -21,9 +93,12 @@ instance Generator Void where
 instance Generator Name where
   genValue = genValueWith [genName]
 
--- | *Document*
 generate :: MonadIO m => Gen a -> m a
 generate = Gen.sample
+
+-------------------------------------------------------------------------------
+
+-- Document
 
 genDocument :: Gen Document
 genDocument =
@@ -33,7 +108,10 @@ genExecutableDocument :: Generator a => Gen (ExecutableDocument a)
 genExecutableDocument =
   ExecutableDocument <$> Gen.list (Range.linear 1 3) genExecutableDefinition
 
--- | *Identifiers*
+-------------------------------------------------------------------------------
+
+-- Identifiers
+
 genText :: Gen Text
 genText = Gen.text (Range.linear 0 11) Gen.unicode
 
@@ -64,7 +142,10 @@ genType =
 genDescription :: Gen Description
 genDescription = Description <$> Gen.choice [genText, genBlockText]
 
--- | *Values*
+-------------------------------------------------------------------------------
+
+-- Values
+
 genValueWith :: [Gen a] -> Gen (Value a)
 genValueWith varGens = Gen.recursive Gen.choice nonRecursive recursive
   where
@@ -123,7 +204,10 @@ genIndentation :: Gen Text
 genIndentation = do
   Gen.text (Range.linear 0 100) (return ' ')
 
--- | *Definitions*
+-------------------------------------------------------------------------------
+
+-- Definitions
+
 genDefinition :: Gen Definition
 genDefinition =
   Gen.choice
@@ -330,7 +414,10 @@ genTypeSystemDirectiveLocation =
       TSDLINPUT_FIELD_DEFINITION
     ]
 
--- | *Structure*
+-------------------------------------------------------------------------------
+
+-- Structure
+
 genSelectionSet :: Generator a => Gen (SelectionSet FragmentSpread a)
 genSelectionSet = mkListNonEmpty genSelection
 
@@ -378,7 +465,10 @@ genDirectives = mkList genDirective
 genArgument :: Generator a => Gen (Name, Value a)
 genArgument = (,) <$> genName <*> genValue
 
--- | *Helpers*
+-------------------------------------------------------------------------------
+
+-- Helpers
+
 mkList :: Gen a -> Gen [a]
 mkList = Gen.list $ Range.linear 0 11
 
