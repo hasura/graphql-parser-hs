@@ -1,18 +1,18 @@
 import Control.Monad
-import qualified Data.ByteString.Builder as BS
+import Data.ByteString.Builder qualified as BS
 import Data.Functor ((<&>))
 import Data.Maybe (catMaybes)
 import Data.String (fromString)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy.Builder as TL
-import qualified Data.Text.Prettyprint.Doc as PP
-import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
+import Data.Text qualified as T
+import Data.Text.Lazy.Builder qualified as TL
+import Data.Text.Prettyprint.Doc qualified as PP
+import Data.Text.Prettyprint.Doc.Render.Text qualified as PP
 import Language.GraphQL.Draft.Generator
 import Language.GraphQL.Draft.Parser (parseExecutableDoc)
 import Language.GraphQL.Draft.Printer
 import Language.GraphQL.Draft.Syntax
 import Test.Tasty.Bench
-import qualified Text.Builder as TB
+import Text.Builder qualified as TB
 
 genDocs :: Int -> IO [(Int, ExecutableDocument Name)]
 genDocs num =

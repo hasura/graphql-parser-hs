@@ -17,7 +17,7 @@ import Hedgehog
     withTests,
   )
 import Language.GraphQL.Draft.Parser (Parser, nameParser, runParser, value)
-import qualified Language.GraphQL.Draft.Printer as Printer
+import Language.GraphQL.Draft.Printer qualified as Printer
 import Language.GraphQL.Draft.Syntax (EnumValue (..), Value (..), litName)
 import Text.Builder (Builder, run)
 

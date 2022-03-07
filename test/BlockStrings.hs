@@ -1,7 +1,7 @@
 -- | Regression tests for issue #20 https://github.com/hasura/graphql-parser-hs/issues/20
 module BlockStrings where
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Hedgehog
 import Language.GraphQL.Draft.Parser
 

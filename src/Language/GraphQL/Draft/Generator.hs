@@ -74,11 +74,11 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.HashMap.Strict as M
 import Data.Scientific (fromFloatDigits)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Void (Void)
 import Hedgehog (Gen)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 import Language.GraphQL.Draft.Syntax
 
 -------------------------------------------------------------------------------

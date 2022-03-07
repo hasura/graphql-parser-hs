@@ -7,7 +7,7 @@ where
 -------------------------------------------------------------------------------
 
 import Data.Text (Text)
-import {-# SOURCE #-} qualified Language.GraphQL.Draft.Syntax as AST
+import {-# SOURCE #-} Language.GraphQL.Draft.Syntax qualified as AST
 
 -------------------------------------------------------------------------------
 

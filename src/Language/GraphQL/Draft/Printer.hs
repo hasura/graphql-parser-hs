@@ -2,28 +2,28 @@ module Language.GraphQL.Draft.Printer where
 
 -------------------------------------------------------------------------------
 
-import qualified Data.Aeson as J
+import Data.Aeson qualified as J
 import Data.Bool (bool)
-import qualified Data.ByteString.Builder as BS
-import qualified Data.ByteString.Builder.Scientific as BSBS
+import Data.ByteString.Builder qualified as BS
+import Data.ByteString.Builder.Scientific qualified as BSBS
 import Data.Char (isControl)
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as M
+import Data.HashMap.Strict qualified as M
 import Data.List (intersperse, sort)
 import Data.Scientific (Scientific)
 import Data.String (IsString)
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT hiding (singleton)
-import qualified Data.Text.Lazy.Builder as LT (Builder)
-import qualified Data.Text.Lazy.Builder as LTB
-import qualified Data.Text.Lazy.Builder.Int as LTBI
-import qualified Data.Text.Lazy.Builder.Scientific as LTBS
-import qualified Data.Text.Lazy.Encoding as LTE
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as LT hiding (singleton)
+import Data.Text.Lazy.Builder qualified as LT (Builder)
+import Data.Text.Lazy.Builder qualified as LTB
+import Data.Text.Lazy.Builder.Int qualified as LTBI
+import Data.Text.Lazy.Builder.Scientific qualified as LTBS
+import Data.Text.Lazy.Encoding qualified as LTE
 import Data.Void (Void, absurd)
 import Language.GraphQL.Draft.Syntax
-import qualified Prettyprinter as PP
-import qualified Text.Builder as Text
+import Prettyprinter qualified as PP
+import Text.Builder qualified as Text
 
 -------------------------------------------------------------------------------
 

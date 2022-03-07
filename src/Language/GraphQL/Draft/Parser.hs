@@ -27,7 +27,7 @@ where
 import Control.Applicative (empty, many, optional, (<|>))
 import Control.Monad (foldM, guard)
 import Data.Aeson.Parser (jstring)
-import qualified Data.Attoparsec.ByteString as A
+import Data.Attoparsec.ByteString qualified as A
 import Data.Attoparsec.Text
   ( Parser,
     anyChar,
@@ -40,7 +40,7 @@ import Data.Attoparsec.Text
     sepBy1,
     (<?>),
   )
-import qualified Data.Attoparsec.Text as AT
+import Data.Attoparsec.Text qualified as AT
 import Data.Char
   ( isAsciiLower,
     isAsciiUpper,
@@ -48,14 +48,14 @@ import Data.Char
   )
 import Data.Functor (($>))
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as M
+import Data.HashMap.Strict qualified as M
 import Data.Maybe (fromMaybe)
 import Data.Scientific (Scientific)
 import Data.Text (Text, find)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Text.Encoding (encodeUtf8)
 import Data.Void (Void)
-import qualified Language.GraphQL.Draft.Syntax as AST
+import Language.GraphQL.Draft.Syntax qualified as AST
 
 -- * Document
 
