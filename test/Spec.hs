@@ -45,7 +45,7 @@ import Prelude
 -------------------------------------------------------------------------------
 
 data TestMode = TMDev | TMQuick | TMRelease
-  deriving (Show)
+  deriving stock (Show)
 
 main :: IO ()
 main = do
