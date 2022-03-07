@@ -100,7 +100,6 @@ test-suite graphql-parser-test
     , graphql-parser
     , hedgehog
     , prettyprinter
-    , scientific
     , text
     , text-builder
 
