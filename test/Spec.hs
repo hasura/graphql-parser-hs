@@ -10,7 +10,6 @@ import qualified Data.Text.Encoding.Error as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TL
 import qualified Data.Text.Lazy.Encoding as TL
-import qualified Data.Text.Prettyprint.Doc.Render.Text as PP
 import Hedgehog
 import Keywords
 import Language.GraphQL.Draft.Generator
@@ -18,6 +17,7 @@ import qualified Language.GraphQL.Draft.Parser as Input
 import qualified Language.GraphQL.Draft.Printer as Output
 import Language.GraphQL.Draft.Syntax
 import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Text as PP
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import qualified Text.Builder as TB
