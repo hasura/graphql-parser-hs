@@ -20,6 +20,7 @@ import Hedgehog
     (===),
   )
 import Language.GraphQL.Draft.Parser (blockString, runParser)
+import Prelude
 
 -------------------------------------------------------------------------------
 

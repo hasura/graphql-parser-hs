@@ -80,6 +80,7 @@ import Hedgehog (Gen)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Language.GraphQL.Draft.Syntax
+import Prelude
 
 -------------------------------------------------------------------------------
 

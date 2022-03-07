@@ -56,6 +56,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding (encodeUtf8)
 import Data.Void (Void)
 import Language.GraphQL.Draft.Syntax qualified as AST
+import Prelude
 
 -- * Document
 

@@ -40,6 +40,7 @@ import Prettyprinter.Render.Text qualified as PP
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import Text.Builder qualified as TB
+import Prelude
 
 -------------------------------------------------------------------------------
 

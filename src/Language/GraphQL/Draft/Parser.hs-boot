@@ -8,6 +8,7 @@ where
 
 import Data.Text (Text)
 import {-# SOURCE #-} Language.GraphQL.Draft.Syntax qualified as AST
+import Prelude (Either)
 
 -------------------------------------------------------------------------------
 
