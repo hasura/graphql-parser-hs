@@ -1,27 +1,35 @@
-import Control.Monad
+module Benchmark
+  ( main,
+  )
+where
+
+-------------------------------------------------------------------------------
+
 import Data.ByteString.Builder qualified as BS
 import Data.Functor ((<&>))
 import Data.Maybe (catMaybes)
-import Data.String (fromString)
-import Data.Text qualified as T
-import Data.Text.Lazy.Builder qualified as TL
-import Data.Text.Prettyprint.Doc qualified as PP
-import Data.Text.Prettyprint.Doc.Render.Text qualified as PP
-import Language.GraphQL.Draft.Generator
+import Data.Text (Text)
+import Data.Text.Lazy.Builder qualified as LTB
+import Data.Traversable (for)
+import Language.GraphQL.Draft.Generator (genExecutableDocument, genText, generate)
 import Language.GraphQL.Draft.Parser (parseExecutableDoc)
-import Language.GraphQL.Draft.Printer
-import Language.GraphQL.Draft.Syntax
-import Test.Tasty.Bench
-import Text.Builder qualified as TB
+import Language.GraphQL.Draft.Printer (executableDocument, renderExecutableDoc)
+import Language.GraphQL.Draft.Syntax (ExecutableDocument, Name, mkName)
+import Prettyprinter qualified as PP
+import Prettyprinter.Render.Text qualified as PP
+import Test.Tasty.Bench (bench, bgroup, defaultMain, nf, whnf)
+import Text.Builder qualified as STB -- Strict Text Builder
+
+-------------------------------------------------------------------------------
 
 genDocs :: Int -> IO [(Int, ExecutableDocument Name)]
 genDocs num =
-  forM [1 .. num] $ \n -> (n,) <$> generate genExecutableDocument
+  for [1 .. num] $ \n -> (n,) <$> generate genExecutableDocument
 
-genTexts :: Int -> IO [(Int, [T.Text])]
+genTexts :: Int -> IO [(Int, [Text])]
 genTexts num =
-  forM [1 .. num] $ \n -> do
-    texts <- forM [1 .. 500] $ const $ generate genText
+  for [1 .. num] $ \n -> do
+    texts <- for [1 .. 500 :: Int] . const $ generate genText
     pure $ (n, texts)
 
 main :: IO ()
@@ -62,8 +70,8 @@ main = do
       bgroup "rendering executableDocument (lazy text builder)" $
         map (\(n, gq) -> bench (show n) $ nf (renderTLB . executableDocument) gq) gqs
 
-    renderPP :: PP.Doc T.Text -> T.Text
+    renderPP :: PP.Doc Text -> Text
     renderPP = PP.renderStrict . PP.layoutPretty PP.defaultLayoutOptions
     renderBB = BS.toLazyByteString
-    renderTB = TB.run
-    renderTLB = TL.toLazyText
+    renderTB = STB.run
+    renderTLB = LTB.toLazyText
