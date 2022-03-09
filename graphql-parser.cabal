@@ -52,10 +52,12 @@ library
     , base                  >=4.7 && <5
     , bytestring
     , containers
+    , case-insensitive
     , deepseq
     , filepath
     , hashable
     , hedgehog
+    , insert-ordered-containers
     , prettyprinter
     , scientific
     , template-haskell >= 2.16.0.0
@@ -70,6 +72,7 @@ library
     Language.GraphQL.Draft.Parser
     Language.GraphQL.Draft.Printer
     Language.GraphQL.Draft.Syntax
+    Language.GraphQL.Draft.Analyse
 
 test-suite graphql-parser-test
   import:           common-all
