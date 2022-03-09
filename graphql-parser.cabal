@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: 3.0
 name:          graphql-parser
 version:       0.2.0.0
 synopsis:      A native Haskell GraphQL parser.
@@ -6,7 +6,7 @@ homepage:      https://github.com/hasura/graphql-parser-hs
 bug-reports:   https://github.com/hasura/graphql-parser-hs/issues
 author:        Vamshi Surabhi
 maintainer:    vamshi@hasura.io
-copyright:     2018–2020 Hasura Inc., 2015 J. Daniel Navarro
+copyright:     2018–2022 Hasura Inc., 2015 J. Daniel Navarro
 license:       BSD-3-Clause
 license-file:  LICENSE
 build-type:    Simple
@@ -16,24 +16,37 @@ source-repository head
   location: https://github.com/hasura/graphql-parser-hs
 
 common common-all
+  -- This warning strategy was inspired by Max Tagher's 'Enable All the
+  -- Warnings' blog post.
+  --
+  -- NOTE: '-Wno-prepositive-qualified-module' is currently a workaround for
+  -- https://github.com/haskell/cabal/pull/7352
   ghc-options:
-    -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints
+    -Weverything -Wno-missing-exported-signatures
+    -Wno-missing-import-lists -Wno-missing-export-lists
+    -Wno-missed-specialisations -Wno-all-missed-specializations
+    -Wno-unsafe -Wno-safe -Wno-missing-safe-haskell-mode
+    -Wno-missing-local-signatures -Wno-monomorphism-restriction
+    -Wno-prepositive-qualified-module
 
   default-language:   Haskell2010
   default-extensions:
+    NoImplicitPrelude
     BlockArguments
     ConstraintKinds
+    DeriveAnyClass
     DeriveFunctor
     DeriveGeneric
     DeriveLift
     DeriveTraversable
+    DerivingStrategies
     EmptyCase
     EmptyDataDeriving
     FlexibleContexts
     FlexibleInstances
     FunctionalDependencies
     GeneralizedNewtypeDeriving
+    ImportQualifiedPost
     LambdaCase
     NamedFieldPuns
     OverloadedStrings
@@ -49,24 +62,24 @@ library
   build-depends:
     , aeson
     , attoparsec
-    , base                  >=4.7 && <5
+    , base                  >=4.7      && <5
     , bytestring
     , containers
     , case-insensitive
     , deepseq
-    , filepath
     , hashable
     , hedgehog
     , insert-ordered-containers
     , prettyprinter
     , scientific
-    , template-haskell >= 2.16.0.0
+    , template-haskell      >=2.16.0.0
     , text
     , text-builder
     , th-lift-instances
     , unordered-containers
-    , vector
 
+  -- cabal-fmt: expand src
+  --
   exposed-modules:
     Language.GraphQL.Draft.Generator
     Language.GraphQL.Draft.Parser
@@ -75,11 +88,11 @@ library
     Language.GraphQL.Draft.Analyse
 
 test-suite graphql-parser-test
-  import:           common-all
-  ghc-options:      -threaded -rtsopts -with-rtsopts=-N
-  type:             exitcode-stdio-1.0
-  hs-source-dirs:   test
-  main-is:          Spec.hs
+  import:         common-all
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Spec.hs
   other-modules:
     BlockStrings
     Keywords
@@ -91,11 +104,8 @@ test-suite graphql-parser-test
     , graphql-parser
     , hedgehog
     , prettyprinter
-    , scientific
     , text
     , text-builder
-
-  default-language: Haskell2010
 
 benchmark graphql-parser-bench
   import:         common-all

@@ -1,0 +1,84 @@
+name: ci
+
+on:
+  push: { branches: [ "main" ] }
+  pull_request: { branches: [ "main" ] }
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      # TODO: We should add CI-specific build, test, etc. actions to the
+      # 'Makefile' rather than relying on an environment variable.
+      CABAL: cabal --project-file=./ci/ci.project
+    strategy:
+      matrix:
+        ghc: [ "8.10.7" ]
+        cabal: [ "latest" ] 
+
+    steps:
+      - name: Checkout this repository.
+        uses: actions/checkout@v2
+
+      - name: Set up Haskell tooling.
+        uses: haskell/actions/setup@v1
+        id: set-up-haskell-tooling
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+
+      - name: Freeze 'cabal-install' dependency solution.
+        run: |
+          # Generate a freeze file scoped to an exact snapshot of Hackage's
+          # index state at some arbitrarily recent point in time.
+          #
+          # TODO: See if it's better to just commit this to the repository.
+          #
+          # This way, it would be trivial to write another Action which could
+          # periodically regenerate the freeze file every so often.
+          ${CABAL} freeze \
+            --index-state "hackage.haskell.org 2022-03-03T12:57:11Z"
+
+      - name: Cache compiled dependency artifacts.
+        uses: actions/cache@v2
+        with:
+          path: |
+            ${{ steps.set-up-haskell-tooling.outputs.cabal-store }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}
+          restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
+
+      - name: Compile dependencies.
+        run: |
+          ${CABAL} update
+          ${CABAL} build \
+            --only-dependencies \
+            --enable-tests \
+            --enable-benchmarks
+
+      - name: Cache library, test, and benchmark artifacts.
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./dist-nestyle
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./graphql-parser.cabal') }}
+          restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
+
+      - name: Compile library, tests, and benchmarks.
+        run: |
+          ${CABAL} build graphql-parser
+          ${CABAL} build tests
+          ${CABAL} build benchmarks
+
+      - name: Run tests.
+        run: |
+          ${CABAL} test \
+            --enable-tests \
+            --enable-benchmarks \
+            graphql-parser-test 
+
+      - name: Run benchmarks.
+        run: |
+          ${CABAL} bench \
+            --enable-tests \
+            --enable-benchmarks \
+            graphql-parser-bench 

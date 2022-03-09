@@ -79,19 +79,21 @@ module Language.GraphQL.Draft.Syntax
   )
 where
 
-import Control.DeepSeq
-import Control.Monad
-import qualified Data.Aeson as J
+-------------------------------------------------------------------------------
+
+import Control.DeepSeq (NFData)
+import Control.Monad ((>=>))
+import Data.Aeson qualified as J
 import Data.Bool (bool)
-import qualified Data.Char as C
+import Data.Char qualified as C
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as M
-import Data.Hashable
-import Data.Scientific
+import Data.HashMap.Strict qualified as M
+import Data.Hashable (Hashable)
+import Data.Scientific (Scientific)
 import Data.String (IsString (..))
 import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Void
+import Data.Text qualified as T
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Instances.TH.Lift ()
 import {-# SOURCE #-} Language.GraphQL.Draft.Parser
@@ -100,14 +102,14 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Parser
   )
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 import Language.Haskell.TH.Syntax (Lift, Q)
-import qualified Language.Haskell.TH.Syntax as TH
+import Language.Haskell.TH.Syntax qualified as TH
 import Prettyprinter (Pretty (..))
+import Prelude
 
+-------------------------------------------------------------------------------
 newtype Name = Name {unName :: Text}
-  deriving (Eq, Ord, Show, Hashable, NFData, Lift, Semigroup, J.ToJSONKey, J.ToJSON)
-
-instance Pretty Name where
-  pretty = pretty . unName
+  deriving stock (Eq, Lift, Ord, Show)
+  deriving newtype (Hashable, NFData, Pretty, Semigroup, J.ToJSONKey, J.ToJSON)
 
 mkName :: Text -> Maybe Name
 mkName text =
@@ -139,17 +141,18 @@ instance J.FromJSONKey Name where
 -- * Documents
 
 newtype Document = Document {getDefinitions :: [Definition]}
-  deriving (Ord, Show, Eq, Lift)
+  deriving stock (Eq, Lift, Ord, Show)
 
 data Definition
   = DefinitionExecutable (ExecutableDefinition Name)
   | DefinitionTypeSystem TypeSystemDefinition
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving stock (Eq, Generic, Lift, Ord, Show)
 
 instance Hashable Definition
 
 newtype ExecutableDocument var = ExecutableDocument {getExecutableDefinitions :: [ExecutableDefinition var]}
-  deriving (Ord, Show, Eq, Lift, Hashable, NFData, Functor, Foldable, Traversable)
+  deriving stock (Eq, Lift, Ord, Show, Functor, Foldable, Traversable)
+  deriving newtype (Hashable, NFData)
 
 instance J.FromJSON (ExecutableDocument Name) where
   parseJSON = J.withText "ExecutableDocument" $ \t ->
@@ -163,7 +166,7 @@ instance J.ToJSON (ExecutableDocument Name) where
 data ExecutableDefinition var
   = ExecutableDefinitionOperation (OperationDefinition FragmentSpread var)
   | ExecutableDefinitionFragment FragmentDefinition
-  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
 
 instance Hashable var => Hashable (ExecutableDefinition var)
 
@@ -188,45 +191,34 @@ partitionExDefs = foldr f ([], [], [])
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema SchemaDefinition
   | TypeSystemDefinitionType (TypeDefinition () InputValueDefinition) -- No 'possibleTypes' specified for interfaces
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable TypeSystemDefinition
-
-instance NFData TypeSystemDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data SchemaDefinition = SchemaDefinition
   { _sdDirectives :: Maybe [Directive Void],
     _sdRootOperationTypeDefinitions :: [RootOperationTypeDefinition]
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable SchemaDefinition
-
-instance NFData SchemaDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data RootOperationTypeDefinition = RootOperationTypeDefinition
   { _rotdOperationType :: OperationType,
     _rotdOperationTypeType :: Name
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable RootOperationTypeDefinition
-
-instance NFData RootOperationTypeDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data OperationType
   = OperationTypeQuery
   | OperationTypeMutation
   | OperationTypeSubscription
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable OperationType
-
-instance NFData OperationType
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 newtype SchemaDocument
   = SchemaDocument [TypeSystemDefinition]
-  deriving (Ord, Show, Eq, Lift, Hashable, NFData, Generic)
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving newtype (Hashable, NFData)
 
 instance J.FromJSON SchemaDocument where
   parseJSON = J.withText "SchemaDocument" $ \t ->
@@ -238,16 +230,14 @@ instance J.FromJSON SchemaDocument where
 -- the list of object types that implement that interface
 newtype SchemaIntrospection
   = SchemaIntrospection [TypeDefinition [Name] InputValueDefinition]
-  deriving (Ord, Show, Eq, Lift, Hashable, Generic)
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving newtype (Hashable)
 
 data OperationDefinition frag var
   = OperationDefinitionTyped (TypedOperationDefinition frag var)
   | OperationDefinitionUnTyped (SelectionSet frag var)
-  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
-
-instance (Hashable (frag var), Hashable var) => Hashable (OperationDefinition frag var)
-
-instance (NFData (frag var), NFData var) => NFData (OperationDefinition frag var)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 data TypedOperationDefinition frag var = TypedOperationDefinition
   { _todType :: OperationType,
@@ -256,22 +246,16 @@ data TypedOperationDefinition frag var = TypedOperationDefinition
     _todDirectives :: [Directive var],
     _todSelectionSet :: SelectionSet frag var
   }
-  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
-
-instance (Hashable (frag var), Hashable var) => Hashable (TypedOperationDefinition frag var)
-
-instance (NFData (frag var), NFData var) => NFData (TypedOperationDefinition frag var)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 data VariableDefinition = VariableDefinition
   { _vdName :: Name,
     _vdType :: GType,
     _vdDefaultValue :: Maybe (Value Void)
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable VariableDefinition
-
-instance NFData VariableDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 type SelectionSet frag var = [Selection frag var]
 
@@ -279,11 +263,8 @@ data Selection frag var
   = SelectionField (Field frag var)
   | SelectionFragmentSpread (frag var)
   | SelectionInlineFragment (InlineFragment frag var)
-  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
-
-instance (Hashable (frag var), Hashable var) => Hashable (Selection frag var)
-
-instance (NFData (frag var), NFData var) => NFData (Selection frag var)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 data Field frag var = Field
   { _fAlias :: Maybe Name,
@@ -292,11 +273,8 @@ data Field frag var = Field
     _fDirectives :: [Directive var],
     _fSelectionSet :: SelectionSet frag var
   }
-  deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
-
-instance (Hashable (frag var), Hashable var) => Hashable (Field frag var)
-
-instance (NFData (frag var), NFData var) => NFData (Field frag var)
+  deriving stock (Eq, Generic, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 instance (Lift (frag var), Lift var) => Lift (Field frag var) where
   liftTyped Field {..} =
@@ -316,11 +294,8 @@ data FragmentSpread var = FragmentSpread
   { _fsName :: Name,
     _fsDirectives :: [Directive var]
   }
-  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
-
-instance Hashable var => Hashable (FragmentSpread var)
-
-instance NFData var => NFData (FragmentSpread var)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 -- | Can be used in place of the @frag@ parameter to various AST types to
 -- guarante that the AST does not include any fragment spreads.
@@ -328,22 +303,16 @@ instance NFData var => NFData (FragmentSpread var)
 -- Note: This is equivalent to @'Const' 'Void'@, but annoyingly, 'Const' does
 -- not provide a 'Lift' instance as of GHC 8.6.
 data NoFragments var
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Lift, Generic)
-
-instance Hashable (NoFragments var)
-
-instance NFData (NoFragments var)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 data InlineFragment frag var = InlineFragment
   { _ifTypeCondition :: Maybe Name,
     _ifDirectives :: [Directive var],
     _ifSelectionSet :: SelectionSet frag var
   }
-  deriving (Ord, Show, Eq, Lift, Functor, Foldable, Traversable, Generic)
-
-instance (Hashable (frag var), Hashable var) => Hashable (InlineFragment frag var)
-
-instance (NFData (frag var), NFData var) => NFData (InlineFragment frag var)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 data FragmentDefinition = FragmentDefinition
   { _fdName :: Name,
@@ -351,11 +320,8 @@ data FragmentDefinition = FragmentDefinition
     _fdDirectives :: [Directive Name],
     _fdSelectionSet :: SelectionSet FragmentSpread Name
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable FragmentDefinition
-
-instance NFData FragmentDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 -- * Values
 
@@ -369,11 +335,8 @@ data Value var
   | VEnum EnumValue
   | VList [Value var]
   | VObject (HashMap Name (Value var))
-  deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
-
-instance Hashable var => Hashable (Value var)
-
-instance NFData var => NFData (Value var)
+  deriving stock (Eq, Generic, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 instance Lift var => Lift (Value var) where
   liftTyped (VVariable a) = [||VVariable a||]
@@ -395,11 +358,8 @@ data Directive var = Directive
   { _dName :: Name,
     _dArguments :: HashMap Name (Value var)
   }
-  deriving (Ord, Show, Eq, Functor, Foldable, Traversable, Generic)
-
-instance Hashable var => Hashable (Directive var)
-
-instance NFData var => NFData (Directive var)
+  deriving stock (Eq, Generic, Ord, Show, Functor, Foldable, Traversable)
+  deriving anyclass (Hashable, NFData)
 
 instance Lift var => Lift (Directive var) where
   liftTyped Directive {..} = [||Directive {_dName, _dArguments = $$(liftTypedHashMap _dArguments)}||]
@@ -407,12 +367,14 @@ instance Lift var => Lift (Directive var) where
 -- * Type Reference
 
 newtype Nullability = Nullability {unNullability :: Bool}
-  deriving (Show, Ord, Eq, Lift, Generic, Hashable, NFData)
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving newtype (Hashable, NFData)
 
 data GType
   = TypeNamed Nullability Name
   | TypeList Nullability GType
-  deriving (Eq, Ord, Show, Lift, Generic)
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 getBaseType :: GType -> Name
 getBaseType = \case
@@ -421,10 +383,6 @@ getBaseType = \case
 
 instance J.ToJSON GType where
   toJSON = J.toJSON . showGT
-
-instance Hashable GType
-
-instance NFData GType
 
 showGT :: GType -> Text
 showGT = \case
@@ -459,14 +417,12 @@ data TypeDefinition possibleTypes inputType
   | TypeDefinitionUnion UnionTypeDefinition
   | TypeDefinitionEnum EnumTypeDefinition
   | TypeDefinitionInputObject (InputObjectTypeDefinition inputType)
-  deriving (Ord, Show, Eq, Lift, Generic, Functor)
-
-instance (Hashable possibleTypes, Hashable inputType) => Hashable (TypeDefinition possibleTypes inputType)
-
-instance (NFData possibleTypes, NFData inputType) => NFData (TypeDefinition possibleTypes inputType)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
+  deriving anyclass (Hashable, NFData)
 
 newtype Description = Description {unDescription :: Text}
-  deriving (Show, Eq, Ord, IsString, Lift, Semigroup, Monoid, Hashable, NFData, J.ToJSON, J.FromJSON)
+  deriving stock (Eq, Lift, Ord, Show)
+  deriving newtype (Hashable, IsString, Monoid, NFData, Semigroup, J.FromJSON, J.ToJSON)
 
 data ObjectTypeDefinition inputType = ObjectTypeDefinition
   { _otdDescription :: Maybe Description,
@@ -475,11 +431,8 @@ data ObjectTypeDefinition inputType = ObjectTypeDefinition
     _otdDirectives :: [Directive Void],
     _otdFieldsDefinition :: [FieldDefinition inputType]
   }
-  deriving (Ord, Show, Eq, Lift, Generic, Functor)
-
-instance (Hashable inputType) => Hashable (ObjectTypeDefinition inputType)
-
-instance (NFData inputType) => NFData (ObjectTypeDefinition inputType)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
+  deriving anyclass (Hashable, NFData)
 
 data FieldDefinition inputType = FieldDefinition
   { _fldDescription :: Maybe Description,
@@ -488,11 +441,8 @@ data FieldDefinition inputType = FieldDefinition
     _fldType :: GType,
     _fldDirectives :: [Directive Void]
   }
-  deriving (Ord, Show, Eq, Lift, Generic, Functor)
-
-instance (Hashable inputType) => Hashable (FieldDefinition inputType)
-
-instance (NFData inputType) => NFData (FieldDefinition inputType)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
+  deriving anyclass (Hashable, NFData)
 
 type ArgumentsDefinition inputType = [inputType]
 
@@ -503,11 +453,8 @@ data InputValueDefinition = InputValueDefinition
     _ivdDefaultValue :: Maybe (Value Void),
     _ivdDirectives :: [Directive Void]
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable InputValueDefinition
-
-instance NFData InputValueDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
   { _itdDescription :: Maybe Description,
@@ -516,11 +463,8 @@ data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
     _itdFieldsDefinition :: [FieldDefinition inputType],
     _itdPossibleTypes :: possibleTypes
   }
-  deriving (Ord, Show, Eq, Lift, Generic, Functor)
-
-instance (Hashable possibleTypes, Hashable inputType) => Hashable (InterfaceTypeDefinition possibleTypes inputType)
-
-instance (NFData possibleTypes, NFData inputType) => NFData (InterfaceTypeDefinition possibleTypes inputType)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
+  deriving anyclass (Hashable, NFData)
 
 data UnionTypeDefinition = UnionTypeDefinition
   { _utdDescription :: Maybe Description,
@@ -528,22 +472,16 @@ data UnionTypeDefinition = UnionTypeDefinition
     _utdDirectives :: [Directive Void],
     _utdMemberTypes :: [Name]
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable UnionTypeDefinition
-
-instance NFData UnionTypeDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data ScalarTypeDefinition = ScalarTypeDefinition
   { _stdDescription :: Maybe Description,
     _stdName :: Name,
     _stdDirectives :: [Directive Void]
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable ScalarTypeDefinition
-
-instance NFData ScalarTypeDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data EnumTypeDefinition = EnumTypeDefinition
   { _etdDescription :: Maybe Description,
@@ -551,25 +489,20 @@ data EnumTypeDefinition = EnumTypeDefinition
     _etdDirectives :: [Directive Void],
     _etdValueDefinitions :: [EnumValueDefinition]
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable EnumTypeDefinition
-
-instance NFData EnumTypeDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data EnumValueDefinition = EnumValueDefinition
   { _evdDescription :: Maybe Description,
     _evdName :: EnumValue,
     _evdDirectives :: [Directive Void]
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable EnumValueDefinition
-
-instance NFData EnumValueDefinition
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 newtype EnumValue = EnumValue {unEnumValue :: Name}
-  deriving (Show, Eq, Lift, Hashable, NFData, J.ToJSON, J.FromJSON, Ord)
+  deriving stock (Eq, Lift, Ord, Show)
+  deriving newtype (Hashable, NFData, J.ToJSON, J.FromJSON)
 
 data InputObjectTypeDefinition inputType = InputObjectTypeDefinition
   { _iotdDescription :: Maybe Description,
@@ -577,11 +510,8 @@ data InputObjectTypeDefinition inputType = InputObjectTypeDefinition
     _iotdDirectives :: [Directive Void],
     _iotdValueDefinitions :: [inputType]
   }
-  deriving (Ord, Show, Eq, Lift, Generic, Functor)
-
-instance (Hashable inputType) => Hashable (InputObjectTypeDefinition inputType)
-
-instance (NFData inputType) => NFData (InputObjectTypeDefinition inputType)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
+  deriving anyclass (Hashable, NFData)
 
 data DirectiveDefinition inputType = DirectiveDefinition
   { _ddDescription :: Maybe Description,
@@ -589,20 +519,14 @@ data DirectiveDefinition inputType = DirectiveDefinition
     _ddArguments :: (ArgumentsDefinition inputType),
     _ddLocations :: [DirectiveLocation]
   }
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance (Hashable inputType) => Hashable (DirectiveDefinition inputType)
-
-instance (NFData inputType) => NFData (DirectiveDefinition inputType)
+  deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
+  deriving anyclass (Hashable, NFData)
 
 data DirectiveLocation
   = DLExecutable ExecutableDirectiveLocation
   | DLTypeSystem TypeSystemDirectiveLocation
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable DirectiveLocation
-
-instance NFData DirectiveLocation
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data ExecutableDirectiveLocation
   = EDLQUERY
@@ -612,11 +536,8 @@ data ExecutableDirectiveLocation
   | EDLFRAGMENT_DEFINITION
   | EDLFRAGMENT_SPREAD
   | EDLINLINE_FRAGMENT
-  deriving (Ord, Show, Eq, Lift, Generic)
-
-instance Hashable ExecutableDirectiveLocation
-
-instance NFData ExecutableDirectiveLocation
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
 data TypeSystemDirectiveLocation
   = TSDLSCHEMA
@@ -630,13 +551,11 @@ data TypeSystemDirectiveLocation
   | TSDLENUM_VALUE
   | TSDLINPUT_OBJECT
   | TSDLINPUT_FIELD_DEFINITION
-  deriving (Ord, Show, Eq, Lift, Generic)
+  deriving stock (Eq, Generic, Lift, Ord, Show)
+  deriving anyclass (Hashable, NFData)
 
-instance Hashable TypeSystemDirectiveLocation
-
-instance NFData TypeSystemDirectiveLocation
-
-liftTypedHashMap :: (Eq k, Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
+liftTypedHashMap ::
+  (Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
 liftTypedHashMap a = [||M.fromList $$(TH.liftTyped $ M.toList a)||]
 
 inline :: NoFragments var -> FragmentSpread var
