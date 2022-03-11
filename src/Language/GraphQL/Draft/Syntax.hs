@@ -87,7 +87,6 @@ import Data.Aeson qualified as J
 import Data.Bool (bool)
 import Data.Char qualified as C
 import Data.HashMap.Strict (HashMap)
-import Data.HashMap.Strict qualified as M
 import Data.Hashable (Hashable)
 import Data.Scientific (Scientific)
 import Data.String (IsString (..))
@@ -101,7 +100,8 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Parser
     parseSchemaDocument,
   )
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
-import Language.Haskell.TH.Syntax (Lift, Q)
+import Language.GraphQL.Draft.Syntax.Internal (liftTypedHashMap)
+import Language.Haskell.TH.Syntax (Lift, Q, TExp)
 import Language.Haskell.TH.Syntax qualified as TH
 import Prettyprinter (Pretty (..))
 import Prelude
@@ -129,7 +129,7 @@ parseName text = maybe (fail errorMessage) pure $ mkName text
   where
     errorMessage = T.unpack text <> " is not valid GraphQL name"
 
-litName :: Text -> Q (TH.TExp Name)
+litName :: Text -> Q (TExp Name)
 litName = parseName >=> \name -> [||name||]
 
 instance J.FromJSON Name where
@@ -554,10 +554,6 @@ data TypeSystemDirectiveLocation
   | TSDLINPUT_FIELD_DEFINITION
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
-
-liftTypedHashMap ::
-  (Hashable k, Lift k, Lift v) => HashMap k v -> Q (TH.TExp (HashMap k v))
-liftTypedHashMap a = [||M.fromList $$(TH.liftTyped $ M.toList a)||]
 
 inline :: NoFragments var -> FragmentSpread var
 inline x = case x of {}
