@@ -227,10 +227,11 @@ instance J.FromJSON SchemaDocument where
       Left err -> fail $ "parsing the schema document: " <> show err
 
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
--- the list of object types that implement that interface
+-- the list of object types that implement that interface. Types are indexed by
+-- their name for fast lookups.
 newtype SchemaIntrospection
-  = SchemaIntrospection [TypeDefinition [Name] InputValueDefinition]
-  deriving stock (Eq, Generic, Lift, Ord, Show)
+  = SchemaIntrospection (HashMap Name (TypeDefinition [Name] InputValueDefinition))
+  deriving stock (Eq, Generic, Ord, Show)
   deriving newtype (Hashable)
 
 data OperationDefinition frag var
