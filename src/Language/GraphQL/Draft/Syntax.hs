@@ -101,7 +101,7 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Parser
   )
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 import Language.GraphQL.Draft.Syntax.Internal (liftTypedHashMap)
-import Language.Haskell.TH.Syntax (Lift, Q, TExp)
+import Language.Haskell.TH.Syntax (Lift, Q, Exp)
 import Language.Haskell.TH.Syntax qualified as TH
 import Prettyprinter (Pretty (..))
 import Prelude
@@ -129,8 +129,8 @@ parseName text = maybe (fail errorMessage) pure $ mkName text
   where
     errorMessage = T.unpack text <> " is not valid GraphQL name"
 
-litName :: Text -> Q (TExp Name)
-litName = parseName >=> \name -> [||name||]
+litName :: Text -> Q Exp -- (TExp Name)
+litName = parseName >=> \name -> [|name|]
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
