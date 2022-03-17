@@ -8,6 +8,7 @@ module Language.GraphQL.Draft.Syntax
     mkName,
     unsafeMkName,
     litName,
+    nameQQ,
     Description (..),
     Value (..),
     literal,
@@ -101,7 +102,8 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Parser
   )
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 import Language.GraphQL.Draft.Syntax.Internal (liftTypedHashMap)
-import Language.Haskell.TH.Syntax (Lift, Q, Exp)
+import Language.Haskell.TH.Quote (QuasiQuoter (..))
+import Language.Haskell.TH.Syntax (Exp, Lift, Q)
 import Language.Haskell.TH.Syntax qualified as TH
 import Prettyprinter (Pretty (..))
 import Prelude
@@ -129,8 +131,18 @@ parseName text = maybe (fail errorMessage) pure $ mkName text
   where
     errorMessage = T.unpack text <> " is not valid GraphQL name"
 
-litName :: Text -> Q Exp -- (TExp Name)
+-- | Construct a 'Name' value at compile-time.
+litName :: Text -> Q Exp
 litName = parseName >=> \name -> [|name|]
+
+-- | Construct a 'Name' value at compile-time via quasiquotation.
+nameQQ :: QuasiQuoter
+nameQQ = QuasiQuoter {quoteExp, quotePat, quoteType, quoteDec}
+  where
+    quotePat _ = error "nameQQ does not support quoting patterns"
+    quoteType _ = error "nameQQ does not support quoting types"
+    quoteDec _ = error "nameQQ does not support quoting declarations"
+    quoteExp = litName . T.pack
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
