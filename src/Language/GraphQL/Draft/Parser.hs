@@ -19,6 +19,7 @@ module Language.GraphQL.Draft.Parser
     Parser,
     runParser,
     blockString,
+    execDocQQ,
   )
 where
 
@@ -57,6 +58,8 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Void (Void)
 import Language.GraphQL.Draft.Syntax qualified as AST
 import Prelude
+import qualified Language.Haskell.TH.Syntax as TH
+import Language.Haskell.TH.Quote (QuasiQuoter (..))
 
 -- * Document
 
@@ -602,3 +605,21 @@ isWhitespace c = c == ' ' || c == '\t'
 -- copied from https://hackage.haskell.org/package/extra-1.7.9/docs/src/Data.List.Extra.html
 dropWhileEnd' :: (a -> Bool) -> [a] -> [a]
 dropWhileEnd' p = foldr (\x xs -> if null xs && p x then [] else x : xs) []
+
+-- | Construct an 'AST.ExecutableDocument AST.Name' at compile time.
+execDocQQ :: QuasiQuoter
+execDocQQ =
+  QuasiQuoter
+    { quoteExp = quoteExpr,
+      quotePat = error "execDocQQ does not support quoting patterns",
+      quoteType = error "execDocQQ does not support quoting types",
+      quoteDec = error "execDocQQ does not support quoting declarations"
+    }
+
+quoteExpr :: String -> TH.Q TH.Exp
+quoteExpr s = do
+  execDoc <-
+    case parseExecutableDoc (T.pack s) of
+      Left err -> fail $ show err
+      Right e -> return e
+  TH.lift execDoc
