@@ -606,7 +606,7 @@ isWhitespace c = c == ' ' || c == '\t'
 dropWhileEnd' :: (a -> Bool) -> [a] -> [a]
 dropWhileEnd' p = foldr (\x xs -> if null xs && p x then [] else x : xs) []
 
--- | Construct an 'AST.ExecutableDocument AST.Name' at compile time.
+-- | Construct a validated 'AST.ExecutableDocument AST.Name' at compile time.
 execDocQQ :: QuasiQuoter
 execDocQQ =
   QuasiQuoter
@@ -615,11 +615,11 @@ execDocQQ =
       quoteType = error "execDocQQ does not support quoting types",
       quoteDec = error "execDocQQ does not support quoting declarations"
     }
-
-quoteExpr :: String -> TH.Q TH.Exp
-quoteExpr s = do
-  execDoc <-
-    case parseExecutableDoc (T.pack s) of
-      Left err -> fail $ show err
-      Right e -> return e
-  TH.lift execDoc
+  where
+    quoteExpr :: String -> TH.Q TH.Exp
+    quoteExpr s = do
+      execDoc <-
+        case parseExecutableDoc (T.pack s) of
+          Left err -> fail $ show err
+          Right e -> return e
+      TH.lift execDoc
