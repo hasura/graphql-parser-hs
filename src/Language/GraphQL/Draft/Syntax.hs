@@ -103,6 +103,7 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 import Language.GraphQL.Draft.Syntax.Internal (liftTypedHashMap)
 import Language.Haskell.TH.Syntax (Lift, Q, TExp)
 import Language.Haskell.TH.Syntax qualified as TH
+import Language.Haskell.TH.Syntax.Compat (fromCode)
 import Prettyprinter (Pretty (..))
 import Prelude
 
@@ -285,7 +286,7 @@ instance (Lift (frag var), Lift var) => Lift (Field frag var) where
         _fName,
         _fDirectives,
         _fSelectionSet,
-        _fArguments = $$(liftTypedHashMap _fArguments)
+        _fArguments = $$(fromCode $ liftTypedHashMap _fArguments)
       }
     ||]
 
@@ -348,7 +349,7 @@ instance Lift var => Lift (Value var) where
   liftTyped (VBoolean a) = [||VBoolean a||]
   liftTyped (VEnum a) = [||VEnum a||]
   liftTyped (VList a) = [||VList a||]
-  liftTyped (VObject a) = [||VObject $$(liftTypedHashMap a)||]
+  liftTyped (VObject a) = [||VObject $$(fromCode $ liftTypedHashMap a)||]
 
 literal :: Value Void -> Value var
 literal = fmap absurd
@@ -363,7 +364,8 @@ data Directive var = Directive
   deriving anyclass (Hashable, NFData)
 
 instance Lift var => Lift (Directive var) where
-  liftTyped Directive {..} = [||Directive {_dName, _dArguments = $$(liftTypedHashMap _dArguments)}||]
+  liftTyped Directive {..} =
+    [||Directive {_dName, _dArguments = $$(fromCode $ liftTypedHashMap _dArguments)}||]
 
 -- * Type Reference
 

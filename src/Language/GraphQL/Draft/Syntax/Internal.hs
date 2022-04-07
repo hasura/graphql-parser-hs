@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
@@ -16,7 +17,9 @@ where
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.Hashable (Hashable)
-import Language.Haskell.TH.Syntax (Lift, Q, TExp, liftTyped)
+import Language.Haskell.TH.Syntax (Lift, liftTyped)
+-- import Language.Haskell.TH.Syntax.Compat (SpliceQ, expToSplice, liftTypedQuote, toCode, liftSplice, examineSplice)
+import Language.Haskell.TH.Syntax.Compat
 import Prelude
 
 -------------------------------------------------------------------------------
@@ -29,6 +32,6 @@ liftTypedHashMap ::
     Lift v
   ) =>
   HashMap k v ->
-  Q (TExp (HashMap k v))
-liftTypedHashMap a =
-  [||HashMap.fromList $$(liftTyped $ HashMap.toList a)||]
+  CodeQ (HashMap k v)
+liftTypedHashMap hm = liftCode $
+  examineCode [||HashMap.fromList $$(HashMap.toList hm)||]
