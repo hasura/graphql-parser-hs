@@ -30,11 +30,8 @@ common common-all
     -Wno-missing-local-signatures -Wno-monomorphism-restriction
     -Wno-prepositive-qualified-module
 
-  if impl(ghc >=9.0)
-    ghc-options: -Wno-implicit-lift
-
   if impl(ghc >=9.2)
-    ghc-options: -Wno-missing-kind-signatures
+    ghc-options: -Wno-implicit-lift
 
   default-language:   Haskell2010
   default-extensions:
@@ -60,6 +57,7 @@ common common-all
     RankNTypes
     RecordWildCards
     RoleAnnotations
+    StandaloneKindSignatures
     StrictData
     TupleSections
 

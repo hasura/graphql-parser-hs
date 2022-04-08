@@ -88,6 +88,7 @@ import Data.Bool (bool)
 import Data.Char qualified as C
 import Data.HashMap.Strict (HashMap)
 import Data.Hashable (Hashable)
+import Data.Kind (Type)
 import Data.Scientific (Scientific)
 import Data.String (IsString (..))
 import Data.Text (Text)
@@ -103,12 +104,12 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 import Language.GraphQL.Draft.Syntax.Internal (liftTypedHashMap)
 import Language.Haskell.TH.Syntax (Lift)
 import Language.Haskell.TH.Syntax qualified as TH
--- import Language.Haskell.TH.Syntax.Compat (CodeQ, fromCode, liftTypedQuote)
-import Language.Haskell.TH.Syntax.Compat
+import Language.Haskell.TH.Syntax.Compat (SpliceQ, examineSplice, liftSplice)
 import Prettyprinter (Pretty (..))
 import Prelude
 
 -------------------------------------------------------------------------------
+type Name :: Type
 newtype Name = Name {unName :: Text}
   deriving stock (Eq, Lift, Ord, Show)
   deriving newtype (Hashable, NFData, Pretty, Semigroup, J.ToJSONKey, J.ToJSON)
@@ -136,8 +137,6 @@ litName txt = liftSplice do
   name <- parseName txt
   examineSplice [||name||]
 
--- parseName >=> fromCode . liftTypedQuote
-
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
 
@@ -146,9 +145,11 @@ instance J.FromJSONKey Name where
 
 -- * Documents
 
+type Document :: Type
 newtype Document = Document {getDefinitions :: [Definition]}
   deriving stock (Eq, Lift, Ord, Show)
 
+type Definition :: Type
 data Definition
   = DefinitionExecutable (ExecutableDefinition Name)
   | DefinitionTypeSystem TypeSystemDefinition
@@ -156,6 +157,7 @@ data Definition
 
 instance Hashable Definition
 
+type ExecutableDocument :: Type -> Type
 newtype ExecutableDocument var = ExecutableDocument {getExecutableDefinitions :: [ExecutableDefinition var]}
   deriving stock (Eq, Lift, Ord, Show, Functor, Foldable, Traversable)
   deriving newtype (Hashable, NFData)
@@ -169,6 +171,7 @@ instance J.FromJSON (ExecutableDocument Name) where
 instance J.ToJSON (ExecutableDocument Name) where
   toJSON = J.String . renderExecutableDoc
 
+type ExecutableDefinition :: Type -> Type
 data ExecutableDefinition var
   = ExecutableDefinitionOperation (OperationDefinition FragmentSpread var)
   | ExecutableDefinitionFragment FragmentDefinition
@@ -194,12 +197,14 @@ partitionExDefs = foldr f ([], [], [])
       ExecutableDefinitionFragment frag ->
         (selSets, ops, frag : frags)
 
+type TypeSystemDefinition :: Type
 data TypeSystemDefinition
   = TypeSystemDefinitionSchema SchemaDefinition
   | TypeSystemDefinitionType (TypeDefinition () InputValueDefinition) -- No 'possibleTypes' specified for interfaces
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type SchemaDefinition :: Type
 data SchemaDefinition = SchemaDefinition
   { _sdDirectives :: Maybe [Directive Void],
     _sdRootOperationTypeDefinitions :: [RootOperationTypeDefinition]
@@ -207,6 +212,7 @@ data SchemaDefinition = SchemaDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type RootOperationTypeDefinition :: Type
 data RootOperationTypeDefinition = RootOperationTypeDefinition
   { _rotdOperationType :: OperationType,
     _rotdOperationTypeType :: Name
@@ -214,6 +220,7 @@ data RootOperationTypeDefinition = RootOperationTypeDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type OperationType :: Type
 data OperationType
   = OperationTypeQuery
   | OperationTypeMutation
@@ -221,6 +228,7 @@ data OperationType
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type SchemaDocument :: Type
 newtype SchemaDocument
   = SchemaDocument [TypeSystemDefinition]
   deriving stock (Eq, Generic, Lift, Ord, Show)
@@ -235,17 +243,20 @@ instance J.FromJSON SchemaDocument where
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,
 -- the list of object types that implement that interface. Types are indexed by
 -- their name for fast lookups.
+type SchemaIntrospection :: Type
 newtype SchemaIntrospection
   = SchemaIntrospection (HashMap Name (TypeDefinition [Name] InputValueDefinition))
   deriving stock (Eq, Generic, Ord, Show)
   deriving newtype (Hashable)
 
+type OperationDefinition :: (Type -> Type) -> Type -> Type
 data OperationDefinition frag var
   = OperationDefinitionTyped (TypedOperationDefinition frag var)
   | OperationDefinitionUnTyped (SelectionSet frag var)
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
   deriving anyclass (Hashable, NFData)
 
+type TypedOperationDefinition :: (Type -> Type) -> Type -> Type
 data TypedOperationDefinition frag var = TypedOperationDefinition
   { _todType :: OperationType,
     _todName :: Maybe Name,
@@ -256,6 +267,7 @@ data TypedOperationDefinition frag var = TypedOperationDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
   deriving anyclass (Hashable, NFData)
 
+type VariableDefinition :: Type
 data VariableDefinition = VariableDefinition
   { _vdName :: Name,
     _vdType :: GType,
@@ -264,8 +276,10 @@ data VariableDefinition = VariableDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type SelectionSet :: (Type -> Type) -> Type -> Type
 type SelectionSet frag var = [Selection frag var]
 
+type Selection :: (Type -> Type) -> Type -> Type
 data Selection frag var
   = SelectionField (Field frag var)
   | SelectionFragmentSpread (frag var)
@@ -273,6 +287,7 @@ data Selection frag var
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
   deriving anyclass (Hashable, NFData)
 
+type Field :: (Type -> Type) -> Type -> Type
 data Field frag var = Field
   { _fAlias :: Maybe Name,
     _fName :: Name,
@@ -297,6 +312,7 @@ instance (Lift (frag var), Lift var) => Lift (Field frag var) where
 
 -- * Fragments
 
+type FragmentSpread :: Type -> Type
 data FragmentSpread var = FragmentSpread
   { _fsName :: Name,
     _fsDirectives :: [Directive var]
@@ -309,10 +325,12 @@ data FragmentSpread var = FragmentSpread
 --
 -- Note: This is equivalent to @'Const' 'Void'@, but annoyingly, 'Const' does
 -- not provide a 'Lift' instance as of GHC 8.6.
+type NoFragments :: Type -> Type
 data NoFragments var
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
   deriving anyclass (Hashable, NFData)
 
+type InlineFragment :: (Type -> Type) -> Type -> Type
 data InlineFragment frag var = InlineFragment
   { _ifTypeCondition :: Maybe Name,
     _ifDirectives :: [Directive var],
@@ -321,6 +339,7 @@ data InlineFragment frag var = InlineFragment
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor, Foldable, Traversable)
   deriving anyclass (Hashable, NFData)
 
+type FragmentDefinition :: Type
 data FragmentDefinition = FragmentDefinition
   { _fdName :: Name,
     _fdTypeCondition :: Name,
@@ -332,6 +351,7 @@ data FragmentDefinition = FragmentDefinition
 
 -- * Values
 
+type Value :: Type -> Type
 data Value var
   = VVariable var
   | VNull
@@ -361,6 +381,7 @@ literal = fmap absurd
 
 -- * Directives
 
+type Directive :: Type -> Type
 data Directive var = Directive
   { _dName :: Name,
     _dArguments :: HashMap Name (Value var)
@@ -379,10 +400,12 @@ instance Lift var => Lift (Directive var) where
 
 --     * Type Reference
 
+type Nullability :: Type
 newtype Nullability = Nullability {unNullability :: Bool}
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving newtype (Hashable, NFData)
 
+type GType :: Type
 data GType
   = TypeNamed Nullability Name
   | TypeList Nullability GType
@@ -423,6 +446,7 @@ isNotNull = not . isNullable
 
 -- * Type definition
 
+type TypeDefinition :: Type -> Type -> Type
 data TypeDefinition possibleTypes inputType
   = TypeDefinitionScalar ScalarTypeDefinition
   | TypeDefinitionObject (ObjectTypeDefinition inputType)
@@ -433,10 +457,12 @@ data TypeDefinition possibleTypes inputType
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
 
+type Description :: Type
 newtype Description = Description {unDescription :: Text}
   deriving stock (Eq, Lift, Ord, Show)
   deriving newtype (Hashable, IsString, Monoid, NFData, Semigroup, J.FromJSON, J.ToJSON)
 
+type ObjectTypeDefinition :: Type -> Type
 data ObjectTypeDefinition inputType = ObjectTypeDefinition
   { _otdDescription :: Maybe Description,
     _otdName :: Name,
@@ -447,6 +473,7 @@ data ObjectTypeDefinition inputType = ObjectTypeDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
 
+type FieldDefinition :: Type -> Type
 data FieldDefinition inputType = FieldDefinition
   { _fldDescription :: Maybe Description,
     _fldName :: Name,
@@ -457,8 +484,10 @@ data FieldDefinition inputType = FieldDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
 
+type ArgumentsDefinition :: Type -> Type
 type ArgumentsDefinition inputType = [inputType]
 
+type InputValueDefinition :: Type
 data InputValueDefinition = InputValueDefinition
   { _ivdDescription :: Maybe Description,
     _ivdName :: Name,
@@ -469,6 +498,7 @@ data InputValueDefinition = InputValueDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type InterfaceTypeDefinition :: Type -> Type -> Type
 data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
   { _itdDescription :: Maybe Description,
     _itdName :: Name,
@@ -479,6 +509,7 @@ data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
 
+type UnionTypeDefinition :: Type
 data UnionTypeDefinition = UnionTypeDefinition
   { _utdDescription :: Maybe Description,
     _utdName :: Name,
@@ -488,6 +519,7 @@ data UnionTypeDefinition = UnionTypeDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type ScalarTypeDefinition :: Type
 data ScalarTypeDefinition = ScalarTypeDefinition
   { _stdDescription :: Maybe Description,
     _stdName :: Name,
@@ -496,6 +528,7 @@ data ScalarTypeDefinition = ScalarTypeDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type EnumTypeDefinition :: Type
 data EnumTypeDefinition = EnumTypeDefinition
   { _etdDescription :: Maybe Description,
     _etdName :: Name,
@@ -505,6 +538,7 @@ data EnumTypeDefinition = EnumTypeDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type EnumValueDefinition :: Type
 data EnumValueDefinition = EnumValueDefinition
   { _evdDescription :: Maybe Description,
     _evdName :: EnumValue,
@@ -513,10 +547,12 @@ data EnumValueDefinition = EnumValueDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type EnumValue :: Type
 newtype EnumValue = EnumValue {unEnumValue :: Name}
   deriving stock (Eq, Lift, Ord, Show)
   deriving newtype (Hashable, NFData, J.ToJSON, J.FromJSON)
 
+type InputObjectTypeDefinition :: Type -> Type
 data InputObjectTypeDefinition inputType = InputObjectTypeDefinition
   { _iotdDescription :: Maybe Description,
     _iotdName :: Name,
@@ -526,6 +562,7 @@ data InputObjectTypeDefinition inputType = InputObjectTypeDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
 
+type DirectiveDefinition :: Type -> Type
 data DirectiveDefinition inputType = DirectiveDefinition
   { _ddDescription :: Maybe Description,
     _ddName :: Name,
@@ -535,12 +572,14 @@ data DirectiveDefinition inputType = DirectiveDefinition
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
 
+type DirectiveLocation :: Type
 data DirectiveLocation
   = DLExecutable ExecutableDirectiveLocation
   | DLTypeSystem TypeSystemDirectiveLocation
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type ExecutableDirectiveLocation :: Type
 data ExecutableDirectiveLocation
   = EDLQUERY
   | EDLMUTATION
@@ -552,6 +591,7 @@ data ExecutableDirectiveLocation
   deriving stock (Eq, Generic, Lift, Ord, Show)
   deriving anyclass (Hashable, NFData)
 
+type TypeSystemDirectiveLocation :: Type
 data TypeSystemDirectiveLocation
   = TSDLSCHEMA
   | TSDLSCALAR
