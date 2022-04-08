@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Description: The GraphQL AST
@@ -82,7 +83,6 @@ where
 -------------------------------------------------------------------------------
 
 import Control.DeepSeq (NFData)
-import Control.Monad ((>=>))
 import Data.Aeson qualified as J
 import Data.Bool (bool)
 import Data.Char qualified as C
@@ -101,9 +101,10 @@ import {-# SOURCE #-} Language.GraphQL.Draft.Parser
   )
 import {-# SOURCE #-} Language.GraphQL.Draft.Printer (renderExecutableDoc)
 import Language.GraphQL.Draft.Syntax.Internal (liftTypedHashMap)
-import Language.Haskell.TH.Syntax (Lift, Q, TExp)
+import Language.Haskell.TH.Syntax (Lift)
 import Language.Haskell.TH.Syntax qualified as TH
-import Language.Haskell.TH.Syntax.Compat (fromCode)
+-- import Language.Haskell.TH.Syntax.Compat (CodeQ, fromCode, liftTypedQuote)
+import Language.Haskell.TH.Syntax.Compat
 import Prettyprinter (Pretty (..))
 import Prelude
 
@@ -130,8 +131,12 @@ parseName text = maybe (fail errorMessage) pure $ mkName text
   where
     errorMessage = T.unpack text <> " is not valid GraphQL name"
 
-litName :: Text -> Q (TExp Name)
-litName = parseName >=> \name -> [||name||]
+litName :: Text -> SpliceQ Name
+litName txt = liftSplice do
+  name <- parseName txt
+  examineSplice [||name||]
+
+-- parseName >=> fromCode . liftTypedQuote
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
@@ -286,7 +291,7 @@ instance (Lift (frag var), Lift var) => Lift (Field frag var) where
         _fName,
         _fDirectives,
         _fSelectionSet,
-        _fArguments = $$(fromCode $ liftTypedHashMap _fArguments)
+        _fArguments = $$(liftTypedHashMap _fArguments)
       }
     ||]
 
@@ -349,7 +354,7 @@ instance Lift var => Lift (Value var) where
   liftTyped (VBoolean a) = [||VBoolean a||]
   liftTyped (VEnum a) = [||VEnum a||]
   liftTyped (VList a) = [||VList a||]
-  liftTyped (VObject a) = [||VObject $$(fromCode $ liftTypedHashMap a)||]
+  liftTyped (VObject a) = [||VObject $$(liftTypedHashMap a)||]
 
 literal :: Value Void -> Value var
 literal = fmap absurd
@@ -365,9 +370,14 @@ data Directive var = Directive
 
 instance Lift var => Lift (Directive var) where
   liftTyped Directive {..} =
-    [||Directive {_dName, _dArguments = $$(fromCode $ liftTypedHashMap _dArguments)}||]
+    [||
+    Directive
+      { _dName,
+        _dArguments = $$(liftTypedHashMap _dArguments)
+      }
+    ||]
 
--- * Type Reference
+--     * Type Reference
 
 newtype Nullability = Nullability {unNullability :: Bool}
   deriving stock (Eq, Generic, Lift, Ord, Show)
