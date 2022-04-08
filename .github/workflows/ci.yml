@@ -13,7 +13,7 @@ jobs:
       CABAL: cabal --project-file=./ci/ci.project
     strategy:
       matrix:
-        ghc: [ "8.10.7" "9.0.2" "9.2.2"  ]
+        ghc: [ "8.10.7", "9.0.2", "9.2.2"  ]
         cabal: [ "latest" ] 
 
     steps:
