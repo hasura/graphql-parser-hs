@@ -101,7 +101,6 @@ test-suite graphql-parser-test
     Keywords
 
   build-depends:
-    , attoparsec
     , base
     , bytestring
     , graphql-parser
