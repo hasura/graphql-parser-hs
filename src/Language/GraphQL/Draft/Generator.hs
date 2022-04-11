@@ -72,6 +72,7 @@ where
 
 import Control.Monad.IO.Class (MonadIO)
 import Data.HashMap.Strict as M
+import Data.Kind (Constraint, Type)
 import Data.Scientific (fromFloatDigits)
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -85,6 +86,7 @@ import Prelude
 -------------------------------------------------------------------------------
 
 -- | *Generator*
+type Generator :: Type -> Constraint
 class Generator a where
   genValue :: Gen (Value a)
 

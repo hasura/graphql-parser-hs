@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
@@ -16,12 +17,24 @@ where
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HashMap
 import Data.Hashable (Hashable)
-import Language.Haskell.TH.Syntax (Lift, Q, TExp, liftTyped)
+import Language.Haskell.TH.Syntax (Lift, liftTyped)
+import Language.Haskell.TH.Syntax qualified as TH
 import Prelude
 
 -------------------------------------------------------------------------------
 
 -- | Lift a 'HashMap' into a Template Haskell splice via list conversion.
+#if MIN_VERSION_template_haskell(2,17,0)
+liftTypedHashMap ::
+  ( Eq k,
+    Hashable k,
+    Lift k,
+    Lift v,
+    TH.Quote m
+  ) =>
+  HashMap k v ->
+  TH.Code m (HashMap k v)
+#else
 liftTypedHashMap ::
   ( Eq k,
     Hashable k,
@@ -29,6 +42,7 @@ liftTypedHashMap ::
     Lift v
   ) =>
   HashMap k v ->
-  Q (TExp (HashMap k v))
-liftTypedHashMap a =
-  [||HashMap.fromList $$(liftTyped $ HashMap.toList a)||]
+  TH.Q (TH.TExp (HashMap k v))
+#endif
+liftTypedHashMap hm =
+  [||HashMap.fromList $$(liftTyped $ HashMap.toList hm)||]

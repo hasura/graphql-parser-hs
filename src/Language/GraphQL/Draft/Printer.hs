@@ -9,6 +9,7 @@ import Data.ByteString.Builder.Scientific qualified as BSBS
 import Data.Char (isControl)
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as M
+import Data.Kind (Constraint, Type)
 import Data.List (intersperse, sort)
 import Data.Scientific (Scientific)
 import Data.String (IsString)
@@ -28,6 +29,7 @@ import Prelude
 
 -------------------------------------------------------------------------------
 
+type Printer :: Type -> Constraint
 class (Monoid a, IsString a) => Printer a where
   textP :: Text -> a
   charP :: Char -> a
@@ -103,6 +105,7 @@ instance Printer Text.Builder where
   doubleP = Text.string . show
   {-# INLINE doubleP #-}
 
+type Print :: Type -> Constraint
 class Print a where
   printP :: Printer b => a -> b
 
