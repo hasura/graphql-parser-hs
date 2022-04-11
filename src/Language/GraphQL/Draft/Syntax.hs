@@ -132,6 +132,7 @@ parseName text = maybe (fail errorMessage) pure $ mkName text
   where
     errorMessage = T.unpack text <> " is not valid GraphQL name"
 
+-- | Construct a 'Name' value at compile-time.
 litName :: Text -> SpliceQ Name
 litName txt = liftSplice do
   name <- parseName txt

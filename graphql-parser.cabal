@@ -89,6 +89,7 @@ library
     Language.GraphQL.Draft.Printer
     Language.GraphQL.Draft.Syntax
     Language.GraphQL.Draft.Syntax.Internal
+    Language.GraphQL.Draft.Syntax.QQ
 
 test-suite graphql-parser-test
   import:         common-all
