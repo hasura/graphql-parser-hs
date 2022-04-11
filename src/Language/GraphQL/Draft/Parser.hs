@@ -1,8 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--------------------------------------------------------------------------------
-
 -- | Description: Parse text into GraphQL ASTs
 module Language.GraphQL.Draft.Parser
   ( executableDocument,
@@ -58,9 +56,11 @@ import Data.Text qualified as T
 import Data.Text.Encoding (encodeUtf8)
 import Data.Void (Void)
 import Language.GraphQL.Draft.Syntax qualified as AST
-import Prelude
-import qualified Language.Haskell.TH.Syntax as TH
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
+import Language.Haskell.TH.Syntax qualified as TH
+import Prelude
+
+-------------------------------------------------------------------------------
 
 -- * Document
 
