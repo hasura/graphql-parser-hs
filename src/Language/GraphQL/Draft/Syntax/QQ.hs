@@ -1,4 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Quasiquotation for 'Language.GraphQL.Draft.Syntax' types.
 --
@@ -17,7 +20,8 @@ import Language.GraphQL.Draft.Parser (parseExecutableDoc)
 import Language.GraphQL.Draft.Syntax qualified as Syntax
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax (lift)
-import Language.Haskell.TH.Syntax.Compat (examineSplice, unTypeQQuote)
+import PyF (fmtConfig)
+import PyF.Internal.QQ (toExp)
 import Prelude
 
 -------------------------------------------------------------------------------
@@ -27,10 +31,12 @@ name :: QuasiQuoter
 name =
   QuasiQuoter {quoteExp, quotePat, quoteType, quoteDec}
   where
-    quotePat _ = error "executableDoc does not support quoting patterns"
-    quoteType _ = error "executableDoc does not support quoting types"
-    quoteDec _ = error "executableDoc does not support quoting declarations"
-    quoteExp = unTypeQQuote . examineSplice . Syntax.litName . Text.pack
+    quotePat _ = error "'name' does not support quoting patterns"
+    quoteType _ = error "'name' does not support quoting types"
+    quoteDec _ = error "'name' does not support quoting declarations"
+    quoteExp str = do
+      let formattedStrExpQ = toExp fmtConfig str
+      [|Syntax.parseName . Text.pack $ $(formattedStrExpQ)|]
 
 -- | Construct @'Syntax.ExecutableDocument' 'Syntax.Name'@ literals at compile
 -- time via quasiquotation.
@@ -38,9 +44,9 @@ executableDoc :: QuasiQuoter
 executableDoc =
   QuasiQuoter {quoteExp, quotePat, quoteType, quoteDec}
   where
-    quotePat _ = error "executableDoc does not support quoting patterns"
-    quoteType _ = error "executableDoc does not support quoting types"
-    quoteDec _ = error "executableDoc does not support quoting declarations"
+    quotePat _ = error "'executableDoc' does not support quoting patterns"
+    quoteType _ = error "'executableDoc' does not support quoting types"
+    quoteDec _ = error "'executableDoc' does not support quoting declarations"
     quoteExp s = case parseExecutableDoc (Text.pack s) of
       Left err -> fail $ show err
       Right result -> lift result
