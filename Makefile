@@ -25,6 +25,13 @@ ghcid:
 	    graphql-parser \
 	  "
 
+.PHONY: repl
+repl:
+	$(CABAL) repl \
+	    --repl-option='-fobject-code' \
+	    --repl-option='-O0' \
+	    graphql-parser
+
 .PHONY: ghcid-test
 ghcid-test:
 	ghcid \
