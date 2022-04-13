@@ -8,6 +8,7 @@ module Language.GraphQL.Draft.Syntax
     unName,
     mkName,
     unsafeMkName,
+    parseName,
     litName,
     Description (..),
     Value (..),
