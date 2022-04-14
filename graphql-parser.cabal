@@ -73,6 +73,7 @@ library
     , hashable              >=1.3
     , hedgehog              >=1.1
     , prettyprinter         >=1.7
+    , PyF                   >=0.10
     , scientific            >=0.3
     , template-haskell      >=2.16
     , text                  >=1.2
