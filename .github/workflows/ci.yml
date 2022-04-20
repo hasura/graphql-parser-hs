@@ -37,7 +37,7 @@ jobs:
           # This way, it would be trivial to write another Action which could
           # periodically regenerate the freeze file every so often.
           ${CABAL} freeze \
-            --index-state "hackage.haskell.org 2022-03-03T12:57:11Z"
+            --index-state "hackage.haskell.org 2022-04-19T19:29:56Z"
 
       - name: Cache compiled dependency artifacts.
         uses: actions/cache@v2
