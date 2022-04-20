@@ -44,7 +44,7 @@ jobs:
         with:
           path: |
             ${{ steps.set-up-haskell-tooling.outputs.cabal-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
           restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
 
       - name: Compile dependencies.
@@ -60,7 +60,7 @@ jobs:
         with:
           path: |
             ./dist-nestyle
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./graphql-parser.cabal') }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./graphql-parser.cabal') }}-0
           restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
 
       - name: Compile library, tests, and benchmarks.
