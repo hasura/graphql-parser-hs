@@ -17,6 +17,7 @@ module Language.GraphQL.Draft.Parser
     Parser,
     runParser,
     blockString,
+    field,
   )
 where
 
