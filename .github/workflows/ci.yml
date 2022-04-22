@@ -44,10 +44,8 @@ jobs:
         with:
           path: |
             ${{ steps.set-up-haskell-tooling.outputs.cabal-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
-          # TODO(jkachmar): Reset this after the cache has been invalidated at least once.
-          # restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
-          restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}
+          restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
 
       - name: Compile dependencies.
         run: |
@@ -62,7 +60,7 @@ jobs:
         with:
           path: |
             ./dist-nestyle
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./graphql-parser.cabal') }}-0
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./graphql-parser.cabal') }}
           restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
 
       - name: Compile library, tests, and benchmarks.
