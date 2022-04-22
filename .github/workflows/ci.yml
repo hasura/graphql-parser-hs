@@ -55,14 +55,6 @@ jobs:
             --enable-tests \
             --enable-benchmarks
 
-      - name: Cache library, test, and benchmark artifacts.
-        uses: actions/cache@v2
-        with:
-          path: |
-            ./dist-nestyle
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./graphql-parser.cabal') }}
-          restore-keys: ${{ runner.os }}-cabal-${{ matrix.ghc }}-
-
       - name: Compile library, tests, and benchmarks.
         run: |
           ${CABAL} build graphql-parser
