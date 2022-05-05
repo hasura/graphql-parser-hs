@@ -92,13 +92,23 @@ library
     Language.GraphQL.Draft.Syntax.Internal
     Language.GraphQL.Draft.Syntax.QQ
 
+-- NOTE: Each version of 'weeder' supports a specific version of GHC:
+--   * weeder-2.2.0 -> GHC 8.10.x
+--   * weeder-2.3.0 -> GHC 9.0.x
+--
+-- It would be more trouble than it's worth for us to try and support the full
+-- matrix of GHC <> weeder versions, and (in all likelihood) dead code for one
+-- compiler version will be dead code in another.
+--
+-- Since 'graphql-engine' is currently built with GHC 8.10.7, we'll stick with
+-- 'weeder-2.2.0' here.
 executable weeder
   import: common-all
   hs-source-dirs: executables/weeder
   main-is: Main.hs
   build-depends:
     , base
-    , weeder
+    , weeder ==2.2.0
 
 test-suite graphql-parser-test
   import:         common-all
