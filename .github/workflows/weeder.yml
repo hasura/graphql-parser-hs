@@ -8,9 +8,20 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     env:
-      # TODO: We should add CI-specific build, test, etc. actions to the
-      # 'Makefile' rather than relying on an environment variable.
-      CABAL: cabal --project-file=./ci/ci.project
+      # NOTE: Each version of 'weeder' supports a specific version of GHC:
+      #  * weeder-2.2.0 -> GHC 8.10.x
+      #  * weeder-2.3.0 -> GHC 9.0.x
+      #
+      # It would be more trouble than it's worth for us to try and support the
+      # full matrix of GHC <> weeder versions, and (in all likelihood) dead
+      # code for one compiler version will be dead code in another.
+      #
+      # Since 'graphql-engine' is currently built with GHC 8.10.7, we'll stick
+      # with 'weeder-2.2.0' here.
+      #
+      # TODO: We should add weeder-specific actions to the 'Makefile' rather
+      # than relying on an environment variable.
+      CABAL: cabal --project-file=./ci/weeder.project
     strategy:
       matrix:
         ghc: [ "8.10.7" ]
@@ -27,38 +38,14 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
-      - name: Freeze 'cabal-install' dependency solution.
-        run: |
-          # Generate a freeze file scoped to an exact snapshot of Hackage's
-          # index state at some arbitrarily recent point in time.
-          #
-          # NOTE: Each version of 'weeder' supports a specific version of GHC:
-          #  * weeder-2.2.0 -> GHC 8.10.x
-          #  * weeder-2.3.0 -> GHC 9.0.x
-          #
-          # It would be more trouble than it's worth for us to try and support
-          # the full matrix of GHC <> weeder versions, and (in all likelihood)
-          # dead code for one compiler version will be dead code in another.
-          #
-          # Since 'graphql-engine' is currently built with GHC 8.10.7, we'll
-          # stick with 'weeder-2.2.0' here.
-          #
-          # TODO: See if it's better to just commit this to the repository.
-          #
-          # This way, it would be trivial to write another Action which could
-          # periodically regenerate the freeze file every so often.
-          ${CABAL} freeze \
-            --index-state "hackage.haskell.org 2022-04-19T19:29:56Z" \
-            --constraint 'weeder ==2.2.0'
-
       - name: Cache compiled dependency artifacts.
         uses: actions/cache@v3
         with:
           path: |
             ${{ steps.set-up-haskell-tooling.outputs.cabal-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/weeder.project.freeze') }}
           restore-keys: |
-            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/weeder.project.freeze') }}
 
       # See 'weeder' version NOTE above.
       - name: Compile weeder.
