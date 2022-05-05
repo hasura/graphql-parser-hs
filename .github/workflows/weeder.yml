@@ -13,7 +13,7 @@ jobs:
       CABAL: cabal --project-file=./ci/ci.project
     strategy:
       matrix:
-        ghc: [ "8.10.7" ]
+        ghc: [ "8.10.7", "9.0" ]
         cabal: [ "latest" ] 
 
     steps:
@@ -48,17 +48,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
 
-      - name: Compile dependencies.
-        run: |
-          ${CABAL} update
-          ${CABAL} build \
-            --only-dependencies \
-            weeder
-
       - name: Compile weeder.
         run: |
-          ${CABAL} build weeder
+          ${CABAL} update
+          ${CABAL} install weeder
 
       - name: Run weeder.
         run: |
-          ${CABAL} run weeder
+          ${HOME}/.cabal/bin/weeder
