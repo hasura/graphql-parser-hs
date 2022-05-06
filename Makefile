@@ -32,6 +32,13 @@ build-deps:
 	  --enable-benchmarks \
 	  all
 
+.PHONY: build
+build:
+	$(CABAL) build \
+	  --enable-tests \
+	  --enable-benchmarks \
+	  graphql-parser
+
 .PHONY: build-all
 build-all:
 	$(CABAL) build \
