@@ -10,6 +10,15 @@ module Language.GraphQL.Draft.Syntax
     unsafeMkName,
     parseName,
     litName,
+    isValidName,
+    NameSuffix,
+    unNameSuffix,
+    mkNameSuffix,
+    addSuffixes,
+    convertNameToSuffix,
+    parseSuffix,
+    litSuffix,
+    litGQLIdentifier,
     Description (..),
     Value (..),
     literal,
@@ -115,15 +124,44 @@ newtype Name = Name {unName :: Text}
   deriving stock (Eq, Lift, Ord, Show)
   deriving newtype (Hashable, NFData, Pretty, Semigroup, J.ToJSONKey, J.ToJSON)
 
+-- | @NameSuffix@ is essentially a GQL identifier that can be used as Suffix
+--  It is slightely different from @Name@ as it relaxes the criteria that a
+--  @Name@ cannot start with a digit.
+newtype NameSuffix = Suffix {unNameSuffix :: Text}
+  deriving stock (Lift, Show)
+
+matchFirst :: Char -> Bool
+matchFirst c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c
+
+matchBody :: Char -> Bool
+matchBody c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c || C.isDigit c
+
+isValidName :: Text -> Bool
+isValidName text =
+  case T.uncons text of
+    Nothing -> False
+    Just (first, body) ->
+      matchFirst first && T.all matchBody body
+
 mkName :: Text -> Maybe Name
 mkName text =
-  T.uncons text >>= \(first, body) ->
-    if matchFirst first && T.all matchBody body
-      then Just (Name text)
+  if isValidName text
+    then Just (Name text)
+    else Nothing
+
+mkNameSuffix :: Text -> Maybe NameSuffix
+mkNameSuffix text =
+    if T.all matchBody text
+      then Just (Suffix text)
       else Nothing
-  where
-    matchFirst c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c
-    matchBody c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c || C.isDigit c
+
+addSuffixes :: Name -> [NameSuffix] -> Name
+addSuffixes prefix [] = prefix
+addSuffixes (Name prefix) ((Suffix suffix) : rest) = addSuffixes (Name (prefix <> suffix)) rest
+
+-- | All @Name@s are @Suffix@, so this function won't fail
+convertNameToSuffix :: Name -> NameSuffix
+convertNameToSuffix (Name n) = Suffix n
 
 unsafeMkName :: Text -> Name
 unsafeMkName = Name
@@ -133,11 +171,30 @@ parseName text = maybe (fail errorMessage) pure $ mkName text
   where
     errorMessage = T.unpack text <> " is not valid GraphQL name"
 
+parseSuffix :: MonadFail m => Text -> m NameSuffix
+parseSuffix text = maybe (fail errorMessage) pure $ mkNameSuffix text
+  where
+    errorMessage = T.unpack text <> " is not valid GraphQL suffix"
+
 -- | Construct a 'Name' value at compile-time.
 litName :: Text -> SpliceQ Name
 litName txt = liftSplice do
   name <- parseName txt
   examineSplice [||name||]
+
+-- | Construct a 'NameSuffix' value at compile-time.
+litSuffix :: Text -> SpliceQ NameSuffix
+litSuffix txt = liftSplice do
+  name <- parseSuffix txt
+  examineSplice [||name||]
+
+-- | Construct prefix-suffix tuple at compile-time from a list.
+litGQLIdentifier :: [Text] -> SpliceQ (Name, [NameSuffix])
+litGQLIdentifier [] = fail ""
+litGQLIdentifier (x:xs) = liftSplice do
+  pref <- parseName x
+  suffs <- traverse parseSuffix xs
+  examineSplice [||(pref,suffs)||]
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName
