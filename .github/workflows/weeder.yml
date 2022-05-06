@@ -24,7 +24,7 @@ jobs:
       CABAL: cabal --project-file=./ci/weeder.project
     strategy:
       matrix:
-        ghc: [ "8.10.7" ]
+        ghc: [ "8.10.7", "9.0.2" ]
         cabal: [ "latest" ] 
 
     steps:
@@ -38,6 +38,35 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
+      - name: Set up weeder store directory.
+        id: set-up-weeder-store
+        run: |
+          mkdir -p $HOME/weeder-store
+
+          cabal \
+            --store-dir="${HOME}/weeder-store" \
+            update \
+            --project='./ci/${{ matrix.ghc }}/weeder.project'
+
+          echo '::set-output name=weeder-store::${HOME}/weeder-store'
+
+      - name: Cache weeder.
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ steps.set-up-weeder-store.outputs.weeder-store }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}
+
+      - name: Install weeder.
+        run: |
+          cabal \
+            --store-dir="${HOME}/weeder-store" \
+            install \
+            --project='./ci/${{ matrix.ghc }}/weeder.project' \
+            weeder
+
       - name: Cache compiled dependency artifacts.
         uses: actions/cache@v3
         with:
@@ -47,11 +76,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/weeder.project.freeze') }}
 
-      # See 'weeder' version NOTE above.
-      - name: Compile weeder.
+      - name: Compile dependencies.
         run: |
-          ${CABAL} update
-          ${CABAL} install weeder
+          make update \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
+          make build-deps \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
+
+      - name: Compile library.
+        run: |
+          make build \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
 
       - name: Run weeder.
         run: |
