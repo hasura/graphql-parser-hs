@@ -1,7 +1,7 @@
-packages: .
+packages: ./
 
 package *
-  optimization: 2
+  ghc-options: -fwrite-ide-info
 
   haddock-html: true
   haddock-hoogle: true
