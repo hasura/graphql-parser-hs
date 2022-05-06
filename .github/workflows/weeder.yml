@@ -7,21 +7,6 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    env:
-      # NOTE: Each version of 'weeder' supports a specific version of GHC:
-      #  * weeder-2.2.0 -> GHC 8.10.x
-      #  * weeder-2.3.0 -> GHC 9.0.x
-      #
-      # It would be more trouble than it's worth for us to try and support the
-      # full matrix of GHC <> weeder versions, and (in all likelihood) dead
-      # code for one compiler version will be dead code in another.
-      #
-      # Since 'graphql-engine' is currently built with GHC 8.10.7, we'll stick
-      # with 'weeder-2.2.0' here.
-      #
-      # TODO: We should add weeder-specific actions to the 'Makefile' rather
-      # than relying on an environment variable.
-      CABAL: cabal --project-file=./ci/weeder.project
     strategy:
       matrix:
         ghc: [ "8.10.7", "9.0.2" ]
@@ -72,9 +57,9 @@ jobs:
         with:
           path: |
             ${{ steps.set-up-haskell-tooling.outputs.cabal-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/weeder.project.freeze') }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}
           restore-keys: |
-            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/weeder.project.freeze') }}
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}
 
       - name: Compile dependencies.
         run: |
