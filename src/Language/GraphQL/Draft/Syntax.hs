@@ -127,6 +127,7 @@ newtype Name = Name {unName :: Text}
 -- | @NameSuffix@ is essentially a GQL identifier that can be used as Suffix
 --  It is slightely different from @Name@ as it relaxes the criteria that a
 --  @Name@ cannot start with a digit.
+type NameSuffix :: Type
 newtype NameSuffix = Suffix {unNameSuffix :: Text}
   deriving stock (Lift, Show)
 
