@@ -40,9 +40,9 @@ jobs:
         with:
           path: |
             ${{ steps.set-up-weeder-store.outputs.weeder-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}-0
           restore-keys: |
-            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}-0
 
       - name: Install weeder.
         run: |
@@ -57,9 +57,9 @@ jobs:
         with:
           path: |
             ${{ steps.set-up-haskell-tooling.outputs.cabal-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}-0
           restore-keys: |
-            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}-0
 
       - name: Compile dependencies.
         run: |
