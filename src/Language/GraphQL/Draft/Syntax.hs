@@ -190,7 +190,7 @@ litSuffix txt = liftSplice do
 
 -- | Construct prefix-suffix tuple at compile-time from a list.
 litGQLIdentifier :: [Text] -> SpliceQ (Name, [NameSuffix])
-litGQLIdentifier [] = fail ""
+litGQLIdentifier [] = liftSplice $ fail "GQL identifier cannot be empty"
 litGQLIdentifier (x:xs) = liftSplice do
   pref <- parseName x
   suffs <- traverse parseSuffix xs
