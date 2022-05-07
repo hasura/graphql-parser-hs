@@ -26,28 +26,28 @@ jobs:
       - name: Set up weeder store directory.
         id: set-up-weeder-store
         run: |
-          mkdir -p $HOME/weeder-store
+          mkdir -p /tmp/weeder-store
 
           cabal \
-            --store-dir="${HOME}/weeder-store" \
+            --store-dir="/tmp/weeder-store" \
             update \
             --project='./ci/${{ matrix.ghc }}/weeder.project'
 
-          echo '::set-output name=weeder-store::${HOME}/weeder-store'
+          echo '::set-output name=weeder-store::/tmp/weeder-store'
 
       - name: Cache weeder.
         uses: actions/cache@v3
         with:
           path: |
             ${{ steps.set-up-weeder-store.outputs.weeder-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}-0
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}-1
           restore-keys: |
-            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}-0
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/weeder.project.freeze') }}-1
 
       - name: Install weeder.
         run: |
           cabal \
-            --store-dir="${HOME}/weeder-store" \
+            --store-dir="${{ steps.set-up-weeder-store.outputs.weeder-store }}" \
             install \
             --project='./ci/${{ matrix.ghc }}/weeder.project' \
             weeder
