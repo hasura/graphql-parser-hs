@@ -47,7 +47,12 @@ name =
     quoteDec _ = error "'name' does not support quoting declarations"
     quoteExp str = do
       let formattedStrExpQ = toExp fmtConfig str
-      [|Syntax.parseName . Text.pack $ $(formattedStrExpQ)|]
+          nameExpQ = [|Syntax.mkName . Text.pack $ $(formattedStrExpQ)|]
+      [|
+        case $(nameExpQ) of
+          Nothing -> error $ str <> " is not a valid GraphQL Name"
+          Just result -> result
+        |]
 
 -- | Construct @'Syntax.ExecutableDocument' 'Syntax.Name'@ literals at compile
 -- time via quasiquotation.
@@ -117,4 +122,8 @@ executableDocFmt =
     quoteExp str = do
       let formattedStrExpQ = toExp fmtConfig str
           docExpQ = [|parseExecutableDoc . Text.pack $ $(formattedStrExpQ)|]
-      [|either (fail . show) pure $(docExpQ)|]
+      [|
+        case $(docExpQ) of
+          Left errMsg -> error $ Text.unpack errMsg
+          Right result -> result
+        |]
