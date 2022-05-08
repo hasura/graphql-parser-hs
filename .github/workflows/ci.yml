@@ -27,51 +27,33 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
-      - name: Freeze 'cabal-install' dependency solution.
-        run: |
-          # Generate a freeze file scoped to an exact snapshot of Hackage's
-          # index state at some arbitrarily recent point in time.
-          #
-          # TODO: See if it's better to just commit this to the repository.
-          #
-          # This way, it would be trivial to write another Action which could
-          # periodically regenerate the freeze file every so often.
-          ${CABAL} freeze \
-            --index-state "hackage.haskell.org 2022-04-19T19:29:56Z"
-
       - name: Cache compiled dependency artifacts.
         uses: actions/cache@v3
         with:
           path: |
             ${{ steps.set-up-haskell-tooling.outputs.cabal-store }}
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
-          restore-key: |
-            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/ci.project.freeze') }}-0
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}-0
+          restore-keys: |
+            ${{ runner.os }}-cabal-${{ matrix.ghc }}-${{ hashFiles('./ci/${{ matrix.ghc }}/ci.project.freeze') }}-0
 
       - name: Compile dependencies.
         run: |
-          ${CABAL} update
-          ${CABAL} build \
-            --only-dependencies \
-            --enable-tests \
-            --enable-benchmarks
+          make update \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
+          make build-deps \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
 
       - name: Compile library, tests, and benchmarks.
         run: |
-          ${CABAL} build graphql-parser
-          ${CABAL} build tests
-          ${CABAL} build benchmarks
+          make build-all \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
 
       - name: Run tests.
         run: |
-          ${CABAL} test \
-            --enable-tests \
-            --enable-benchmarks \
-            graphql-parser-test 
+          make test-all \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
 
       - name: Run benchmarks.
         run: |
-          ${CABAL} bench \
-            --enable-tests \
-            --enable-benchmarks \
-            graphql-parser-bench 
+          make bench-all \
+            PROJECT='ci/${{ matrix.ghc }}/ci.project'
