@@ -8,7 +8,6 @@ where
 import Data.Bifunctor (second)
 import Data.ByteString.Builder qualified as BS
 import Data.Function ((&))
-import Data.Functor ((<&>))
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Data.Text.Lazy.Builder qualified as LTB
