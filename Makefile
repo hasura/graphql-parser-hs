@@ -86,3 +86,11 @@ ghcid-test:
 	      graphql-parser-test \
 	    " \
 	--test ":main"
+
+.PHONY: lint
+lint:
+	hlint src/
+
+.PHONY: lint-all
+lint-all:
+	hlint src/ test/ bench/
