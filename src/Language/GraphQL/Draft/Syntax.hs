@@ -152,9 +152,9 @@ mkName text =
 
 mkNameSuffix :: Text -> Maybe NameSuffix
 mkNameSuffix text =
-    if T.all matchBody text
-      then Just (Suffix text)
-      else Nothing
+  if T.all matchBody text
+    then Just (Suffix text)
+    else Nothing
 
 addSuffixes :: Name -> [NameSuffix] -> Name
 addSuffixes prefix [] = prefix
@@ -192,10 +192,10 @@ litSuffix txt = liftSplice do
 -- | Construct prefix-suffix tuple at compile-time from a list.
 litGQLIdentifier :: [Text] -> SpliceQ (Name, [NameSuffix])
 litGQLIdentifier [] = liftSplice $ fail "GQL identifier cannot be empty"
-litGQLIdentifier (x:xs) = liftSplice do
+litGQLIdentifier (x : xs) = liftSplice do
   pref <- parseName x
   suffs <- traverse parseSuffix xs
-  examineSplice [||(pref,suffs)||]
+  examineSplice [||(pref, suffs)||]
 
 instance J.FromJSON Name where
   parseJSON = J.withText "Name" parseName

@@ -25,7 +25,7 @@ import Hedgehog
   )
 import Language.GraphQL.Draft.Parser (Parser, nameParser, runParser, value)
 import Language.GraphQL.Draft.Printer qualified as Printer
-import Language.GraphQL.Draft.Syntax (EnumValue (..), Value (..), litName, litSuffix, addSuffixes)
+import Language.GraphQL.Draft.Syntax (EnumValue (..), Value (..), addSuffixes, litName, litSuffix)
 import Text.Builder (Builder, run)
 import Prelude
 
@@ -82,7 +82,8 @@ propHandleTripleQuote :: Property
 propHandleTripleQuote = property . roundtripValue $ VString "\"\"\""
 
 propNameWithSuffix :: Property
-propNameWithSuffix = property . roundtripValue $
+propNameWithSuffix =
+  property . roundtripValue $
     VList [VEnum $ EnumValue (addSuffixes $$(litName "prefix") [$$(litSuffix "1suffix"), $$(litSuffix "2suffix")])]
 
 -- | Test that a given 'Value'@ @'Void' passes round-trip tests as expected.
