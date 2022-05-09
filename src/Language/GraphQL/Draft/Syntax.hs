@@ -546,7 +546,7 @@ type FieldDefinition :: Type -> Type
 data FieldDefinition inputType = FieldDefinition
   { _fldDescription :: Maybe Description,
     _fldName :: Name,
-    _fldArgumentsDefinition :: (ArgumentsDefinition inputType),
+    _fldArgumentsDefinition :: ArgumentsDefinition inputType,
     _fldType :: GType,
     _fldDirectives :: [Directive Void]
   }
@@ -635,7 +635,7 @@ type DirectiveDefinition :: Type -> Type
 data DirectiveDefinition inputType = DirectiveDefinition
   { _ddDescription :: Maybe Description,
     _ddName :: Name,
-    _ddArguments :: (ArgumentsDefinition inputType),
+    _ddArguments :: ArgumentsDefinition inputType,
     _ddLocations :: [DirectiveLocation]
   }
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
