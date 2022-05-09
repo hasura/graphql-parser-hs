@@ -78,7 +78,7 @@ executableDoc =
     quotePat _ = error "'executableDoc' does not support quoting patterns"
     quoteType _ = error "'executableDoc' does not support quoting types"
     quoteDec _ = error "'executableDoc' does not support quoting declarations"
-    quoteExp str = case (parseExecutableDoc . Text.pack $ str) of
+    quoteExp str = case parseExecutableDoc . Text.pack $ str of
       Left err -> fail . show $ err
       Right doc -> [|doc|]
 

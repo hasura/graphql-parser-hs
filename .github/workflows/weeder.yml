@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ghc: [ "8.10.7", "9.0.2" ]
+        ghc: [ "8.10.7" ]
         cabal: [ "latest" ] 
 
     steps:

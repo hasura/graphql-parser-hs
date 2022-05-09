@@ -86,3 +86,21 @@ ghcid-test:
 	      graphql-parser-test \
 	    " \
 	--test ":main"
+
+.PHONY: ghcid-bench
+ghcid-bench:
+	ghcid \
+	  --command "\
+	    $(CABAL) repl \
+	      --repl-option '-fobject-code' \
+	      --repl-option '-O0' \
+	      graphql-parser-bench \
+	    "
+
+.PHONY: lint
+lint:
+	hlint src/
+
+.PHONY: lint-all
+lint-all:
+	hlint src/ test/ bench/
