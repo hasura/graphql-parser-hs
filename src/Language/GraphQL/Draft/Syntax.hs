@@ -96,6 +96,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson qualified as J
 import Data.Bool (bool)
 import Data.Char qualified as C
+import Data.Coerce (coerce)
 import Data.HashMap.Strict (HashMap)
 import Data.Hashable (Hashable)
 import Data.Kind (Type)
@@ -131,12 +132,18 @@ type NameSuffix :: Type
 newtype NameSuffix = Suffix {unNameSuffix :: Text}
   deriving stock (Lift, Show)
 
+-- | @matchFirst@ verifies if the starting character is according to the
+--  graphql spec (refer https://spec.graphql.org/October2021/#NameStart).
 matchFirst :: Char -> Bool
 matchFirst c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c
 
+-- | @matchBody@ verifies if the continuing character is according to the
+--  graphql spec (refer https://spec.graphql.org/October2021/#NameContinue).
 matchBody :: Char -> Bool
 matchBody c = c == '_' || C.isAsciiUpper c || C.isAsciiLower c || C.isDigit c
 
+-- | @isValidName@ verifies if a text is a valid @Name@ as per the graphql
+--  spec (refer https://spec.graphql.org/October2021/#Name)
 isValidName :: Text -> Bool
 isValidName text =
   case T.uncons text of
@@ -164,7 +171,7 @@ addSuffixes (Name prefix) suffs = Name $ T.concat (prefix : suffsT)
 
 -- | All @Name@s are @Suffix@, so this function won't fail
 convertNameToSuffix :: Name -> NameSuffix
-convertNameToSuffix (Name n) = Suffix n
+convertNameToSuffix = coerce
 
 unsafeMkName :: Text -> Name
 unsafeMkName = Name
