@@ -83,9 +83,9 @@ ghcid-test:
 	    $(CABAL) repl \
 	      --repl-option '-fobject-code' \
 	      --repl-option '-O0' \
-	      graphql-parser-test \
+	      graphql-parser:test:tests \
 	    " \
-	--test ":main"
+	  --test ":main"
 
 .PHONY: ghcid-bench
 ghcid-bench:
