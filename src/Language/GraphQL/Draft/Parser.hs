@@ -595,7 +595,7 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
     sanitize = dropWhileEnd' onlyWhiteSpace . dropWhile onlyWhiteSpace
 
     onlyWhiteSpace :: Text -> Bool
-    onlyWhiteSpace t = T.all isWhitespace t
+    onlyWhiteSpace = T.all isWhitespace
 
     countIndentation :: Text -> Int
     countIndentation = fromMaybe maxBound . T.findIndex (not . isWhitespace)
