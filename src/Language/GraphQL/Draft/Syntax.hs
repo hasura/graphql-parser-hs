@@ -158,7 +158,9 @@ mkNameSuffix text =
 
 addSuffixes :: Name -> [NameSuffix] -> Name
 addSuffixes prefix [] = prefix
-addSuffixes (Name prefix) ((Suffix suffix) : rest) = addSuffixes (Name (prefix <> suffix)) rest
+addSuffixes (Name prefix) suffs = Name $ T.concat (prefix : suffsT)
+  where
+    suffsT = map unNameSuffix suffs
 
 -- | All @Name@s are @Suffix@, so this function won't fail
 convertNameToSuffix :: Name -> NameSuffix
