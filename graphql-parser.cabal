@@ -104,6 +104,7 @@ test-suite tests
     , bytestring
     , graphql-parser
     , hedgehog
+    , hspec          >= 2.9
     , prettyprinter
     , tasty
     , tasty-hedgehog

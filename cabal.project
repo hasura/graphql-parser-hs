@@ -11,4 +11,6 @@ package *
   haddock-quickjump: true
 
 package graphql-parser
+  benchmarks: True
+  tests: True
   ghc-options: -j
