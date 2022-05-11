@@ -103,4 +103,4 @@ lint:
 
 .PHONY: lint-all
 lint-all:
-	hlint src/ test/ bench/
+	hlint src/ test/ tests/ bench/

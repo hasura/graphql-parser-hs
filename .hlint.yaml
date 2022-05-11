@@ -1,0 +1,37 @@
+#######################################
+# HLint Configuration                 #
+#                                     #
+# https://github.com/ndmitchell/hlint #
+#######################################
+
+# This file contains a template configuration file, which is typically placed
+# as '.hlint.yaml' in the root directory of your project.
+
+- arguments: [--color=auto]
+
+# Add some functions to the blocklist by default.
+- functions:
+  - {name: unsafePerformIO, within: []}
+  - {name: unsafeCoerce, within: []}
+  - {name: head, within: []}
+  - {name: tail, within: []}
+  - {name: init, within: []}
+  - {name: last, within: []}
+  - {name: fromJust, within: []}
+  - {name: decodeUtf8, within: [], message: "Use decodeUtf8' or decodeUtf8With lenientDecode"}
+
+# Ignore some builtin hints.
+- ignore: {name: Avoid lambda}
+
+# Applicative-Monad Proposal fallout.
+- warning: {lhs: mapM, rhs: traverse, name: Generalize mapM}
+- warning: {lhs: mapM_, rhs: traverse_, name: Generalize mapM_}
+- warning: {lhs: forM, rhs: for, name: Generalize forM}
+- warning: {lhs: forM_, rhs: for_, name: Generalize forM_}
+- warning: {lhs: sequence, rhs: sequenceA, name: Generalize sequence}
+- warning: {lhs: sequence_, rhs: sequenceA_, name: Generalize sequence_}
+- warning: {lhs: return, rhs: pure, name: Avoid return}
+
+# Applicative style
+- warning: {lhs: f <$> pure a <*> b, rhs: f a <$> b, name: Avoid redundant pure}
+- warning: {lhs: f <$> pure a <* b, rhs: f a <$ b, name: Avoid redundant pure}
