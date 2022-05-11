@@ -15,6 +15,7 @@ import Data.Scientific (Scientific)
 import Data.String (IsString)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.Encoding.Error (lenientDecode)
 import Data.Text.Lazy qualified as LT hiding (singleton)
 import Data.Text.Lazy.Builder qualified as LT (Builder)
 import Data.Text.Lazy.Builder qualified as LTB
@@ -279,7 +280,11 @@ dispatchStringPrinter t =
     hasWhitespaceEnd = T.all isWhitespace $ T.takeWhileEnd (/= '\n') t
     -- Condition 4: if none of the remaining lines (i.e. not the first line)
     -- contains nonzero indentation, we can't print it as a block string
-    hasZeroIndentation = any lineZeroIndentation $ tail $ T.lines t
+    --
+    -- NOTE: We use @'drop' 1@ here rather than 'tail' because 'tail' is a
+    -- partial function which will error on an empty list, while @'drop' 1@ is
+    -- not.
+    hasZeroIndentation = any lineZeroIndentation . drop 1 . T.lines $ t
       where
         lineZeroIndentation line = case T.uncons line of
           Nothing -> False -- empty lines don't count
@@ -293,9 +298,14 @@ dispatchStringPrinter t =
     isSourceCharacter :: Char -> Bool
     isSourceCharacter = not . isControl
 
--- | We use Aeson to decode string values, and therefore use Aeson to encode them back.
+-- | We use Aeson to decode string values, and therefore use Aeson to encode
+-- them back.
+--
+-- NOTE: This function uses @'LTE.decodeUtf8With' 'lenientDecode'@, which
+-- replaces invalid input bytes with the Unicode replacement character @U+FFFD@.
 stringValue :: Printer a => Text -> a
-stringValue s = textP $ LT.toStrict $ LTE.decodeUtf8 $ J.encode s
+stringValue =
+  textP . LT.toStrict . LTE.decodeUtf8With lenientDecode . J.encode
 
 blockStringValue :: Printer a => Text -> a
 blockStringValue t = textP "\"\"\"\n" <> textP t <> textP "\n\"\"\""
