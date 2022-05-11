@@ -66,7 +66,7 @@ executableDocument = whiteSpace *> (AST.ExecutableDocument <$> many1 definitionE
 
 runParser :: AT.Parser a -> Text -> Either Text a
 runParser parser t =
-  either (Left . T.pack) return $ AT.parseOnly (parser <* AT.endOfInput) t
+  either (Left . T.pack) pure $ AT.parseOnly (parser <* AT.endOfInput) t
 
 parseExecutableDoc :: Text -> Either Text (AST.ExecutableDocument AST.Name)
 parseExecutableDoc = runParser executableDocument
@@ -149,7 +149,7 @@ aliasAndFld = do
   colonM <- optional (tok ":")
   case colonM of
     Just _ -> (Just n,) <$> nameParser
-    Nothing -> return (Nothing, n)
+    Nothing -> pure (Nothing, n)
 {-# INLINE aliasAndFld #-}
 
 field :: Variable var => Parser (AST.Field AST.FragmentSpread var)
@@ -546,7 +546,7 @@ blockString = extractText <$> ("\"\"\"" *> blockContents)
     blockContents =
       AT.runScanner Continue scanner >>= \case
         -- this drop the parsed closing quotes (since we are using a different parser)
-        (textBlock, Done) -> return $ T.lines (T.dropEnd 3 textBlock)
+        (textBlock, Done) -> pure $ T.lines (T.dropEnd 3 textBlock)
         -- there is only one way to get to a Done, so we need this here because runScanner never fails
         _ -> fail "couldn't parse block string"
 
