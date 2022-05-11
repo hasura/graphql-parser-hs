@@ -1,22 +1,32 @@
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
 
 {-# LANGUAGE TemplateHaskell #-}
-
+{-# LANGUAGE TypeApplications #-}
 module Language.GraphQL.Draft.ParserTest where
 
 -------------------------------------------------------------------------------
 
+import Data.ByteString.Builder qualified as ByteString.Builder
+import Data.Foldable (for_)
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.Encoding.Error qualified as Text.Encoding.Error
+import Data.Text.Lazy qualified as Text.Lazy
+import Data.Text.Lazy.Builder qualified as Text.Lazy.Builder
+import Data.Text.Lazy.Encoding qualified as Text.Lazy.Encoding
 import Data.Void (Void)
 import Hedgehog (Property, failure, footnote, forAll, property, (===))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import Language.GraphQL.Draft.Parser (Parser, blockString, nameParser, runParser, value)
+import Language.GraphQL.Draft.Generator (genExecutableDocument)
+import Language.GraphQL.Draft.Parser (Parser)
+import Language.GraphQL.Draft.Parser qualified as Parser
 import Language.GraphQL.Draft.Printer qualified as Printer
-import Language.GraphQL.Draft.Syntax (EnumValue (..), Name, Value (..), litName)
+import Language.GraphQL.Draft.Syntax qualified as Syntax
 import Prelude
-import Test.Hspec (Expectation, Spec, describe, it, shouldBe)
+import Prettyprinter qualified as PrettyPrinter (defaultLayoutOptions, layoutPretty)
+import Prettyprinter.Render.Text qualified as PrettyPrinter
+import Test.Hspec (Expectation, Spec, it, shouldBe)
 import Text.Builder (Builder, run)
 
 -------------------------------------------------------------------------------
@@ -96,83 +106,112 @@ spec_blockquotes = do
 
 spec_keywords :: Spec
 spec_keywords = do
-  it "parses names that begin with null" do
-    let test :: Name
-        test = $$(litName "nullColumn")
+  let testValue :: Syntax.Value Void -> Expectation
+      testValue x = parseAndPrint Parser.value Printer.value x `shouldBe` Right x
 
-    parseAndPrint nameParser Printer.nameP test `shouldBe` Right test
+  it "parses names that begin with null" do
+    let test :: Syntax.Name
+        test = $$(Syntax.litName "nullColumn")
+
+    parseAndPrint Parser.nameParser Printer.nameP test `shouldBe` Right test
 
   it "parses enum names that begin with null" do
-    let test :: Value Void
-        test = VList [VEnum (EnumValue $$(litName "nullColumn"))]
-
-    parseAndPrint value Printer.value test `shouldBe` Right test
+    testValue $ Syntax.VList
+      [ Syntax.VEnum (Syntax.EnumValue $$(Syntax.litName "nullColumn"))
+      ]
 
   it "parses enum names that begin with true" do
-    let test :: Value Void
-        test = VList [VEnum (EnumValue $$(litName "trueColumn"))]
+    testValue $ Syntax.VList
+      [ Syntax.VEnum (Syntax.EnumValue $$(Syntax.litName "trueColumn"))
+      ]
 
-    parseAndPrint value Printer.value test `shouldBe` Right test
+  it "a string containing \\NUL is handled correctly" do
+    testValue $ Syntax.VString "\NUL"
 
---   it "a string containing \\NUL is handled correctly" do
---     withTests 1 propHandleNulString
---
---   it "a string containing \\n is handled correctly" do
---     withTests 1 propHandleNewlineString
---
---   it "a string containing \\x0011 is handled correctly" do
---     withTests 1 propHandleControlString
---
---   it "all unicode characters are supported" do
---     withTests 1 propHandleUnicodeCharacters
---
---   it "triple quotes is a valid string" do
---     withTests 1 propHandleTripleQuote
---
---   it "name with a suffix should be a valid name" do
---     withTests 1 propNameWithSuffix
---
--- propNullNameName :: Property
--- propNullNameName =
---   property $
---     roundtripParser nameParser Printer.nameP $$(litName "nullColumntwo")
---
--- propHandleNulString :: Property
--- propHandleNulString = property . roundtripValue $ VString "\NUL"
---
--- propHandleNewlineString :: Property
--- propHandleNewlineString = property . roundtripValue $ VString "\n"
---
--- propHandleControlString :: Property
--- propHandleControlString = property . roundtripValue $ VString "\x0011"
---
--- -- NB: 'liftTest' is explicitly used to restrict the 'for_' block to operate in
--- -- the 'Test' type (i.e. 'type Test = TestT Identity'), as opposed to 'PropertyT
--- -- IO'.  The 'Test' monad is a thinner monad stack & therefore doesn't suffer
--- -- from memory leakage caused by, among others, Hedgehog's 'TreeT', which is
--- -- used for automatic shrinking (which we don't need in this test).
--- propHandleUnicodeCharacters :: Property
--- propHandleUnicodeCharacters = property . liftTest $
---   for_ [minBound .. maxBound] $ \char ->
---     roundtripValue . VString $ singleton char
---
--- propHandleTripleQuote :: Property
--- propHandleTripleQuote = property . roundtripValue $ VString "\"\"\""
---
--- propNameWithSuffix :: Property
--- propNameWithSuffix =
---   property . roundtripValue $
---     VList [VEnum $ EnumValue (addSuffixes $$(litName "prefix") [$$(litSuffix "1suffix"), $$(litSuffix "2suffix")])]
---
--- -- | Test that a given 'Value'@ @'Void' passes round-trip tests as expected.
--- roundtripValue :: (MonadTest m) => Value Void -> m ()
--- roundtripValue = roundtripParser value Printer.value
+  it "a string containing \\n is handled correctly" do
+    testValue $ Syntax.VString "\n"
+
+  it "a string containing \\x0011 is handled correctly" do
+    testValue $ Syntax.VString "\x0011"
+
+  it "all unicode characters are supported" do
+    for_ [minBound .. maxBound] \char ->
+      testValue $ Syntax.VString (Text.singleton char)
+
+  it "triple quotes is a valid string" do
+    testValue $ Syntax.VString "\"\"\""
+
+  it "name with a suffix should be a valid name" do
+    testValue $ Syntax.VList
+      [ Syntax.VEnum $ Syntax.EnumValue
+          $ Syntax.addSuffixes $$(Syntax.litName "prefix")
+              [ $$(Syntax.litSuffix "1suffix")
+              , $$(Syntax.litSuffix "2suffix")
+              ]
+      ]
+
 
 -- | Given a parser, printer, and text builder, attempt to round-trip a piece
 -- of AST. In other words, try to parse a printed value back into the original
 -- value. This is used in the spec_keywords tests.
-parseAndPrint :: (Eq a, Show a) => Parser a -> (a -> Builder) -> a -> Either Text a
-parseAndPrint parser printer = runParser parser . run . printer
+parseAndPrint :: Parser a -> (a -> Builder) -> a -> Either Text a
+parseAndPrint parser printer = Parser.runParser parser . run . printer
+
+-------------------------------------------------------------------------------
+
+-- | Check that the pretty printer outputs content that can still be parsed
+-- correctly.
+hprop_parser_pretty_printer :: Property
+hprop_parser_pretty_printer = property do
+  xs <- forAll genExecutableDocument
+
+  let printer :: Syntax.ExecutableDocument Syntax.Name -> Text
+      printer
+        = PrettyPrinter.renderStrict
+        . PrettyPrinter.layoutPretty @Text PrettyPrinter.defaultLayoutOptions
+        . Printer.executableDocument
+
+  Parser.parseExecutableDoc (printer xs) === Right xs
+
+-- | Check that the text printer outputs content that can still be parsed
+-- correctly.
+hprop_parser_text_printer :: Property
+hprop_parser_text_printer = property do
+  xs <- forAll genExecutableDocument
+
+  let printer :: Syntax.ExecutableDocument Syntax.Name -> Text
+      printer = run . Printer.executableDocument
+
+  Parser.parseExecutableDoc (printer xs) === Right xs
+
+-- | Check that the lazy text printer outputs content that can still be parsed
+-- correctly.
+hprop_parser_lazy_text_printer :: Property
+hprop_parser_lazy_text_printer = property do
+  xs <- forAll genExecutableDocument
+
+  let printer :: Syntax.ExecutableDocument Syntax.Name -> Text
+      printer
+        = Text.Lazy.toStrict
+        . Text.Lazy.Builder.toLazyText
+        . Printer.executableDocument
+
+  Parser.parseExecutableDoc (printer xs) === Right xs
+
+-- | Check that the bytestring printer outputs content that can still be parsed
+-- correctly.
+hprop_parser_bytestring_printer :: Property
+hprop_parser_bytestring_printer = property do
+  xs <- forAll genExecutableDocument
+
+  let printer :: Syntax.ExecutableDocument Syntax.Name -> Text
+      printer
+        = Text.Lazy.toStrict
+        . Text.Lazy.Encoding.decodeUtf8With Text.Encoding.Error.lenientDecode
+        . ByteString.Builder.toLazyByteString
+        . Printer.executableDocument
+
+  Parser.parseExecutableDoc (printer xs) === Right xs
 
 -------------------------------------------------------------------------------
 
@@ -183,7 +222,7 @@ hprop_empty_lines = property do
   n <- forAll $ Gen.int (Range.linear 0 100)
   let input = Text.replicate n "\n"
 
-  case runParser blockString ("\"\"\"" <> input <> "\"\"\"") of
+  case Parser.runParser Parser.blockString ("\"\"\"" <> input <> "\"\"\"") of
     Right r -> r === ""
     Left  l -> do
       footnote (Text.unpack l)
@@ -195,13 +234,13 @@ hprop_empty_lines = property do
 -- text on the right.
 shouldParseTo :: Text -> Text -> Expectation
 shouldParseTo unparsed expected = do
-  case runParser blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
+  case Parser.runParser Parser.blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
     Right r -> r `shouldBe` expected
     Left  l -> fail (Text.unpack l)
 
 -- | Assert that the given blockstring text should fail to parse.
 parseFailure :: Text -> Expectation
 parseFailure unparsed = do
-  case runParser blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
+  case Parser.runParser Parser.blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
     Right _ -> fail $ "Should have failed for: " <> Text.unpack ("\"\"\"" <> unparsed <> "\"\"\"")
     Left  _ -> pure ()
