@@ -1,7 +1,7 @@
 .PHONY: format
 format:
 	cabal-fmt -i graphql-parser.cabal
-	find src test bench \
+	find src test tests bench \
 	  -type f \( -name "*.hs" -o -name "*.hs-boot" \) | \
 	  xargs ormolu -ie
 
