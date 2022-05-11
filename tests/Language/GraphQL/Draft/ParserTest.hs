@@ -1,7 +1,7 @@
-{-# OPTIONS_GHC -fno-warn-deprecations #-}
-
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -fno-warn-deprecations #-}
+
 module Language.GraphQL.Draft.ParserTest where
 
 -------------------------------------------------------------------------------
@@ -23,11 +23,11 @@ import Language.GraphQL.Draft.Parser (Parser)
 import Language.GraphQL.Draft.Parser qualified as Parser
 import Language.GraphQL.Draft.Printer qualified as Printer
 import Language.GraphQL.Draft.Syntax qualified as Syntax
-import Prelude
 import Prettyprinter qualified as PrettyPrinter (defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text qualified as PrettyPrinter
 import Test.Hspec (Expectation, Spec, it, shouldBe)
 import Text.Builder (Builder, run)
+import Prelude
 
 -------------------------------------------------------------------------------
 
@@ -77,7 +77,7 @@ spec_whitespace_blockstring = do
 spec_blockquotes :: Spec
 spec_blockquotes = do
   it "parses the model \"Hello, World\" example" do
-    let input  = "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  "
+    let input = "\n    Hello,\n      World!\n\n    Yours,\n      GraphQL.\n  "
         output = "Hello,\n  World!\n\nYours,\n  GraphQL."
 
     input `shouldParseTo` output
@@ -116,14 +116,16 @@ spec_keywords = do
     parseAndPrint Parser.nameParser Printer.nameP test `shouldBe` Right test
 
   it "parses enum names that begin with null" do
-    testValue $ Syntax.VList
-      [ Syntax.VEnum (Syntax.EnumValue $$(Syntax.litName "nullColumn"))
-      ]
+    testValue $
+      Syntax.VList
+        [ Syntax.VEnum (Syntax.EnumValue $$(Syntax.litName "nullColumn"))
+        ]
 
   it "parses enum names that begin with true" do
-    testValue $ Syntax.VList
-      [ Syntax.VEnum (Syntax.EnumValue $$(Syntax.litName "trueColumn"))
-      ]
+    testValue $
+      Syntax.VList
+        [ Syntax.VEnum (Syntax.EnumValue $$(Syntax.litName "trueColumn"))
+        ]
 
   it "a string containing \\NUL is handled correctly" do
     testValue $ Syntax.VString "\NUL"
@@ -142,14 +144,16 @@ spec_keywords = do
     testValue $ Syntax.VString "\"\"\""
 
   it "name with a suffix should be a valid name" do
-    testValue $ Syntax.VList
-      [ Syntax.VEnum $ Syntax.EnumValue
-          $ Syntax.addSuffixes $$(Syntax.litName "prefix")
-              [ $$(Syntax.litSuffix "1suffix")
-              , $$(Syntax.litSuffix "2suffix")
-              ]
-      ]
-
+    testValue $
+      Syntax.VList
+        [ Syntax.VEnum $
+            Syntax.EnumValue $
+              Syntax.addSuffixes
+                $$(Syntax.litName "prefix")
+                [ $$(Syntax.litSuffix "1suffix"),
+                  $$(Syntax.litSuffix "2suffix")
+                ]
+        ]
 
 -- | Given a parser, printer, and text builder, attempt to round-trip a piece
 -- of AST. In other words, try to parse a printed value back into the original
@@ -166,10 +170,10 @@ hprop_parser_pretty_printer = property do
   xs <- forAll genExecutableDocument
 
   let printer :: Syntax.ExecutableDocument Syntax.Name -> Text
-      printer
-        = PrettyPrinter.renderStrict
-        . PrettyPrinter.layoutPretty @Text PrettyPrinter.defaultLayoutOptions
-        . Printer.executableDocument
+      printer =
+        PrettyPrinter.renderStrict
+          . PrettyPrinter.layoutPretty @Text PrettyPrinter.defaultLayoutOptions
+          . Printer.executableDocument
 
   Parser.parseExecutableDoc (printer xs) === Right xs
 
@@ -191,10 +195,10 @@ hprop_parser_lazy_text_printer = property do
   xs <- forAll genExecutableDocument
 
   let printer :: Syntax.ExecutableDocument Syntax.Name -> Text
-      printer
-        = Text.Lazy.toStrict
-        . Text.Lazy.Builder.toLazyText
-        . Printer.executableDocument
+      printer =
+        Text.Lazy.toStrict
+          . Text.Lazy.Builder.toLazyText
+          . Printer.executableDocument
 
   Parser.parseExecutableDoc (printer xs) === Right xs
 
@@ -205,11 +209,11 @@ hprop_parser_bytestring_printer = property do
   xs <- forAll genExecutableDocument
 
   let printer :: Syntax.ExecutableDocument Syntax.Name -> Text
-      printer
-        = Text.Lazy.toStrict
-        . Text.Lazy.Encoding.decodeUtf8With Text.Encoding.Error.lenientDecode
-        . ByteString.Builder.toLazyByteString
-        . Printer.executableDocument
+      printer =
+        Text.Lazy.toStrict
+          . Text.Lazy.Encoding.decodeUtf8With Text.Encoding.Error.lenientDecode
+          . ByteString.Builder.toLazyByteString
+          . Printer.executableDocument
 
   Parser.parseExecutableDoc (printer xs) === Right xs
 
@@ -224,7 +228,7 @@ hprop_empty_lines = property do
 
   case Parser.runParser Parser.blockString ("\"\"\"" <> input <> "\"\"\"") of
     Right r -> r === ""
-    Left  l -> do
+    Left l -> do
       footnote (Text.unpack l)
       failure
 
@@ -236,11 +240,11 @@ shouldParseTo :: Text -> Text -> Expectation
 shouldParseTo unparsed expected = do
   case Parser.runParser Parser.blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
     Right r -> r `shouldBe` expected
-    Left  l -> fail (Text.unpack l)
+    Left l -> fail (Text.unpack l)
 
 -- | Assert that the given blockstring text should fail to parse.
 parseFailure :: Text -> Expectation
 parseFailure unparsed = do
   case Parser.runParser Parser.blockString ("\"\"\"" <> unparsed <> "\"\"\"") of
     Right _ -> fail $ "Should have failed for: " <> Text.unpack ("\"\"\"" <> unparsed <> "\"\"\"")
-    Left  _ -> pure ()
+    Left _ -> pure ()
