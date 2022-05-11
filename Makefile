@@ -1,7 +1,7 @@
 .PHONY: format
 format:
 	cabal-fmt -i graphql-parser.cabal
-	find src test tests bench \
+	find src tests bench \
 	  -type f \( -name "*.hs" -o -name "*.hs-boot" \) | \
 	  xargs ormolu -ie
 
@@ -94,7 +94,7 @@ ghcid-bench:
 	    $(CABAL) repl \
 	      --repl-option '-fobject-code' \
 	      --repl-option '-O0' \
-	      graphql-parser-bench \
+	      graphql-parser:bench:bench \
 	    "
 
 .PHONY: lint
@@ -103,4 +103,4 @@ lint:
 
 .PHONY: lint-all
 lint-all:
-	hlint src/ test/ tests/ bench/
+	hlint src/ tests/ bench/

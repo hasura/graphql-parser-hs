@@ -114,30 +114,7 @@ test-suite tests
 
   other-modules:      Language.GraphQL.Draft.ParserTest
 
-test-suite graphql-parser-test
-  import:             common-all
-  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
-  type:               exitcode-stdio-1.0
-  hs-source-dirs:     test
-  main-is:            Spec.hs
-  other-modules:
-    BlockStrings
-    Keywords
-
-  build-tool-depends: tasty-discover:tasty-discover -any
-  build-depends:
-    , base
-    , bytestring
-    , graphql-parser
-    , hedgehog
-    , prettyprinter
-    , tasty
-    , tasty-hedgehog
-    , tasty-hspec
-    , text
-    , text-builder
-
-benchmark graphql-parser-bench
+benchmark bench
   import:         common-all
   type:           exitcode-stdio-1.0
   hs-source-dirs: bench
