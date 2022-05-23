@@ -5,9 +5,10 @@ where
 
 -------------------------------------------------------------------------------
 
+import Data.Bifunctor (second)
 import Data.ByteString.Builder qualified as BS
-import Data.Functor ((<&>))
-import Data.Maybe (catMaybes)
+import Data.Function ((&))
+import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Data.Text.Lazy.Builder qualified as LTB
 import Data.Traversable (for)
@@ -30,8 +31,8 @@ genDocs num =
 genTexts :: Int -> IO [(Int, [Text])]
 genTexts num =
   for [1 .. num] $ \n -> do
-    texts <- for [1 .. 500 :: Int] . const $ generate genText
-    pure $ (n, texts)
+    texts <- for [1 .. 500 :: Int] \_ -> generate genText
+    pure (n, texts)
 
 main :: IO ()
 main = do
@@ -41,35 +42,40 @@ main = do
       grp2 = mkBBGrp docs
       grp3 = mkTBGrp docs
       grp4 = mkTLBGrp docs
-      renderedDocs = map (\(n, q) -> (n, renderExecutableDoc q)) docs
+      renderedDocs = map (second renderExecutableDoc) docs
       grp5 = mkPGrp renderedDocs
       grp6 = mkNGrp texts
   defaultMain [grp1, grp2, grp3, grp4, grp5, grp6]
   where
     mkNGrp texts =
       bgroup "checking name validity" $
-        texts <&> \(n, t) ->
-          bench (show n) $ nf (length . catMaybes . map mkName) t
+        texts & map \(n, t) ->
+          bench (show n) $ nf (length . mapMaybe mkName) t
 
     mkPGrp qs =
       bgroup "parsing executableDocument" $
-        map (\(n, q) -> bench (show n) $ whnf parseExecutableDoc q) qs
+        qs & map \(n, q) ->
+          bench (show n) $ whnf parseExecutableDoc q
 
     mkPPGrp gqs =
       bgroup "rendering executableDocument (prettyprinter)" $
-        map (\(n, gq) -> bench (show n) $ nf (renderPP . executableDocument) gq) gqs
+        gqs & map \(n, gq) ->
+          bench (show n) $ nf (renderPP . executableDocument) gq
 
     mkBBGrp gqs =
       bgroup "rendering executableDocument (bytestring builder)" $
-        map (\(n, gq) -> bench (show n) $ nf (renderBB . executableDocument) gq) gqs
+        gqs & map \(n, gq) ->
+          bench (show n) $ nf (renderBB . executableDocument) gq
 
     mkTBGrp gqs =
       bgroup "rendering executableDocument (text builder)" $
-        map (\(n, gq) -> bench (show n) $ nf (renderTB . executableDocument) gq) gqs
+        gqs & map \(n, gq) ->
+          bench (show n) $ nf (renderTB . executableDocument) gq
 
     mkTLBGrp gqs =
       bgroup "rendering executableDocument (lazy text builder)" $
-        map (\(n, gq) -> bench (show n) $ nf (renderTLB . executableDocument) gq) gqs
+        gqs & map \(n, gq) ->
+          bench (show n) $ nf (renderTLB . executableDocument) gq
 
     renderPP :: PP.Doc Text -> Text
     renderPP = PP.renderStrict . PP.layoutPretty PP.defaultLayoutOptions

@@ -1,0 +1,24 @@
+name: lint
+
+on:
+  push: { branches: [ "main" ] }
+  pull_request: { branches: [ "main" ] }
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repository.
+        uses: actions/checkout@v3
+
+      - name: Set up hlint.
+        uses: haskell/actions/hlint-setup@v2
+        with: { version: 3.4 }
+
+      - name: Run hlint
+        uses: haskell/actions/hlint-run@v2
+        with:
+          # NOTE: This _must_ be a stringified array, not an _actual_ array.
+          path: '[ "bench/", "src/", "test/" ]'
+          fail-on: warning

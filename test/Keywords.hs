@@ -25,7 +25,7 @@ import Hedgehog
   )
 import Language.GraphQL.Draft.Parser (Parser, nameParser, runParser, value)
 import Language.GraphQL.Draft.Printer qualified as Printer
-import Language.GraphQL.Draft.Syntax (EnumValue (..), Value (..), litName)
+import Language.GraphQL.Draft.Syntax (EnumValue (..), Value (..), addSuffixes, litName, litSuffix)
 import Text.Builder (Builder, run)
 import Prelude
 
@@ -40,7 +40,8 @@ primitiveTests =
     ("a string containing \\n is handled correctly", withTests 1 propHandleNewlineString),
     ("a string containing \\x0011 is handled correctly", withTests 1 propHandleControlString),
     ("all unicode characters are supported", withTests 1 propHandleUnicodeCharacters),
-    ("triple quotes is a valid string", withTests 1 propHandleTripleQuote)
+    ("triple quotes is a valid string", withTests 1 propHandleTripleQuote),
+    ("name with a suffix should be a valid name", withTests 1 propNameWithSuffix)
   ]
 
 propNullNameValue :: Property
@@ -79,6 +80,11 @@ propHandleUnicodeCharacters = property . liftTest $
 
 propHandleTripleQuote :: Property
 propHandleTripleQuote = property . roundtripValue $ VString "\"\"\""
+
+propNameWithSuffix :: Property
+propNameWithSuffix =
+  property . roundtripValue $
+    VList [VEnum $ EnumValue (addSuffixes $$(litName "prefix") [$$(litSuffix "1suffix"), $$(litSuffix "2suffix")])]
 
 -- | Test that a given 'Value'@ @'Void' passes round-trip tests as expected.
 roundtripValue :: (MonadTest m) => Value Void -> m ()
