@@ -235,7 +235,7 @@ newtype ExecutableDocument var = ExecutableDocument {getExecutableDefinitions ::
 instance J.FromJSON (ExecutableDocument Name) where
   parseJSON = J.withText "ExecutableDocument" $ \t ->
     case parseExecutableDoc t of
-      Right a -> return a
+      Right a -> pure a
       Left _ -> fail "parsing the graphql query failed"
 
 instance J.ToJSON (ExecutableDocument Name) where
@@ -307,7 +307,7 @@ newtype SchemaDocument
 instance J.FromJSON SchemaDocument where
   parseJSON = J.withText "SchemaDocument" $ \t ->
     case parseSchemaDocument t of
-      Right schemaDoc -> return schemaDoc
+      Right schemaDoc -> pure schemaDoc
       Left err -> fail $ "parsing the schema document: " <> show err
 
 -- | A variant of 'SchemaDocument' that additionally stores, for each interface,

@@ -92,26 +92,29 @@ library
     Language.GraphQL.Draft.Syntax.Internal
     Language.GraphQL.Draft.Syntax.QQ
 
-test-suite graphql-parser-test
-  import:         common-all
-  ghc-options:    -threaded -rtsopts -with-rtsopts=-N
-  type:           exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is:        Spec.hs
-  other-modules:
-    BlockStrings
-    Keywords
-
+test-suite tests
+  import:             common-all
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     tests
+  main-is:            Driver.hs
+  build-tool-depends: tasty-discover:tasty-discover -any
   build-depends:
     , base
     , bytestring
     , graphql-parser
     , hedgehog
+    , hspec           >=2.9
     , prettyprinter
+    , tasty
+    , tasty-hedgehog
+    , tasty-hspec
     , text
     , text-builder
 
-benchmark graphql-parser-bench
+  other-modules:      Language.GraphQL.Draft.ParserTest
+
+benchmark bench
   import:         common-all
   type:           exitcode-stdio-1.0
   hs-source-dirs: bench

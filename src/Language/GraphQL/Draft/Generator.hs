@@ -184,14 +184,14 @@ genBlockText = T.unlines <$> Gen.list (Range.linear 0 20) line
     line = do
       Gen.frequency
         [ (10, Gen.text (Range.linear 1 10) Gen.unicode),
-          (10, return "\n"),
+          (10, pure "\n"),
           (6, genIndentation),
           (5, genMinIndentedText 10),
-          (4, return ""),
-          (3, return " "),
-          (6, return "\t"),
-          (3, return "\""), -- "
-          (3, return "\\") -- \
+          (4, pure ""),
+          (3, pure " "),
+          (6, pure "\t"),
+          (3, pure "\""), -- "
+          (3, pure "\\") -- \
         ]
 
 -- | Like `genText` but with random indentation in the start of the string according
@@ -201,11 +201,11 @@ genMinIndentedText min_ = do
   let minIndent = T.replicate min_ " "
   i <- genIndentation
   t <- genText
-  return (minIndent <> i <> t)
+  pure (minIndent <> i <> t)
 
 genIndentation :: Gen Text
 genIndentation = do
-  Gen.text (Range.linear 0 100) (return ' ')
+  Gen.text (Range.linear 0 100) (pure ' ')
 
 -------------------------------------------------------------------------------
 
