@@ -94,6 +94,7 @@ where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson qualified as J
+import Data.Bifunctor (Bifunctor (bimap))
 import Data.Bool (bool)
 import Data.Char qualified as C
 import Data.Coerce (coerce)
@@ -526,6 +527,15 @@ data TypeDefinition possibleTypes inputType
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
 
+instance Bifunctor TypeDefinition where
+  bimap f g definition = case definition of
+    TypeDefinitionScalar d -> TypeDefinitionScalar d
+    TypeDefinitionObject d -> TypeDefinitionObject $ fmap g d
+    TypeDefinitionInterface d -> TypeDefinitionInterface $ bimap f g d
+    TypeDefinitionUnion d -> TypeDefinitionUnion d
+    TypeDefinitionEnum d -> TypeDefinitionEnum d
+    TypeDefinitionInputObject d -> TypeDefinitionInputObject $ fmap g d
+
 type Description :: Type
 newtype Description = Description {unDescription :: Text}
   deriving stock (Eq, Lift, Ord, Show)
@@ -577,6 +587,14 @@ data InterfaceTypeDefinition possibleTypes inputType = InterfaceTypeDefinition
   }
   deriving stock (Eq, Generic, Lift, Ord, Show, Functor)
   deriving anyclass (Hashable, NFData)
+
+instance Bifunctor InterfaceTypeDefinition where
+  bimap f g InterfaceTypeDefinition {..} =
+    InterfaceTypeDefinition
+      { _itdFieldsDefinition = map (fmap g) _itdFieldsDefinition,
+        _itdPossibleTypes = f _itdPossibleTypes,
+        ..
+      }
 
 type UnionTypeDefinition :: Type
 data UnionTypeDefinition = UnionTypeDefinition
