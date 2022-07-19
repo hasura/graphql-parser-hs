@@ -1,6 +1,5 @@
 module Language.GraphQL.Draft.Syntax
   ( ExecutableDocument,
-    Name,
     SchemaDocument,
   )
 where
@@ -8,9 +7,6 @@ where
 import Data.Kind (Type)
 
 -------------------------------------------------------------------------------
-
-type Name :: Type
-data Name
 
 type role ExecutableDocument nominal
 
