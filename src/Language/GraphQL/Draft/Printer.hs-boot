@@ -6,10 +6,8 @@ where
 -------------------------------------------------------------------------------
 
 import Data.Text (Text)
-import {-# SOURCE #-} Language.GraphQL.Draft.Syntax
-  ( ExecutableDocument,
-    Name,
-  )
+import {-# SOURCE #-} Language.GraphQL.Draft.Syntax (ExecutableDocument)
+import Language.GraphQL.Draft.Syntax.Name (Name)
 
 -------------------------------------------------------------------------------
 

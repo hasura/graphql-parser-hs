@@ -82,8 +82,6 @@ library
     , th-lift-instances     >=0.1
     , unordered-containers  >=0.2
 
-  -- cabal-fmt: expand src
-  --
   exposed-modules:
     Language.GraphQL.Draft.Generator
     Language.GraphQL.Draft.Parser
@@ -91,6 +89,9 @@ library
     Language.GraphQL.Draft.Syntax
     Language.GraphQL.Draft.Syntax.Internal
     Language.GraphQL.Draft.Syntax.QQ
+
+  other-modules:
+    Language.GraphQL.Draft.Syntax.Name
 
 test-suite graphql-parser-test
   import:         common-all
