@@ -130,7 +130,7 @@ newtype Name = Name {unName :: Text}
 --  @Name@ cannot start with a digit.
 type NameSuffix :: Type
 newtype NameSuffix = Suffix {unNameSuffix :: Text}
-  deriving stock (Lift, Show)
+  deriving stock (Lift, Show, Eq)
 
 -- | @matchFirst@ verifies if the starting character is according to the
 --  graphql spec (refer https://spec.graphql.org/October2021/#NameStart).
