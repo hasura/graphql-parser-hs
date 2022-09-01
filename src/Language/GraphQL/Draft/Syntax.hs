@@ -122,7 +122,7 @@ import Prelude
 -------------------------------------------------------------------------------
 type Name :: Type
 newtype Name = Name {unName :: Text}
-  deriving stock (Eq, Lift, Ord, Show)
+  deriving stock (Lift, Show, Eq, Ord)
   deriving newtype (Hashable, NFData, Pretty, Semigroup, J.ToJSONKey, J.ToJSON)
 
 -- | @NameSuffix@ is essentially a GQL identifier that can be used as Suffix
@@ -130,7 +130,8 @@ newtype Name = Name {unName :: Text}
 --  @Name@ cannot start with a digit.
 type NameSuffix :: Type
 newtype NameSuffix = Suffix {unNameSuffix :: Text}
-  deriving stock (Lift, Show, Eq)
+  deriving stock (Lift, Show, Eq, Ord)
+  deriving newtype (Hashable, NFData, Pretty, Semigroup, J.ToJSONKey, J.ToJSON)
 
 -- | @matchFirst@ verifies if the starting character is according to the
 --  graphql spec (refer https://spec.graphql.org/October2021/#NameStart).
