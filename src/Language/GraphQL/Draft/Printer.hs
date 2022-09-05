@@ -23,6 +23,7 @@ import Data.Text.Lazy.Builder.Scientific qualified as LTBS
 import Data.Text.Lazy.Encoding qualified as LTE
 import Data.Void (Void, absurd)
 import Language.GraphQL.Draft.Syntax
+import Language.GraphQL.Draft.Syntax.Name qualified as Name
 import Prettyprinter qualified as PP
 import Text.Builder qualified as Text
 import Prelude
@@ -39,7 +40,7 @@ class (Monoid a, IsString a) => Printer a where
   {-# MINIMAL textP, charP, intP, doubleP #-}
 
   nameP :: Name -> a
-  nameP = textP . unName
+  nameP = textP . Name.unName
 
   nodeP :: (Print (frag var), Print var) => TypedOperationDefinition frag var -> a
   nodeP = node

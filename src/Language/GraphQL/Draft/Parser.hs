@@ -56,6 +56,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding (encodeUtf8)
 import Data.Void (Void)
 import Language.GraphQL.Draft.Syntax qualified as AST
+import Language.GraphQL.Draft.Syntax.Name qualified as Name
 import Prelude
 
 -------------------------------------------------------------------------------
@@ -269,7 +270,7 @@ objectFields several = foldM insertField M.empty =<< several objectField
   where
     objectField = (,) <$> nameParser <* tok ":" <*> value
     insertField obj (k, v)
-      | k `M.member` obj = fail $ "multiple “" <> T.unpack (AST.unName k) <> "” fields"
+      | k `M.member` obj = fail $ "multiple “" <> T.unpack (Name.unName k) <> "” fields"
       | otherwise = pure (M.insert k v obj)
 
 -- * Directives

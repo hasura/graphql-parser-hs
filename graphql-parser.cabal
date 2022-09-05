@@ -73,7 +73,6 @@ library
     , hashable              >=1.3
     , hedgehog              >=1.1
     , prettyprinter         >=1.7
-    , PyF                   >=0.10
     , scientific            >=0.3
     , template-haskell      >=2.16
     , text                  >=1.2
@@ -82,8 +81,6 @@ library
     , th-lift-instances     >=0.1
     , unordered-containers  >=0.2
 
-  -- cabal-fmt: expand src
-  --
   exposed-modules:
     Language.GraphQL.Draft.Generator
     Language.GraphQL.Draft.Parser
@@ -91,6 +88,9 @@ library
     Language.GraphQL.Draft.Syntax
     Language.GraphQL.Draft.Syntax.Internal
     Language.GraphQL.Draft.Syntax.QQ
+
+  other-modules:
+    Language.GraphQL.Draft.Syntax.Name
 
 test-suite graphql-parser-test
   import:         common-all

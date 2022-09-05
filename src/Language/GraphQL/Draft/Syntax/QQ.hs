@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Quasiquotation for 'Language.GraphQL.Draft.Syntax' types.
@@ -10,7 +10,6 @@
 module Language.GraphQL.Draft.Syntax.QQ
   ( name,
     executableDoc,
-    executableDocFmt,
   )
 where
 
@@ -20,24 +19,19 @@ import Data.Text qualified as Text
 import Language.GraphQL.Draft.Parser (parseExecutableDoc)
 import Language.GraphQL.Draft.Syntax qualified as Syntax
 import Language.Haskell.TH.Quote (QuasiQuoter (..))
-import PyF (fmtConfig)
-import PyF.Internal.QQ (toExp)
 import Prelude
 
 -------------------------------------------------------------------------------
 
 -- | Construct 'Syntax.Name' literals at compile-time via quasiquotation.
 --
--- This quasiquoter supports Python-style "f-string" interpolation.
---
--- For example, if one had some value @barLit = "bar"@ present in-scope, then
--- the following quasiquotation:
+-- For example:
 --
 -- @
--- [name|foo_{barLit}|]
+-- [name|foo_bar|]
 -- @
 --
--- ...would produce a 'Syntax.Name' value with the value @foo_bar@.
+-- ... would produce a 'Syntax.Name' value with the value @foo_bar@.
 name :: QuasiQuoter
 name =
   QuasiQuoter {quoteExp, quotePat, quoteType, quoteDec}
@@ -45,21 +39,14 @@ name =
     quotePat _ = error "'name' does not support quoting patterns"
     quoteType _ = error "'name' does not support quoting types"
     quoteDec _ = error "'name' does not support quoting declarations"
-    quoteExp str = do
-      let formattedStrExpQ = toExp fmtConfig str
-          nameExpQ = [|Syntax.mkName . Text.pack $ $(formattedStrExpQ)|]
-      [|
-        case $(nameExpQ) of
-          Nothing -> error $ str <> " is not a valid GraphQL Name"
-          Just result -> result
-        |]
+    quoteExp str = case Syntax.mkName (Text.pack str) of
+      Nothing -> error $ str <> " is not a valid GraphQL Name"
+      Just result -> [|result|]
 
 -- | Construct @'Syntax.ExecutableDocument' 'Syntax.Name'@ literals at compile
 -- time via quasiquotation.
 --
--- This quasiquoter does not support Python-style "f-string" interpolation,
--- unlike 'executableDocFmt', which means that GraphQL document literals can be
--- produced using their natural syntax:
+-- For example:
 --
 -- @
 -- [executableDoc|
@@ -78,52 +65,6 @@ executableDoc =
     quotePat _ = error "'executableDoc' does not support quoting patterns"
     quoteType _ = error "'executableDoc' does not support quoting types"
     quoteDec _ = error "'executableDoc' does not support quoting declarations"
-    quoteExp str = case parseExecutableDoc . Text.pack $ str of
+    quoteExp str = case parseExecutableDoc (Text.pack str) of
       Left err -> fail . show $ err
       Right doc -> [|doc|]
-
--- | Construct @'Syntax.ExecutableDocument' 'Syntax.Name'@ literals at compile
--- time via quasiquotation.
---
--- Unlike 'executableDoc', this quasiquoter supports interpolation at the
--- expense of overloading the braces normally used to define GraphQL documents.
---
--- For example, if one were to write the following quasiquotation, with
--- @nameLit = "name"@ in-scope:
---
--- @
--- [executableDocFmt|
--- {{
---   hero {{
---     {nameLit}
---     age
---   }}
--- }}
--- |]
--- @
---
--- ...then the following document literal would be produced:
---
--- @
--- {
---   hero {
---     name
---     age
---   }
--- }
--- @
-executableDocFmt :: QuasiQuoter
-executableDocFmt =
-  QuasiQuoter {quoteExp, quotePat, quoteType, quoteDec}
-  where
-    quotePat _ = error "'executableDocFmt' does not support quoting patterns"
-    quoteType _ = error "'executableDocFmt' does not support quoting types"
-    quoteDec _ = error "'executableDocFmt' does not support quoting declarations"
-    quoteExp str = do
-      let formattedStrExpQ = toExp fmtConfig str
-          docExpQ = [|parseExecutableDoc . Text.pack $ $(formattedStrExpQ)|]
-      [|
-        case $(docExpQ) of
-          Left errMsg -> error $ Text.unpack errMsg
-          Right result -> result
-        |]
