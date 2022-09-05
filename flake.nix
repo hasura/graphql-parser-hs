@@ -6,11 +6,12 @@
   description = "Hasura GraphQL Engine";
 
   inputs = {
-    nixpkgs.url = github:NixOS/nixpkgs/nixos-22.05;
+    nixpkgs = {
+      url = github:NixOS/nixpkgs/nixos-22.05;
+    };
 
     flake-utils = {
       url = github:numtide/flake-utils;
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
