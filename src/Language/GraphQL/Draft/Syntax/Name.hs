@@ -49,7 +49,8 @@ newtype Name = Name {unName :: Text}
 --  @Name@ cannot start with a digit.
 type NameSuffix :: Type
 newtype NameSuffix = Suffix {unNameSuffix :: Text}
-  deriving stock (Lift, Show)
+  deriving stock (Eq, Lift, Ord, Show)
+  deriving newtype (Semigroup, Hashable, NFData, Pretty, J.ToJSONKey, J.ToJSON)
 
 parseName :: MonadFail m => Text -> m Name
 parseName text = maybe (fail errorMessage) pure $ mkName text
