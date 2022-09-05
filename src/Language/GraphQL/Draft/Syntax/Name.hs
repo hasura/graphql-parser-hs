@@ -42,7 +42,7 @@ import Prelude
 type Name :: Type
 newtype Name = Name {unName :: Text}
   deriving stock (Eq, Lift, Ord, Show)
-  deriving newtype (Hashable, NFData, Pretty, J.ToJSONKey, J.ToJSON)
+  deriving newtype (Semigroup, Hashable, NFData, Pretty, J.ToJSONKey, J.ToJSON)
 
 -- | @NameSuffix@ is essentially a GQL identifier that can be used as Suffix
 --  It is slightely different from @Name@ as it relaxes the criteria that a
