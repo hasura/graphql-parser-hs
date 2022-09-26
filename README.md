@@ -6,6 +6,6 @@ A GraphQL parsing library for Haskell. Used at Hasura in various production
 projects.
 
 The code for this library has now moved to another git repository, and can be
-found here:
+found in the
 [graphql-engine](https://github.com/hasura/graphql-engine/tree/master/server/lib/graphql-parser-hs) repository.
 
